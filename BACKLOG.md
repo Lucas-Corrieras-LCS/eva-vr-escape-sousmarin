@@ -27,7 +27,8 @@
 - [ ] Créer le projet Unity via Hub (utilisateur)
 - [ ] Lancer le serveur MCP Unity + vérifier la connexion (CC)
 - [ ] Packages + Player Settings Quest 2 selon `docs/setup-unity.md` (CC)
-- [~] `git init` + `.gitignore` Unity + Git LFS (fait) · repo GitHub partagé avec le binôme (à faire)
+- [x] Dépôt Git (LFS + Smart Merge) → https://github.com/Lucas-Corrieras-LCS/eva-vr-escape-sousmarin (public)
+- [ ] Inviter le binôme comme collaborateur (B)
 - [ ] Build « hello VR » sur le Quest 2 (valider la chaîne de build)
 
 ## Phase 1 — Cadrage & conception
@@ -79,4 +80,4 @@
 ## Journal
 
 - **2026-10-16** — Dossier créé. Énoncé lu. Choix : escape game mono, binôme, sous-marin, ascenseur, Unity 6.3 LTS.
-- **2026-10-16** — Dépôt Git local initialisé (LFS + Smart Merge Unity), premier commit.
+- **2026-10-16** — Dépôt Git initialisé (LFS + Smart Merge Unity) et publié sur GitHub (public).
