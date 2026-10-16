@@ -69,15 +69,27 @@ Principe : **l'information et l'action sont séparées** entre modules voisins. 
 
 ### Étage 2 — « Équilibrer la pression »
 
-1. **Vannes croisées** : chaque module a un manomètre et une vanne ; tourner **sa** vanne fait varier la pression du **voisin**. Il faut amener toutes les aiguilles dans la zone verte → guidage oral + vue par le hublot.
-2. **La lampe UV** : un module plongé dans le noir a besoin de la lampe UV d'un autre (envoyée par le sas) pour révéler l'ordre des valves.
+1. **Vannes croisées** : chaque module a un manomètre et une vanne. La vanne d'un joueur règle le manomètre du joueur **suivant** dans l'ordre de la piste (Q0 → Q1 → Q3 → Q2 → Q0, en sautant les modules vides). Il faut amener l'aiguille dans la zone verte (tirée au hasard) et l'y tenir 1,5 s → guidage oral (« encore… stop ! »). Une fois stabilisée, la vanne se bloque. Personne ne sait au départ quelle jauge il pilote : on le découvre ensemble.
+2. **La lampe UV** : le code de chaque digicode est écrit à **l'encre UV** sur le mur du fond du module partenaire. Il n'existe **qu'une seule lampe UV** (dans le module orange) : elle doit circuler entre les modules par les sas (horizontaux **et** verticaux à cet étage) pour que chacun puisse lire le code de l'autre.
 
 ### Étage 3 — « Remontée d'urgence » (réunion finale)
 
-- Les cloisons tombent : les joueurs se **voient enfin en entier**, chacun dans son quart de la grande salle.
-- Le **cœur du réacteur** est au point de jonction des 4 quadrants (centre de la piste) : chacun en touche **un quart** depuis sa zone.
-- Chacun insère sa **clé d'activation** (récupérée aux étages précédents) puis tous tournent **en même temps**.
-- Final : la structure se met en mouvement, lumière blanche, bulles, fondu au blanc → écran de fin avec le temps de l'équipe.
+- Les cloisons sont devenues des **parois vitrées toute hauteur** : les joueurs se voient enfin en entier, chacun dans son quart de la grande salle. Des failles lumineuses violettes courent dans les allées (zones interdites).
+- Le **cœur du réacteur** est au point de jonction des 4 quadrants (centre de la piste) ; chaque joueur a une console dans **son** coin, reliée au réacteur.
+- **Séquence du réacteur** : le cœur s'illumine d'une suite de couleurs de joueurs (chacun apparaît au moins une fois). Chacun appuie sur **son** bouton quand vient sa couleur, dans l'ordre. Une erreur rejoue la séquence.
+- **Leviers de remontée** : une fois la séquence réussie, tout le monde abaisse son levier en même temps.
+- Final : faisceau de lumière venu de la surface, brouillard qui s'éclaircit, bulles → écran de fin avec le temps de l'équipe.
+
+### Couleurs des joueurs
+
+| Quadrant | Couleur |
+|----------|---------|
+| Q0 | Orange |
+| Q1 | Cyan |
+| Q2 | Vert |
+| Q3 | Magenta |
+
+Teintes choisies très éloignées les unes des autres (le jaune a été écarté : trop proche de l'orange une fois lumineux).
 
 ### Adaptation au nombre de joueurs
 

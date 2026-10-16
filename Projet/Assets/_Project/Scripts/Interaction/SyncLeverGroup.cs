@@ -22,6 +22,8 @@ namespace Abysses.Interaction
         }
 
         [SerializeField] PuzzleObjective objective;
+        [Tooltip("Objectifs à résoudre avant que les leviers ne répondent (ils sont la dernière étape de l'étage).")]
+        [SerializeField] PuzzleObjective[] prerequisites;
         [SerializeField] Entry[] levers;
         [SerializeField, Min(0.5f)] float syncWindow = 2f;
         [SerializeField] AudioSource failSound;
@@ -65,6 +67,11 @@ namespace Abysses.Interaction
         void PullRpc(int quadrant)
         {
             if (objective.Solved.Value) return;
+            if (!PrerequisitesMet())
+            {
+                FailRpc();
+                return;
+            }
 
             bool first = PulledMask.Value == 0;
             PulledMask.Value |= 1 << quadrant;
@@ -77,6 +84,13 @@ namespace Abysses.Interaction
                 return;
             }
             if (first) resetRoutine = StartCoroutine(ResetAfterWindow());
+        }
+
+        bool PrerequisitesMet()
+        {
+            for (int i = 0; i < prerequisites.Length; i++)
+                if (prerequisites[i] != null && !prerequisites[i].Solved.Value) return false;
+            return true;
         }
 
         int RequiredMask()
