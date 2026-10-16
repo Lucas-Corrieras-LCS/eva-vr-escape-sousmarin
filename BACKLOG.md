@@ -6,8 +6,8 @@
 
 ## Où on en est
 
-- **Dernière session** : 2026-10-16 — énoncé lu, décisions de cadrage prises
-- **Prochaine action** : créer le projet Unity 6000.3.23f1 (Universal 3D) dans `TP_Unity/Projet`, puis lancer le MCP
+- **Dernière session** : 2026-10-16 — projet Unity créé, versionné, MCP connecté
+- **Prochaine action** : packages XR + Player Settings Quest 2 (`docs/setup-unity.md`)
 - **Bloquants** : date de rendu, format de rendu et casque EVA de prod inconnus
 
 ## Décisions
@@ -24,8 +24,8 @@
 
 - [x] Dossier + fichiers de suivi (CC)
 - [x] Lecture énoncé → `CONSIGNES.md` (CC)
-- [ ] Créer le projet Unity via Hub (utilisateur)
-- [ ] Lancer le serveur MCP Unity + vérifier la connexion (CC)
+- [x] Créer le projet Unity via Hub → `Projet/` (utilisateur)
+- [x] Serveur MCP Unity connecté — transport **Stdio** (port 6400), instance `Projet` (CC)
 - [ ] Packages + Player Settings Quest 2 selon `docs/setup-unity.md` (CC)
 - [x] Dépôt Git (LFS + Smart Merge) → https://github.com/Lucas-Corrieras-LCS/eva-vr-escape-sousmarin (public)
 - [ ] Inviter le binôme comme collaborateur (B)
@@ -81,3 +81,4 @@
 
 - **2026-10-16** — Dossier créé. Énoncé lu. Choix : escape game mono, binôme, sous-marin, ascenseur, Unity 6.3 LTS.
 - **2026-10-16** — Dépôt Git initialisé (LFS + Smart Merge Unity) et publié sur GitHub (public).
+- **2026-10-16** — Projet Unity créé (6000.3.23f1, Universal 3D) et déplacé dans `Projet/`. MCP connecté en Stdio (le mode HTTP 8080 n'est pas vu par l'app Claude).
