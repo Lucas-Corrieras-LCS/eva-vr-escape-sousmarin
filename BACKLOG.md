@@ -27,7 +27,7 @@
 - [ ] Créer le projet Unity via Hub (utilisateur)
 - [ ] Lancer le serveur MCP Unity + vérifier la connexion (CC)
 - [ ] Packages + Player Settings Quest 2 selon `docs/setup-unity.md` (CC)
-- [ ] `git init` + `.gitignore` Unity + Git LFS + repo partagé avec le binôme (CC + B)
+- [~] `git init` + `.gitignore` Unity + Git LFS (fait) · repo GitHub partagé avec le binôme (à faire)
 - [ ] Build « hello VR » sur le Quest 2 (valider la chaîne de build)
 
 ## Phase 1 — Cadrage & conception
@@ -79,3 +79,4 @@
 ## Journal
 
 - **2026-10-16** — Dossier créé. Énoncé lu. Choix : escape game mono, binôme, sous-marin, ascenseur, Unity 6.3 LTS.
+- **2026-10-16** — Dépôt Git local initialisé (LFS + Smart Merge Unity), premier commit.
