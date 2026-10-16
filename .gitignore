@@ -1,0 +1,62 @@
+# ===== Unity (projet dans Projet/) =====
+Projet/[Ll]ibrary/
+Projet/[Tt]emp/
+Projet/[Oo]bj/
+Projet/[Bb]uild/
+Projet/[Bb]uilds/
+Projet/[Ll]ogs/
+Projet/[Uu]ser[Ss]ettings/
+Projet/[Mm]emoryCaptures/
+Projet/[Rr]ecordings/
+Projet/*_BurstDebugInformation_DoNotShip/
+Projet/*_BackUpThisFolder_ButDontShipItWithYourGame/
+Projet/.utmp/
+Projet/Assets/Screenshots/
+Projet/Assets/Screenshots.meta
+Projet/Assets/Resources/PerformanceTestRun*.json
+Projet/Assets/Resources/PerformanceTestRun*.json.meta
+Projet/Assets/AddressableAssetsData/*/*.bin*
+Projet/Assets/StreamingAssets/aa.meta
+Projet/Assets/StreamingAssets/aa/*
+
+# Crash reports / profiler
+sysinfo.txt
+mono_crash.*
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.data.meta
+*.raw
+
+# ===== IDE / fichiers générés =====
+.vs/
+.vscode/
+.idea/
+.gradle/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+
+# ===== Builds (à partager hors Git : Drive, release GitHub…) =====
+*.apk
+*.aab
+*.unitypackage
+*.app
+crashlytics-build.properties
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Outils IA locaux =====
+.claude/settings.local.json
