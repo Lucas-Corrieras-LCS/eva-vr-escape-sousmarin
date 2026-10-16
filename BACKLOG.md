@@ -1,4 +1,4 @@
-# BACKLOG — Projet VR EVA : Escape game sous-marin
+# BACKLOG — Projet VR EVA : Escape game sous-marin MULTIJOUEUR
 
 > Suivi de progression. À mettre à jour **à chaque tâche terminée**.
 > Statuts : `[ ]` à faire · `[~]` en cours · `[x]` fait · `[!]` bloqué
@@ -7,17 +7,23 @@
 ## Où on en est
 
 - **Dernière session** : 2026-10-16 — configuration Quest 2 terminée
-- **Prochaine action** : scène de test VR (XR Origin + sol) puis build « hello VR » sur le Quest 2 (casque branché en USB, mode développeur)
+- **Prochaine action** : installer la stack réseau, lier Unity Cloud, puis prototype « 2 avatars qui se voient »
 - **Bloquants** : date de rendu, format de rendu et casque EVA de prod inconnus
 
 ## Décisions
 
 | Date | Décision | Raison |
 |------|----------|--------|
-| 2026-10-16 | **Escape game mono-joueur**, piste entière 31 × 16,5 m | Équilibre note/risque |
+| 2026-10-16 | ~~Escape game mono-joueur, piste entière~~ → remplacé | — |
+| 2026-10-16 | **Escape game MULTIJOUEUR** (★★★★★), **15 × 8 m par joueur**, 4 max, même monde virtuel. Repli autorisé : mono-joueur en 15 × 8 m | Choix du binôme, barème technique |
 | 2026-10-16 | Projet en **binôme** | — |
 | 2026-10-16 | DA **sous-marine / fonds marins** | Ambiance forte, lumière centrale |
 | 2026-10-16 | Extension du monde : **ascenseur / bathyscaphe** entre niveaux de profondeur | Bonus C8 + gradient de lumière par profondeur |
+| 2026-10-16 | **2 à 4 joueurs** (jouable dès 2, extensible à 4) | Testable avec les casques de l'IUT |
+| 2026-10-16 | Réseau : **Netcode for GameObjects + Multiplayer Services (Sessions)**. **Relay** (code de session, via Internet) par défaut + **LAN direct** en secours | Wi-Fi école/EVA : isolation client possible OU pas d'Internet → les deux couverts |
+| 2026-10-16 | Pas de chat vocal : les joueurs sont dans la même salle physique | Économie perf/complexité |
+| 2026-10-16 | Disposition **mixte évolutive** : chacun dans son compartiment (vision par hublots, échanges par sas), puis **réunion finale** via l'ascenseur dans une salle commune | Coop C9 + effet « waouh » final |
+| 2026-10-16 | Monde virtuel calqué sur la piste : chaque joueur a son quadrant 15 × 8 m ; la salle commune juxtapose les 4 quadrants séparés par des barrières infranchissables (vitre, gouffre…) avec marge ≥ 50 cm | Aucune collision physique possible (C10) |
 | 2026-10-16 | Unity **6000.3.23f1** (6.3 LTS), URP, OpenXR + XRI 3.3 | Installé + module Android + déjà validé sur Quest |
 
 ## Phase 0 — Mise en place
@@ -33,13 +39,21 @@
 
 ## Phase 1 — Cadrage & conception
 
-- [ ] Scénario de l'escape game (histoire, nombre de niveaux, énigmes) → `docs/game-design.md`
-- [ ] Plan au sol 31 × 16,5 m + limites de zone originales (C2, C4)
+- [ ] Scénario de l'escape game coop (histoire, niveaux, énigmes à 2–4 joueurs) → `docs/game-design.md`
+- [ ] Plan au sol : 4 quadrants 15 × 8 m + salle commune + limites de zone originales avec marge 50 cm (C2, C4, C10)
 - [ ] Moodboard DA + palette lumière par profondeur (C6, C7)
 - [ ] Répartition des tâches dans le binôme
 
 ## Phase 2 — Fondations techniques
 
+- [x] Packages réseau : Netcode for GameObjects 2.13.3, Multiplayer Services 2.4.0, Multiplayer Play Mode 2.0.2 (CC)
+- [~] Projet lié à Unity Cloud (`eva-vr-escape-sousmarin`, org lucascorrieras06) — reste à activer Relay dans le dashboard (utilisateur)
+- [ ] Menu de connexion VR : Héberger / Rejoindre (code Relay) / LAN (CC)
+- [ ] Attribution d'un quadrant (0–3) par joueur + calibration de l'origine (CC)
+- [ ] Avatars réseau légers (tête + mains, couleur par joueur) (CC)
+- [ ] Objets/leviers synchronisés (NetworkObject, ownership au grab) (CC)
+- [ ] Test multi dans l'éditeur (Multiplayer Play Mode) puis 2 casques (CC + B)
+- [ ] Repli mono-joueur 15 × 8 m fonctionnel (même build, session solo) (CC)
 - [ ] XR Origin + interactions (grab, poke, levier, bouton)
 - [ ] Locomotion joystick derrière un flag, **off en build prod** (C3)
 - [ ] Recentrage / calibration de l'origine sur la piste
@@ -83,3 +97,4 @@
 - **2026-10-16** — Dépôt Git initialisé (LFS + Smart Merge Unity) et publié sur GitHub (public).
 - **2026-10-16** — Projet Unity créé (6000.3.23f1, Universal 3D) et déplacé dans `Projet/`. MCP connecté en Stdio (le mode HTTP 8080 n'est pas vu par l'app Claude).
 - **2026-10-16** — Config Quest 2 : OpenXR 1.16.1 (Meta Quest + Touch, Single Pass Instanced, foveated rendering), XRI 3.3.2 (Starter Assets + Interaction Simulator), ProBuilder 6.1.3, Android IL2CPP ARM64 Vulkan ASTC, URP Mobile unique (HDR off, MSAA 4x, ombres 20 m). Validation XR/OpenXR : 0 erreur.
+- **2026-10-16** — Pivot vers l'escape game **multijoueur** (2–4 joueurs, 15 × 8 m chacun). Réseau NGO + Relay/LAN, disposition mixte évolutive.
