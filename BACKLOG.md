@@ -68,6 +68,8 @@
 - [ ] Ambiance sous-marine bon marché : fog URP, caustiques en light cookie animé, god rays sur fausses cartes additives, particules de plancton
 - [ ] Sound design (ambiance, bulles, sonar), audio spatialisé
 - [ ] Feedbacks : haptique des manettes, sons, lumière sur les énigmes réussies
+- [ ] Symboles du digicode : formes + couleurs (aujourd'hui couleurs seules → pas accessible aux daltoniens)
+- [ ] Sons : ambiance, bulles, grondement de l'ascenseur, alarme de zone (les AudioSource sont en place, sans clip)
 
 ## Phase 4 — Optimisation (Quest 2, 72 FPS)
 
