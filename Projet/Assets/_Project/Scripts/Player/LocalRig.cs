@@ -1,3 +1,4 @@
+using System;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using Abysses.Core;
@@ -23,6 +24,9 @@ namespace Abysses.Player
         public Transform RightHand => rightHand;
         public int Quadrant { get; private set; } = -1;
 
+        /// <summary>Le joueur local vient de recevoir son quadrant.</summary>
+        public static event Action<int> QuadrantAssigned;
+
         void Awake()
         {
             if (Instance != null && Instance != this)
@@ -45,6 +49,7 @@ namespace Abysses.Player
             if (!PlayArea.IsValid(quadrant)) return;
             Quadrant = quadrant;
             Recenter();
+            QuadrantAssigned?.Invoke(quadrant);
         }
 
         /// <summary>
