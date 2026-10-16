@@ -6,8 +6,8 @@
 
 ## Où on en est
 
-- **Dernière session** : 2026-10-16 — les 3 étages sont jouables de bout en bout dans l'éditeur (solo)
-- **Prochaine action** : test multi dans l'éditeur (Multiplayer Play Mode, 2 joueurs) ; puis passe artistique + lumière bakée (étage 1 d'abord) ; sons
+- **Dernière session** : 2026-10-16 — passe ambiance : éclairage baké des 3 étages, caustiques, plancton, gyrophares, sons procéduraux, digicode accessible (branche `feat/ambiance-son-lumiere`)
+- **Prochaine action** : test en Play Mode (solo puis Multiplayer Play Mode) pour valider la passe ambiance en jeu (sons, caustiques, light probes en additif) ; haptique des manettes ; régler les volumes au casque
 - **Bloquants** : pas de casque pour tester pour l'instant (tout est validé dans l'éditeur + simulateur XR) ; date/format de rendu inconnus ; Relay à activer dans le dashboard Unity
 
 ## Décisions
@@ -64,12 +64,13 @@
 ## Phase 3 — Contenu & ambiance
 
 - [x] Énigmes : étage 1 (digicode croisé, fusible par le sas, leviers en dernier) ; étage 2 (vannes croisées en anneau, lampe UV unique + sas verticaux) ; étage 3 (salle commune vitrée, séquence du réacteur, leviers de remontée, final lumineux) — tous testés en Play Mode solo
-- [ ] Lighting baked par niveau + light/reflection probes (C6)
-- [ ] Ambiance sous-marine bon marché : fog URP, caustiques en light cookie animé, god rays sur fausses cartes additives, particules de plancton
-- [ ] Sound design (ambiance, bulles, sonar), audio spatialisé
-- [ ] Feedbacks : haptique des manettes, sons, lumière sur les énigmes réussies
-- [ ] Symboles du digicode : formes + couleurs (aujourd'hui couleurs seules → pas accessible aux daltoniens)
-- [ ] Sons : ambiance, bulles, grondement de l'ascenseur, alarme de zone (les AudioSource sont en place, sans clip)
+- [x] Lighting baked par niveau + light/reflection probes (C6) : lumières des modules en Baked (ombres douces, AO, 2 rebonds), 336 light probes + 4 reflection probes box-projetées par étage, bake GPU ~10 s/étage via `Abysses → Tout construire + baker l'éclairage` (CC) — vérifié sur captures, pas encore en jeu
+- [x] Ambiance sous-marine bon marché : fog URP, caustiques (cookie animé 16 images sur une directionnelle sans ombres, étage 1), plancton par module (cyan / braises / bioluminescence), gyrophares de secours à faisceaux additifs (étage 2), rayon de lumière révélé au final (étage 3) (CC)
+- [x] Sound design procédural (`AbyssesContent`, aucun asset externe) : 4 ambiances en boucle (station, habitat, labo, cœur), ascenseur, alarme de zone, digicode (touche/erreur/succès), fusible, sas, leviers ratés, réacteur, étage résolu, final ; spatialisé sur les objets (CC) — volumes à régler au casque
+- [~] Feedbacks : sons et lumière sur les énigmes réussies OK ; **reste l'haptique des manettes**
+- [x] Symboles du digicode : formes + couleurs (● rouge, ▲ vert, ■ bleu, ★ jaune, ◆ blanc, ✚ violet) sur touches, saisie et codes muraux (CC)
+- [x] Sons : ambiance, bulles, grondement de l'ascenseur, alarme de zone (CC)
+- [x] Captures automatiques des étages → `docs/captures/` (`Abysses → Captures d'écran des étages`) (CC)
 
 ## Phase 4 — Optimisation (Quest 2, 72 FPS)
 
@@ -102,3 +103,4 @@
 - **2026-10-16** — Pivot vers l'escape game **multijoueur** (2–4 joueurs, 15 × 8 m chacun). Réseau NGO + Relay/LAN, disposition mixte évolutive.
 - **2026-10-16** — Game design v1. 23 scripts (réseau, jeu, énigmes, UI) + générateur de scènes `Abysses → Tout construire`. Partie solo testée de bout en bout en Play Mode : connexion, descente, étage 1 résolu (digicode, fusible, leviers), ascenseur, fin à -4000 m. Bug corrigé : identifiants réseau à 0 sur les objets générés par script.
 - **2026-10-16** — Étages 2 et 3 construits et testés en Play Mode (solo) de la surface jusqu'au final. Leviers = dernière étape (prérequis). Couleur jaune → vert (confusion avec l'orange). Fusible consommé via Despawn(false).
+- **2026-10-16** — Passe ambiance (branche `feat/ambiance-son-lumiere`, travail hors MCP : générateur relancé en batchmode, console sans erreur ni avertissement). Éclairage baké + probes, caustiques, plancton, gyrophares, rayon final, 17 sons procéduraux, digicode formes + couleurs, captures auto. Corrigé au passage : coque trop métallique (les lightmaps n'avaient presque aucun effet), lampe de cabine qui éclairait le plafond du module (isolée par rendering layer), intensités recalées pour l'atténuation physique du bake.

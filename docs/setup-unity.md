@@ -55,5 +55,7 @@
 | URP | Un seul niveau de qualité **Mobile** (`Mobile_RPAsset`) : HDR off, MSAA 4x, render scale 1, ombres principales 1024 / 20 m / 1 cascade, soft shadows off, 2 lumières add. par objet sans ombres, SRP Batcher on. Profil PC supprimé. |
 | Samples XRI | Starter Assets + **XR Interaction Simulator** (test dans l'éditeur : pas de Quest Link sur macOS) |
 | Validation | OpenXR + XR Project Validation : 0 erreur, 0 avertissement |
+| Éclairage | Lumières des modules **Baked** (ombres douces, AO, 2 rebonds, non directionnel, lightmaps 10 texels/m), 336 light probes + 4 reflection probes (64 px, box projection) par étage. Temps réel restant : caustiques (directionnelle sans ombres, étage 1), lampe de cabine (rendering layer 1 : cabines + avatars), lampe UV, faisceau final |
+| Contenu généré | `Abysses → Tout construire` régénère aussi sons (`Audio/`, WAV 22 kHz mono, Vorbis/ADPCM) et textures (`Art/`). Après chaque reconstruction : **re-baker** (`Abysses → Tout construire + baker l'éclairage`) |
 
 > MCP : l'app Claude se connecte en **Stdio**. Après un rechargement, le bridge peut passer de 6400 à 6401 automatiquement — c'est normal.

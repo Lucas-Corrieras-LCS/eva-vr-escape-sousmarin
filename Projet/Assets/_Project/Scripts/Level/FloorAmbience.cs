@@ -14,6 +14,15 @@ namespace Abysses.Level
         [SerializeField, Range(0f, 0.3f)] float fogDensity = 0.06f;
         [SerializeField] Color ambientColor = new Color(0.05f, 0.1f, 0.12f);
 
+        // Les étages bakés apportent leurs light probes en chargement additif : Unity demande de recalculer
+        // la tétraédrisation à chaque ajout/retrait, sinon les objets mobiles (avatars, objets) restent mal éclairés.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void HookLightProbes()
+        {
+            LightProbes.needsRetetrahedralization -= LightProbes.TetrahedralizeAsync;
+            LightProbes.needsRetetrahedralization += LightProbes.TetrahedralizeAsync;
+        }
+
         Color previousFog;
         float previousDensity;
         Color previousAmbient;
