@@ -14,10 +14,11 @@ TP_Unity/
 ## Règles
 
 1. **Consignes d'abord** : chaque consigne de `CONSIGNES.md` correspond à au moins une tâche du backlog. Rien n'est ajouté hors consignes sans validation.
-2. **Tout passe par le MCP Unity** : création de scènes, GameObjects, composants, scripts, matériaux, builds. Ne pas modifier les `.unity` / `.prefab` à la main.
+2. **Tout passe par le MCP Unity** : scènes, GameObjects, composants, matériaux, builds, tests en Play Mode. Les scripts `.cs` sont écrits sur disque puis importés/compilés en une fois via le MCP (une recompilation par fichier serait beaucoup plus lente). Ne pas modifier les `.unity` / `.prefab` à la main.
 3. **Backlog à jour** : après chaque tâche, cocher, renseigner « Où on en est » et ajouter une ligne au journal.
 4. **Vérifier la console** Unity (`read_console`) après chaque modification de script : zéro erreur avant de passer à la suite.
 5. **Commit Git** à chaque étape stable.
+6. **Scènes générées** : `Abysses → Tout construire` régénère matériaux, prefabs, Station et étages (blockout). ⚠️ Écrase les scènes : une fois la passe artistique commencée sur un étage, ne plus le régénérer (ou retirer son appel du générateur).
 
 ## Optimisation (à appliquer tout du long)
 

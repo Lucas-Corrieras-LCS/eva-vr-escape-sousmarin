@@ -6,9 +6,9 @@
 
 ## Où on en est
 
-- **Dernière session** : 2026-10-16 — configuration Quest 2 terminée
-- **Prochaine action** : installer la stack réseau, lier Unity Cloud, puis prototype « 2 avatars qui se voient »
-- **Bloquants** : date de rendu, format de rendu et casque EVA de prod inconnus
+- **Dernière session** : 2026-10-16 — fondations + étage 1 jouable de bout en bout dans l'éditeur (solo)
+- **Prochaine action** : test multi dans l'éditeur (Multiplayer Play Mode, 2 joueurs) ; puis étages 2 et 3 (énigmes) ; puis passe artistique/lumière de l'étage 1
+- **Bloquants** : pas de casque pour tester pour l'instant (tout est validé dans l'éditeur + simulateur XR) ; date/format de rendu inconnus ; Relay à activer dans le dashboard Unity
 
 ## Décisions
 
@@ -35,12 +35,12 @@
 - [x] Packages + Player Settings + OpenXR + URP Quest 2 selon `docs/setup-unity.md` (CC)
 - [x] Dépôt Git (LFS + Smart Merge) → https://github.com/Lucas-Corrieras-LCS/eva-vr-escape-sousmarin (public)
 - [ ] Inviter le binôme comme collaborateur (B)
-- [ ] Build « hello VR » sur le Quest 2 (valider la chaîne de build)
+- [ ] Build « hello VR » sur le Quest 2 (valider la chaîne de build) — **en attente d'un casque**
 
 ## Phase 1 — Cadrage & conception
 
-- [ ] Scénario de l'escape game coop (histoire, niveaux, énigmes à 2–4 joueurs) → `docs/game-design.md`
-- [ ] Plan au sol : 4 quadrants 15 × 8 m + salle commune + limites de zone originales avec marge 50 cm (C2, C4, C10)
+- [x] Scénario de l'escape game coop → `docs/game-design.md` (première version, à relire par le binôme)
+- [x] Plan au sol : 4 quadrants 15 × 8 m, murs en retrait de 30 cm, alarme de pression si la tête sort de la zone sûre (C2, C4, C10) — salle commune de l'étage 3 à faire
 - [ ] Moodboard DA + palette lumière par profondeur (C6, C7)
 - [ ] Répartition des tâches dans le binôme
 
@@ -48,22 +48,22 @@
 
 - [x] Packages réseau : Netcode for GameObjects 2.13.3, Multiplayer Services 2.4.0, Multiplayer Play Mode 2.0.2 (CC)
 - [~] Projet lié à Unity Cloud (`eva-vr-escape-sousmarin`, org lucascorrieras06) — reste à activer Relay dans le dashboard (utilisateur)
-- [ ] Menu de connexion VR : Héberger / Rejoindre (code Relay) / LAN (CC)
-- [ ] Attribution d'un quadrant (0–3) par joueur + calibration de l'origine (CC)
-- [ ] Avatars réseau légers (tête + mains, couleur par joueur) (CC)
-- [ ] Objets/leviers synchronisés (NetworkObject, ownership au grab) (CC)
+- [x] Menu de connexion VR : En ligne (Relay, sans saisie de code) / Héberger LAN / Rejoindre LAN (découverte UDP auto) / Solo (CC)
+- [x] Attribution d'un quadrant (0–3) par joueur + calibration de l'origine (CC) — vérifié en Play Mode
+- [x] Avatars réseau légers (casque + gants, couleur par quadrant, NetworkTransform propriétaire) (CC)
+- [x] Objets/leviers synchronisés (ownership au grab, sas à objets, leviers synchronisés) (CC)
 - [ ] Test multi dans l'éditeur (Multiplayer Play Mode) puis 2 casques (CC + B)
-- [ ] Repli mono-joueur 15 × 8 m fonctionnel (même build, session solo) (CC)
-- [ ] XR Origin + interactions (grab, poke, levier, bouton)
-- [ ] Locomotion joystick derrière un flag, **off en build prod** (C3)
+- [x] Repli mono-joueur 15 × 8 m fonctionnel (même build, session solo, auto-résolution + écran de surveillance + fusible rapatrié) (CC) — vérifié en Play Mode
+- [x] XR Origin + interactions (grab, poke, levier, bouton) + simulateur XR dans l'éditeur (EditorOnly)
+- [x] Locomotion joystick derrière un flag, **off en build prod** via define `ABYSSES_PROD` ; téléportation/rotation au stick toujours coupées (C3)
 - [ ] Recentrage / calibration de l'origine sur la piste
-- [ ] Système d'ascenseur : changement de niveau sans déplacement réel (C8)
-- [ ] Gestionnaire d'énigmes / états de progression (événements, pas de polling)
-- [ ] Blockout ProBuilder de chaque niveau à l'échelle 1:1
+- [x] Système d'ascenseur : cabines fixes, étages en scènes additives synchronisées, portes/bulles/profondeur (C8) — vérifié en Play Mode
+- [x] Gestionnaire d'énigmes / états de progression (GameStateManager + PuzzleObjective, événements)
+- [~] Blockout à l'échelle 1:1 généré par `Abysses → Tout construire` : étage 1 complet, étages 2 et 3 = coques vides
 
 ## Phase 3 — Contenu & ambiance
 
-- [ ] Énigmes niveau par niveau
+- [~] Énigmes : étage 1 fait (digicode croisé, fusible par le sas, leviers synchronisés) ; étages 2 et 3 à faire
 - [ ] Lighting baked par niveau + light/reflection probes (C6)
 - [ ] Ambiance sous-marine bon marché : fog URP, caustiques en light cookie animé, god rays sur fausses cartes additives, particules de plancton
 - [ ] Sound design (ambiance, bulles, sonar), audio spatialisé
@@ -98,3 +98,4 @@
 - **2026-10-16** — Projet Unity créé (6000.3.23f1, Universal 3D) et déplacé dans `Projet/`. MCP connecté en Stdio (le mode HTTP 8080 n'est pas vu par l'app Claude).
 - **2026-10-16** — Config Quest 2 : OpenXR 1.16.1 (Meta Quest + Touch, Single Pass Instanced, foveated rendering), XRI 3.3.2 (Starter Assets + Interaction Simulator), ProBuilder 6.1.3, Android IL2CPP ARM64 Vulkan ASTC, URP Mobile unique (HDR off, MSAA 4x, ombres 20 m). Validation XR/OpenXR : 0 erreur.
 - **2026-10-16** — Pivot vers l'escape game **multijoueur** (2–4 joueurs, 15 × 8 m chacun). Réseau NGO + Relay/LAN, disposition mixte évolutive.
+- **2026-10-16** — Game design v1. 23 scripts (réseau, jeu, énigmes, UI) + générateur de scènes `Abysses → Tout construire`. Partie solo testée de bout en bout en Play Mode : connexion, descente, étage 1 résolu (digicode, fusible, leviers), ascenseur, fin à -4000 m. Bug corrigé : identifiants réseau à 0 sur les objets générés par script.

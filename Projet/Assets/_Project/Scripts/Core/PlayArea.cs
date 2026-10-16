@@ -18,6 +18,8 @@ namespace Abysses.Core
         public const float QuadrantDepth = 8f;
         /// <summary>Marge de sécurité : dérive possible du tracking de 50 cm / 30 min (consigne C10).</summary>
         public const float SafetyMargin = 0.5f;
+        /// <summary>Retrait des murs virtuels par rapport au bord du quadrant : ils apparaissent avant la limite physique.</summary>
+        public const float WallInset = 0.3f;
         public const int QuadrantCount = 4;
 
         static readonly Vector2[] QuadrantMin =

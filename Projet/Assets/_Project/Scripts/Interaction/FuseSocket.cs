@@ -7,7 +7,7 @@ namespace Abysses.Interaction
 {
     /// <summary>
     /// Emplacement de fusible synchronisé. Quand le bon fusible y est posé, le serveur le « consomme »
-    /// (despawn) et l'emplacement affiche un fusible fixe : pas de physique partagée fragile à maintenir.
+    /// (despawn + masqué) et l'emplacement affiche un fusible fixe : pas de physique partagée fragile à maintenir.
     /// Le socket n'est actif que dans le module du joueur local (voir <see cref="LocalModuleOnly"/>).
     /// </summary>
     public class FuseSocket : NetworkBehaviour
@@ -42,7 +42,9 @@ namespace Abysses.Interaction
         {
             if (objective.Solved.Value || !fuseReference.TryGet(out NetworkObject fuse)) return;
             if (!fuse.TryGetComponent(out FuseItem item) || item.FuseId != socket.RequiredFuseId) return;
-            fuse.Despawn(true);
+            // Objet placé dans la scène : on le despawn sans le détruire (recommandation Netcode), puis on le masque.
+            fuse.Despawn(false);
+            fuse.gameObject.SetActive(false);
             objective.ServerSolve();
         }
 
