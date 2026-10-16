@@ -44,3 +44,16 @@
 - ≤ 100–150 draw calls (SetPass) · ≤ 300–500 k triangles visibles
 - 13,9 ms/frame max · 0 GC alloc par frame en jeu
 - Textures 1024–2048 max, atlas quand possible
+
+## État appliqué (2026-10-16)
+
+| Élément | Valeur |
+|---------|--------|
+| Produit / ID | `EVA Abysses` · `com.iuttroyes.evaabysses` · v0.1.0 |
+| Android | IL2CPP, ARM64, Vulkan seul, ASTC, min API 29, target auto, stripping Medium, Run In Background |
+| XR | OpenXR (loader Android) · Meta Quest Support · Oculus Touch Controller Profile · Foveated Rendering · Single Pass Instanced · Depth 16 bit · Latency = Prioritize Input Polling |
+| URP | Un seul niveau de qualité **Mobile** (`Mobile_RPAsset`) : HDR off, MSAA 4x, render scale 1, ombres principales 1024 / 20 m / 1 cascade, soft shadows off, 2 lumières add. par objet sans ombres, SRP Batcher on. Profil PC supprimé. |
+| Samples XRI | Starter Assets + **XR Interaction Simulator** (test dans l'éditeur : pas de Quest Link sur macOS) |
+| Validation | OpenXR + XR Project Validation : 0 erreur, 0 avertissement |
+
+> MCP : l'app Claude se connecte en **Stdio**. Après un rechargement, le bridge peut passer de 6400 à 6401 automatiquement — c'est normal.

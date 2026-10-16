@@ -6,8 +6,8 @@
 
 ## Où on en est
 
-- **Dernière session** : 2026-10-16 — projet Unity créé, versionné, MCP connecté
-- **Prochaine action** : packages XR + Player Settings Quest 2 (`docs/setup-unity.md`)
+- **Dernière session** : 2026-10-16 — configuration Quest 2 terminée
+- **Prochaine action** : scène de test VR (XR Origin + sol) puis build « hello VR » sur le Quest 2 (casque branché en USB, mode développeur)
 - **Bloquants** : date de rendu, format de rendu et casque EVA de prod inconnus
 
 ## Décisions
@@ -26,7 +26,7 @@
 - [x] Lecture énoncé → `CONSIGNES.md` (CC)
 - [x] Créer le projet Unity via Hub → `Projet/` (utilisateur)
 - [x] Serveur MCP Unity connecté — transport **Stdio** (port 6400), instance `Projet` (CC)
-- [ ] Packages + Player Settings Quest 2 selon `docs/setup-unity.md` (CC)
+- [x] Packages + Player Settings + OpenXR + URP Quest 2 selon `docs/setup-unity.md` (CC)
 - [x] Dépôt Git (LFS + Smart Merge) → https://github.com/Lucas-Corrieras-LCS/eva-vr-escape-sousmarin (public)
 - [ ] Inviter le binôme comme collaborateur (B)
 - [ ] Build « hello VR » sur le Quest 2 (valider la chaîne de build)
@@ -82,3 +82,4 @@
 - **2026-10-16** — Dossier créé. Énoncé lu. Choix : escape game mono, binôme, sous-marin, ascenseur, Unity 6.3 LTS.
 - **2026-10-16** — Dépôt Git initialisé (LFS + Smart Merge Unity) et publié sur GitHub (public).
 - **2026-10-16** — Projet Unity créé (6000.3.23f1, Universal 3D) et déplacé dans `Projet/`. MCP connecté en Stdio (le mode HTTP 8080 n'est pas vu par l'app Claude).
+- **2026-10-16** — Config Quest 2 : OpenXR 1.16.1 (Meta Quest + Touch, Single Pass Instanced, foveated rendering), XRI 3.3.2 (Starter Assets + Interaction Simulator), ProBuilder 6.1.3, Android IL2CPP ARM64 Vulkan ASTC, URP Mobile unique (HDR off, MSAA 4x, ombres 20 m). Validation XR/OpenXR : 0 erreur.
