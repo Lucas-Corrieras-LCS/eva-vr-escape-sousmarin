@@ -2,6 +2,7 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using Abysses.Level;
+using Abysses.Player;
 
 namespace Abysses.Interaction
 {
@@ -59,6 +60,8 @@ namespace Abysses.Interaction
                     if (FuseItem.All[i].FuseId == socket.RequiredFuseId) FuseItem.All[i].gameObject.SetActive(false);
                 socket.socketActive = false;
                 if (insertSound != null && IsSpawned) insertSound.Play();
+                // « Clac » du fusible qui s'enclenche, dans le module concerné.
+                if (IsSpawned && LocalRig.IsLocalOrShared(objective.Quadrant)) LocalRig.Pulse(0.8f, 0.12f);
             }
         }
     }

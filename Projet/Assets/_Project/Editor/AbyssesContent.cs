@@ -24,9 +24,14 @@ namespace Abysses.EditorTools
         {
             public AudioClip AmbienceStation, AmbienceHabitat, AmbienceLabo, AmbienceCoeur;
             public AudioClip Bubbles, Rumble, ZoneAlarm, Key, Error, Success, FuseInsert, Hatch, LeverFail, ReactorTone, ReactorFail, FloorSolved, Finale;
+            public AudioClip CreakLow, CreakHigh, Drip, SteamHiss, NeonBuzz, PowerUp, Knock, HintChime, RadioStatic;
             public Texture2D[] Caustics;
             public Texture2D[] Glyphs;
             public Texture2D Dot, ShaftGradient;
+            /// <summary>Coque : tôles rivetées 1 × 1 m (motif de 2 m), joints, coulures de rouille. Plancher : tôle larmée.</summary>
+            public Texture2D HullAlbedo, HullNormal, FloorAlbedo, FloorNormal;
+            /// <summary>Silhouettes vues par les hublots : poisson (banc) et créature géante.</summary>
+            public Texture2D Fish, Leviathan;
             public Mesh ShaftCone;
         }
 
@@ -53,6 +58,15 @@ namespace Abysses.EditorTools
                 ReactorFail = OneShot("SFX_ReactorFail", 0.9f, ReactorFail),
                 FloorSolved = OneShot("SFX_FloorSolved", 2.5f, FloorSolved),
                 Finale = OneShot("SFX_Finale", 8f, Finale),
+                CreakLow = OneShot("SFX_CreakLow", 2.2f, CreakLow),
+                CreakHigh = OneShot("SFX_CreakHigh", 1.4f, CreakHigh),
+                Drip = OneShot("SFX_Drip", 0.35f, Drip),
+                SteamHiss = Loop("SFX_SteamHiss", 3f, SteamHiss),
+                NeonBuzz = OneShot("SFX_NeonBuzz", 0.5f, NeonBuzz),
+                PowerUp = OneShot("SFX_PowerUp", 2.6f, PowerUp),
+                Knock = OneShot("SFX_Knock", 0.3f, Knock),
+                HintChime = OneShot("SFX_HintChime", 1.4f, HintChime),
+                RadioStatic = Loop("SFX_RadioStatic", 4f, RadioStatic),
             };
 
             c.Caustics = new Texture2D[CausticFrames];
@@ -64,6 +78,15 @@ namespace Abysses.EditorTools
             c.Dot = Png("T_Dot", SoftDot(64), 64, 64, false, true);
             c.ShaftGradient = Png("T_ShaftGradient", ShaftGradient(8, 128), 8, 128, false, true);
             c.ShaftCone = ShaftConeMesh();
+
+            HullMaps(512, out Color[] hullAlbedo, out Color[] hullNormal);
+            c.HullAlbedo = Png("T_Hull_Albedo", hullAlbedo, 512, 512, false, false, false, 512);
+            c.HullNormal = Png("T_Hull_Normal", hullNormal, 512, 512, true, false, true, 512);
+            FloorMaps(256, out Color[] floorAlbedo, out Color[] floorNormal);
+            c.FloorAlbedo = Png("T_Floor_Albedo", floorAlbedo, 256, 256, false, false, false, 256);
+            c.FloorNormal = Png("T_Floor_Normal", floorNormal, 256, 256, true, false, true, 256);
+            c.Fish = Png("T_Fish", Silhouette(128, 64, FishShape), 128, 64, false, true);
+            c.Leviathan = Png("T_Leviathan", Silhouette(256, 128, LeviathanShape), 256, 128, false, true);
             return c;
         }
 
@@ -358,6 +381,89 @@ namespace Abysses.EditorTools
             return pad * k * 0.5f + BubbleField(t, finaleBubbles, finaleFreqs) * 0.2f;
         }
 
+        // ---------- Ambiance de coque, fuites, électricité, interface
+
+        /// <summary>Grincement de coque : frottement à basse fréquence qui glisse, avec résonance métallique.</summary>
+        static float CreakLow(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = 0f; }
+            float f = 55f + 25f * Mathf.Sin(Tau * 0.35f * t) + 18f * t;
+            float stick = 0.5f + 0.5f * Mathf.Sign(Mathf.Sin(Tau * f * t));
+            float grain = LowPass(ref lp1, White(r) * stick, 0.12f);
+            float ring = Mathf.Sin(Tau * 180f * t) * 0.25f + Mathf.Sin(Tau * 263f * t) * 0.15f;
+            float env = Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / d)) * Env(t, 0.3f, 1.4f);
+            return (grain * 1.8f + ring * grain * 3f) * env;
+        }
+
+        static float CreakHigh(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = 0f; }
+            float f = 240f - 90f * (t / d) + 30f * Mathf.Sin(Tau * 3f * t);
+            float pulse = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Tau * f * t)), 6f);
+            float body = LowPass(ref lp1, pulse + White(r) * 0.15f, 0.35f);
+            return body * Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / d)) * 2f;
+        }
+
+        /// <summary>Goutte qui tombe dans une flaque : « ploc » dont la hauteur remonte.</summary>
+        static float Drip(float t, float d, System.Random r)
+        {
+            float f = 900f + 1400f * Mathf.Min(t, 0.05f) / 0.05f;
+            return Mathf.Sin(Tau * f * t) * Env(t, 0.001f, 0.035f) + 0.3f * Bubble(t, 0.02f, 700f);
+        }
+
+        /// <summary>Jet de vapeur : bruit blanc filtré passe-haut, qui fluctue.</summary>
+        static float SteamHiss(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = 0f; }
+            float n = White(r);
+            float hp = n - LowPass(ref lp1, n, 0.25f);
+            float flutter = 0.8f + 0.2f * Mathf.Sin(Tau * (7f / d) * t);
+            return LowPass(ref lp2, hp, 0.7f) * flutter;
+        }
+
+        static float NeonBuzz(float t, float d, System.Random r)
+        {
+            float hum = Mathf.Sign(Mathf.Sin(Tau * 100f * t)) * 0.4f + Mathf.Sin(Tau * 200f * t) * 0.3f;
+            float crackle = r.NextDouble() < 0.004 ? White(r) * 2f : 0f;
+            return (hum + crackle) * Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / d));
+        }
+
+        /// <summary>Remise sous tension : gros contacteur, puis transformateur qui monte en régime.</summary>
+        static float PowerUp(float t, float d, System.Random r)
+        {
+            if (t == 0f) lp1 = 0f;
+            float clunk = (Mathf.Sin(Tau * (70f - 30f * t) * t) + LowPass(ref lp1, White(r), 0.4f)) * Env(t, 0.002f, 0.12f);
+            float u = Mathf.Max(0f, t - 0.15f);
+            float ramp = Mathf.Clamp01(u / 1.6f);
+            float f = 25f + 25f * ramp;
+            float whine = Mathf.Sin(Tau * f * 2f * u) * 0.4f + Mathf.Sin(Tau * f * 4f * u) * 0.25f + Mathf.Sin(Tau * (300f + 900f * ramp) * u) * 0.08f;
+            return clunk * 1.2f + whine * Mathf.Min(1f, u * 4f) * (1f - Mathf.Clamp01((t - d + 0.6f) / 0.6f));
+        }
+
+        /// <summary>Coup frappé sur une cloison métallique.</summary>
+        static float Knock(float t, float d, System.Random r)
+        {
+            if (t == 0f) lp1 = 0f;
+            float thud = Mathf.Sin(Tau * 95f * t) * Env(t, 0.001f, 0.05f);
+            float ring = (Mathf.Sin(Tau * 410f * t) * 0.5f + Mathf.Sin(Tau * 623f * t) * 0.3f) * Env(t, 0.001f, 0.08f);
+            float hit = LowPass(ref lp1, White(r), 0.5f) * Env(t, 0.0005f, 0.006f);
+            return thud + ring * 0.5f + hit;
+        }
+
+        static float HintChime(float t, float d, System.Random r) =>
+            Chime(t, 0f, 880f, 0.35f) * 0.7f + Chime(t, 0.14f, 1318.5f, 0.5f) * 0.6f + 0.2f * SonarPing(t, 0f, 1760f);
+
+        /// <summary>Grésillement radio (lecture du journal de bord).</summary>
+        static float RadioStatic(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = 0f; }
+            float n = White(r);
+            float band = LowPass(ref lp1, n - LowPass(ref lp2, n, 0.05f), 0.4f);
+            float crackle = r.NextDouble() < 0.002 ? White(r) * 1.5f : 0f;
+            float fade = 0.6f + 0.4f * Mathf.Sin(Tau * (3f / d) * t);
+            return band * fade + crackle;
+        }
+
         static AudioClip SaveWav(string name, float[] samples, bool loop)
         {
             string path = AudioDir + "/" + name + ".wav";
@@ -519,7 +625,186 @@ namespace Abysses.EditorTools
             return pixels;
         }
 
-        static Texture2D Png(string name, Color[] pixels, int width, int height, bool linearGray, bool clamp)
+        // ---------- Textures de la coque (motifs pavables)
+
+        /// <summary>Hachage entier → [0, 1[ (bruit reproductible).</summary>
+        static float Hash(int x, int y, int seed)
+        {
+            unchecked
+            {
+                uint h = (uint)(x * 374761393 + y * 668265263 + seed * 2147483647);
+                h = (h ^ (h >> 13)) * 1274126177u;
+                h ^= h >> 16;
+                return (h & 0xFFFFFF) / 16777216f;
+            }
+        }
+
+        /// <summary>Bruit de valeur lissé, pavable sur une période donnée (en cellules).</summary>
+        static float ValueNoise(float x, float y, int period, int seed)
+        {
+            int x0 = Mathf.FloorToInt(x), y0 = Mathf.FloorToInt(y);
+            float fx = x - x0, fy = y - y0;
+            fx = fx * fx * (3f - 2f * fx);
+            fy = fy * fy * (3f - 2f * fy);
+            int Wrap(int v) => ((v % period) + period) % period;
+            float a = Hash(Wrap(x0), Wrap(y0), seed), b = Hash(Wrap(x0 + 1), Wrap(y0), seed);
+            float c = Hash(Wrap(x0), Wrap(y0 + 1), seed), e = Hash(Wrap(x0 + 1), Wrap(y0 + 1), seed);
+            return Mathf.Lerp(Mathf.Lerp(a, b, fx), Mathf.Lerp(c, e, fx), fy);
+        }
+
+        static float Fbm(float u, float v, int baseCells, int seed)
+        {
+            float sum = 0f, amp = 0.5f;
+            for (int o = 0, cells = baseCells; o < 4; o++, cells *= 2, amp *= 0.5f)
+                sum += ValueNoise(u * cells, v * cells, cells, seed + o) * amp;
+            return sum / 0.9375f;
+        }
+
+        /// <summary>
+        /// Tôles de coque : le motif couvre 2 × 2 m (4 tôles). Joints creux, rivets en relief tous les 12,5 cm,
+        /// variation de teinte par tôle, coulures de rouille sous certains rivets, salissures en bas des tôles.
+        /// </summary>
+        static void HullMaps(int size, out Color[] albedo, out Color[] normal)
+        {
+            var height = new float[size * size];
+            albedo = new Color[size * size];
+            const int panels = 2;
+            float seam = 0.012f, rivetRadius = 0.012f, rivetInset = 0.035f;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (x + 0.5f) / size, v = (y + 0.5f) / size;
+                float pu = u * panels, pv = v * panels;
+                int px = Mathf.FloorToInt(pu), py = Mathf.FloorToInt(pv);
+                float lu = pu - px, lv = pv - py;
+                float edge = Mathf.Min(Mathf.Min(lu, 1f - lu), Mathf.Min(lv, 1f - lv));
+
+                // Rivets alignés le long des bords de chaque tôle.
+                float rivet = 0f;
+                float along = lu < rivetInset * 1.5f || lu > 1f - rivetInset * 1.5f ? lv : lu;
+                float across = Mathf.Min(Mathf.Min(lu, 1f - lu), Mathf.Min(lv, 1f - lv));
+                float spacing = 1f / 8f;
+                float k = Mathf.Repeat(along, spacing) - spacing / 2f;
+                float dr = Mathf.Sqrt(k * k + (across - rivetInset) * (across - rivetInset));
+                if (dr < rivetRadius) rivet = Mathf.Sqrt(1f - (dr / rivetRadius) * (dr / rivetRadius));
+
+                float grain = Fbm(u, v, 8, 3);
+                float panelTone = 0.88f + 0.12f * Hash(px, py, 5);
+                float h = 0.5f + grain * 0.08f;
+                if (edge < seam) h -= 0.4f * (1f - edge / seam);
+                h += rivet * 0.35f;
+                height[y * size + x] = h;
+
+                // Couleur : tôle (gris neutre, teintée par le matériau), joints sombres, rouille et salissures.
+                float shade = panelTone * (0.85f + 0.3f * grain);
+                if (edge < seam * 1.6f) shade *= Mathf.Lerp(0.45f, 1f, edge / (seam * 1.6f));
+                Color c = new Color(shade, shade, shade);
+
+                // Coulures de rouille : colonnes fines sous quelques rivets, qui s'effacent vers le bas (v croît vers le haut).
+                float column = Mathf.Repeat(u * panels * 8f, 1f);
+                int columnId = Mathf.FloorToInt(u * panels * 8f);
+                if (Hash(columnId, py, 11) > 0.72f)
+                {
+                    float width = 0.12f + 0.25f * Hash(columnId, py, 12);
+                    float dx = Mathf.Abs(column - 0.5f) / width;
+                    float top = 1f - rivetInset * 1.2f;
+                    float streakLength = 0.25f + 0.55f * Hash(columnId, py, 13);
+                    float t = (top - lv) / streakLength;
+                    if (dx < 1f && t > 0f && t < 1f)
+                    {
+                        float amount = (1f - dx) * (1f - t) * (0.55f + 0.45f * Fbm(u * 3f, v * 0.5f, 4, 17));
+                        c = Color.Lerp(c, new Color(0.62f, 0.33f, 0.16f) * shade * 1.2f, Mathf.Clamp01(amount));
+                    }
+                }
+                // Condensation et crasse au bas de chaque tôle.
+                float grime = Mathf.Clamp01(1f - lv * 4f) * (0.5f + 0.5f * Fbm(u * 2f, v * 2f, 4, 23));
+                c *= 1f - grime * 0.35f;
+                if (rivet > 0f) c = Color.Lerp(c, new Color(0.95f, 0.95f, 0.95f) * panelTone, rivet * 0.5f);
+                c.a = 1f;
+                albedo[y * size + x] = c;
+            }
+            normal = NormalFromHeight(height, size, 6f);
+        }
+
+        /// <summary>Plancher en tôle larmée : petits reliefs allongés croisés, usure plus claire sur les reliefs.</summary>
+        static void FloorMaps(int size, out Color[] albedo, out Color[] normal)
+        {
+            var height = new float[size * size];
+            albedo = new Color[size * size];
+            const int cells = 8;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = (x + 0.5f) / size, v = (y + 0.5f) / size;
+                float cu = u * cells, cv = v * cells;
+                int ix = Mathf.FloorToInt(cu), iy = Mathf.FloorToInt(cv);
+                float lu = cu - ix - 0.5f, lv = cv - iy - 0.5f;
+                // Larme orientée à ±45° selon la case (damier).
+                float angle = ((ix + iy) & 1) == 0 ? 0.785f : -0.785f;
+                float ca = Mathf.Cos(angle), sa = Mathf.Sin(angle);
+                float a = lu * ca - lv * sa, b = lu * sa + lv * ca;
+                float d = (a * a) / (0.32f * 0.32f) + (b * b) / (0.09f * 0.09f);
+                float bump = d < 1f ? Mathf.Sqrt(1f - d) : 0f;
+                float grain = Fbm(u, v, 8, 31);
+                height[y * size + x] = 0.4f + bump * 0.5f + grain * 0.05f;
+                float shade = 0.75f + 0.25f * grain + bump * 0.25f;
+                float wear = Fbm(u * 2f, v * 2f, 4, 37);
+                shade *= 0.8f + 0.3f * wear;
+                albedo[y * size + x] = new Color(shade, shade, shade, 1f);
+            }
+            normal = NormalFromHeight(height, size, 4f);
+        }
+
+        static Color[] NormalFromHeight(float[] height, int size, float strength)
+        {
+            var normal = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float l = height[y * size + (x + size - 1) % size], r = height[y * size + (x + 1) % size];
+                float d = height[((y + size - 1) % size) * size + x], u = height[((y + 1) % size) * size + x];
+                var n = new Vector3((l - r) * strength, (d - u) * strength, 1f).normalized;
+                normal[y * size + x] = new Color(n.x * 0.5f + 0.5f, n.y * 0.5f + 0.5f, n.z * 0.5f + 0.5f, 1f);
+            }
+            return normal;
+        }
+
+        delegate float Shape(float u, float v);
+
+        /// <summary>Silhouette sombre à bords doux (alpha), dessinée par une fonction de distance signée approximative.</summary>
+        static Color[] Silhouette(int width, int height, Shape shape)
+        {
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                float u = (x + 0.5f) / width * 2f - 1f, v = (y + 0.5f) / height * 2f - 1f;
+                float inside = shape(u, v);
+                pixels[y * width + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(inside));
+            }
+            return pixels;
+        }
+
+        /// <summary>Poisson tourné vers la droite (+u) : corps en fuseau, queue fourchue.</summary>
+        static float FishShape(float u, float v)
+        {
+            float body = 1f - ((u - 0.1f) * (u - 0.1f) / 0.55f + v * v / 0.12f);
+            float tailX = -(u + 0.55f);
+            float tail = tailX > 0f && tailX < 0.4f ? (tailX * 1.3f - Mathf.Abs(v)) * 6f : -1f;
+            return Mathf.Max(body * 6f, tail);
+        }
+
+        /// <summary>Créature géante (raie / léviathan) : grand corps ovale, nageoires, longue queue.</summary>
+        static float LeviathanShape(float u, float v)
+        {
+            float body = 1f - ((u - 0.15f) * (u - 0.15f) / 0.3f + v * v / 0.09f);
+            float fin = 1f - ((u - 0.1f) * (u - 0.1f) / 0.05f + (Mathf.Abs(v) - 0.35f) * (Mathf.Abs(v) - 0.35f) / 0.03f);
+            float tailX = -(u + 0.35f);
+            float tail = tailX > 0f && tailX < 0.65f ? (0.06f * (1f - tailX / 0.65f) - Mathf.Abs(v + 0.08f * Mathf.Sin(tailX * 6f))) * 25f : -1f;
+            return Mathf.Max(Mathf.Max(body * 5f, fin * 4f), tail);
+        }
+
+        static Texture2D Png(string name, Color[] pixels, int width, int height, bool linearGray, bool clamp, bool normalMap = false, int maxSize = 256)
         {
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
             texture.SetPixels(pixels);
@@ -530,13 +815,14 @@ namespace Abysses.EditorTools
 
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-            importer.textureType = TextureImporterType.Default;
+            importer.textureType = normalMap ? TextureImporterType.NormalMap : TextureImporterType.Default;
             importer.sRGBTexture = !linearGray;
-            importer.alphaSource = TextureImporterAlphaSource.FromInput;
-            importer.alphaIsTransparency = !linearGray;
+            importer.alphaSource = normalMap ? TextureImporterAlphaSource.None : TextureImporterAlphaSource.FromInput;
+            importer.alphaIsTransparency = !linearGray && !normalMap;
             importer.wrapMode = clamp ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
             importer.mipmapEnabled = true;
-            importer.maxTextureSize = 256;
+            importer.anisoLevel = normalMap || maxSize > 256 ? 2 : 1;
+            importer.maxTextureSize = maxSize;
             importer.textureCompression = TextureImporterCompression.Compressed;
             importer.SaveAndReimport();
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);

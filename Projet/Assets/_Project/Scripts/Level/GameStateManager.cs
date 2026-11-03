@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -35,6 +36,8 @@ namespace Abysses.Level
         [SerializeField] int[] floorDepths = { 0, 200, 1500, 4000 };
         [Tooltip("Durée minimale d'une descente en ascenseur (s).")]
         [SerializeField, Min(2f)] float descentDuration = 8f;
+        [Tooltip("Délai laissé à un joueur déconnecté pour revenir avant que son module ne soit résolu automatiquement (s).")]
+        [SerializeField, Min(0f)] float reconnectGrace = 20f;
 
         public static GameStateManager Instance { get; private set; }
 
@@ -56,6 +59,13 @@ namespace Abysses.Level
         public readonly NetworkVariable<int> ActiveMask = new NetworkVariable<int>(0);
         /// <summary>Quadrants dont le joueur est dans sa cabine.</summary>
         public readonly NetworkVariable<int> ReadyMask = new NetworkVariable<int>(0);
+        /// <summary>Mode facile (enfants, débutants) : indices plus fréquents, leviers plus tolérants. Choisi à la surface.</summary>
+        public readonly NetworkVariable<bool> EasyMode = new NetworkVariable<bool>(false);
+        /// <summary>Meilleurs temps de l'hôte, format brut <see cref="Leaderboard"/> (affiché dans la langue de chacun).</summary>
+        public readonly NetworkVariable<FixedString512Bytes> Leaderboard = new NetworkVariable<FixedString512Bytes>();
+
+        /// <summary>Changement du mode facile ou du classement, sur tous les clients.</summary>
+        public static event Action SettingsChanged;
 
         public int FloorCount => floorScenes.Length;
         public float DescentDuration => descentDuration;
@@ -80,6 +90,8 @@ namespace Abysses.Level
             Instance = this;
             Phase.OnValueChanged += OnPhaseChanged;
             ReadyMask.OnValueChanged += OnReadyChanged;
+            EasyMode.OnValueChanged += OnEasyChanged;
+            Leaderboard.OnValueChanged += OnLeaderboardChanged;
 
             if (IsServer)
             {
@@ -87,6 +99,7 @@ namespace Abysses.Level
                 NetworkManager.SceneManager.OnUnloadEventCompleted += OnSceneEventCompleted;
                 PuzzleObjective.ServerSolved += OnObjectiveSolved;
                 NetworkPlayer.Despawned += OnPlayerLeft;
+                Leaderboard.Value = new FixedString512Bytes(Core.Leaderboard.LoadRaw());
             }
 
             PhaseChanged?.Invoke(Phase.Value);
@@ -97,6 +110,8 @@ namespace Abysses.Level
         {
             Phase.OnValueChanged -= OnPhaseChanged;
             ReadyMask.OnValueChanged -= OnReadyChanged;
+            EasyMode.OnValueChanged -= OnEasyChanged;
+            Leaderboard.OnValueChanged -= OnLeaderboardChanged;
             if (IsServer)
             {
                 if (NetworkManager != null && NetworkManager.SceneManager != null)
@@ -112,6 +127,8 @@ namespace Abysses.Level
 
         void OnPhaseChanged(GamePhase previous, GamePhase current) => PhaseChanged?.Invoke(current);
         void OnReadyChanged(int previous, int current) => ReadyChanged?.Invoke(current);
+        void OnEasyChanged(bool previous, bool current) => SettingsChanged?.Invoke();
+        void OnLeaderboardChanged(FixedString512Bytes previous, FixedString512Bytes current) => SettingsChanged?.Invoke();
 
         // ---------- Requêtes des clients ----------
 
@@ -135,6 +152,44 @@ namespace Abysses.Level
             StartCoroutine(ReturnToSurface());
         }
 
+        /// <summary>Mode facile, réglable à la surface par n'importe quel joueur (ou le maître du jeu).</summary>
+        [Rpc(SendTo.Server)]
+        public void SetEasyModeRpc(bool easy)
+        {
+            if (Phase.Value == GamePhase.Lobby) EasyMode.Value = easy;
+        }
+
+        // ---------- Pupitre du maître du jeu (hôte ou client « spectateur ») ----------
+
+        bool FromGameMaster(RpcParams rpcParams) => ConnectionManager.IsGameMaster(rpcParams.Receive.SenderClientId);
+
+        /// <summary>Résout un objectif à la place de l'équipe (énigme bloquante, joueur malade…).</summary>
+        [Rpc(SendTo.Server)]
+        public void GmSolveRpc(NetworkBehaviourReference objectiveReference, RpcParams rpcParams = default)
+        {
+            if (!FromGameMaster(rpcParams) || Phase.Value != GamePhase.Playing) return;
+            if (objectiveReference.TryGet(out PuzzleObjective objective)) objective.ServerSolve();
+        }
+
+        /// <summary>Résout tout l'étage courant : l'équipe retourne aux cabines.</summary>
+        [Rpc(SendTo.Server)]
+        public void GmSkipFloorRpc(RpcParams rpcParams = default)
+        {
+            if (!FromGameMaster(rpcParams) || Phase.Value != GamePhase.Playing) return;
+            IReadOnlyList<PuzzleObjective> all = PuzzleObjective.Registered;
+            for (int i = all.Count - 1; i >= 0; i--)
+                if (all[i].Floor == Floor.Value) all[i].ServerSolve();
+        }
+
+        /// <summary>Retour à la surface depuis n'importe quel moment (hors descente en cours).</summary>
+        [Rpc(SendTo.Server)]
+        public void GmRestartRpc(RpcParams rpcParams = default)
+        {
+            if (!FromGameMaster(rpcParams) || Phase.Value == GamePhase.Descending || Phase.Value == GamePhase.Lobby) return;
+            StopAllCoroutines();
+            StartCoroutine(ReturnToSurface());
+        }
+
         /// <summary>Le joueur local signale s'il est dans sa cabine.</summary>
         [Rpc(SendTo.Server)]
         public void SetReadyRpc(int quadrant, bool ready)
@@ -154,6 +209,8 @@ namespace Abysses.Level
             if (Floor.Value >= FloorCount)
             {
                 EndTime.Value = NetworkManager.ServerTime.Time;
+                Leaderboard.Value = new FixedString512Bytes(Core.Leaderboard.Record(
+                    Mathf.RoundToInt((float)(EndTime.Value - StartTime.Value)), CountBits(ActiveMask.Value), EasyMode.Value));
                 Phase.Value = GamePhase.Finished;
             }
             else
@@ -172,6 +229,19 @@ namespace Abysses.Level
         }
 
         void OnPlayerLeft(NetworkPlayer player)
+        {
+            // En pleine énigme, on laisse au casque le temps de se reconnecter (Wi-Fi qui décroche) avant de compenser.
+            if (Phase.Value == GamePhase.Playing && reconnectGrace > 0f) StartCoroutine(CompensateAfterGrace());
+            else CompensateMissingPlayers();
+        }
+
+        IEnumerator CompensateAfterGrace()
+        {
+            yield return new WaitForSecondsRealtime(reconnectGrace);
+            CompensateMissingPlayers();
+        }
+
+        void CompensateMissingPlayers()
         {
             // Un joueur part en cours de partie : son module ne doit pas bloquer l'équipe.
             int occupied = NetworkPlayer.OccupiedQuadrantMask();
@@ -232,6 +302,13 @@ namespace Abysses.Level
             PuzzleObjective.ServerAutoSolveInactive(floor, ActiveMask.Value);
             Phase.Value = GamePhase.Playing;
             OnObjectiveSolved(null);
+        }
+
+        static int CountBits(int value)
+        {
+            int count = 0;
+            for (; value != 0; value &= value - 1) count++;
+            return count;
         }
 
         void OnSceneEventCompleted(string sceneName, LoadSceneMode mode, List<ulong> completed, List<ulong> timedOut)

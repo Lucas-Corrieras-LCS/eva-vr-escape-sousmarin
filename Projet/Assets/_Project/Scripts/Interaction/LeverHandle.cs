@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using Abysses.Player;
 
 namespace Abysses.Interaction
 {
@@ -77,6 +78,8 @@ namespace Abysses.Interaction
                 if (!pulledThisGrab && Mathf.Abs(angle - downAngle) <= pullTolerance)
                 {
                     pulledThisGrab = true;
+                    // Butée basse : choc franc dans la main.
+                    LocalRig.Pulse(0.6f, 0.08f);
                     Pulled?.Invoke();
                 }
             }

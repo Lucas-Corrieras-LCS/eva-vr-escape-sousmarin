@@ -49,7 +49,9 @@ namespace Abysses.EditorTools
         {
             new Color(1f, 0.38f, 0.05f), new Color(0.1f, 0.75f, 1f), new Color(0.25f, 1f, 0.3f), new Color(1f, 0.15f, 0.65f),
         };
+        static readonly string[] QuadrantNamesEn = { "ORANGE", "CYAN", "GREEN", "MAGENTA" };
         static readonly string[] SymbolNames = { "ROUGE", "VERT", "BLEU", "JAUNE", "BLANC", "VIOLET" };
+        static readonly string[] SymbolNamesEn = { "RED", "GREEN", "BLUE", "YELLOW", "WHITE", "PURPLE" };
         static readonly Color[] SymbolColors =
         {
             new Color(0.9f, 0.12f, 0.08f), new Color(0.15f, 0.85f, 0.25f), new Color(0.15f, 0.4f, 1f),
@@ -131,6 +133,8 @@ namespace Abysses.EditorTools
         {
             public Material Hull, Panel, Floor, Glass, EmitCyan, EmitWarm, EmitRed, EmitPurple, Visor, SlotEmpty, StatusIdle, StatusOk, StatusError, Warning, Crate;
             public Material Key, ShaftRed, SunShaft, PlanktonHabitat, PlanktonLabo, PlanktonCoeur;
+            /// <summary>Néon éteint (panne), lampe de secours ambre, halo de survol, tuyauterie, eau, créatures des hublots.</summary>
+            public Material NeonOff, EmitAmber, Highlight, Pipe, Water, Fish, Leviathan, GlowBio, GlowAngler, Snow, Steam, Drop;
             public Material[] Avatar = new Material[4];
             /// <summary>Couleur seule (fusibles, anneaux).</summary>
             public Material[] Symbols = new Material[6];
@@ -165,7 +169,27 @@ namespace Abysses.EditorTools
                 PlanktonHabitat = Additive("M_Plankton_Habitat", "Universal Render Pipeline/Particles/Unlit", new Color(0.6f, 0.95f, 1f, 0.5f), fx.Dot),
                 PlanktonLabo = Additive("M_Plankton_Labo", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 0.6f, 0.35f, 0.35f), fx.Dot),
                 PlanktonCoeur = Additive("M_Plankton_Coeur", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 1f, 1f, 0.8f), fx.Dot),
+                NeonOff = Lit("M_Neon_Off", new Color(0.12f, 0.14f, 0.15f), 0.1f, 0.7f),
+                EmitAmber = Lit("M_Emit_Amber", new Color(0.25f, 0.12f, 0.02f), 0f, 0.5f, new Color(1f, 0.5f, 0.08f) * 2.2f),
+                Highlight = Additive("M_Highlight", "Universal Render Pipeline/Unlit", new Color(0.35f, 0.9f, 1f, 0.28f), null),
+                Pipe = Lit("M_Pipe", new Color(0.3f, 0.32f, 0.33f), 0.6f, 0.55f),
+                Water = Transparent("M_Water", new Color(0.12f, 0.3f, 0.35f, 0.55f), false),
+                Fish = ParticleAlpha("M_Fish", new Color(0.03f, 0.08f, 0.1f, 0.9f), fx.Fish),
+                Leviathan = Transparent("M_Leviathan", new Color(0.01f, 0.02f, 0.03f, 0.85f), true),
+                GlowBio = Additive("M_Glow_Bio", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 1f, 1f, 0.9f), fx.Dot),
+                GlowAngler = Additive("M_Glow_Angler", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 0.8f, 0.4f, 0.9f), fx.Dot),
+                Snow = Additive("M_MarineSnow", "Universal Render Pipeline/Particles/Unlit", new Color(0.85f, 0.95f, 1f, 0.45f), fx.Dot),
+                Steam = ParticleAlpha("M_Steam", new Color(0.85f, 0.85f, 0.85f, 0.35f), fx.Dot),
+                Drop = Additive("M_Drop", "Universal Render Pipeline/Particles/Unlit", new Color(0.7f, 0.9f, 1f, 0.8f), fx.Dot),
             };
+            // Coque, cloisons et plancher texturés (tôles rivetées, tôle larmée) : UV en coordonnées monde, voir ApplyWorldUVs.
+            Textured(m.Hull, fx.HullAlbedo, fx.HullNormal, 0.8f);
+            Textured(m.Panel, fx.HullAlbedo, fx.HullNormal, 0.6f);
+            Textured(m.Floor, fx.FloorAlbedo, fx.FloorNormal, 1f);
+            m.Leviathan.SetTexture("_BaseMap", fx.Leviathan);
+            // Vue depuis l'intérieur : la silhouette doit rester visible quel que soit le côté.
+            m.Leviathan.SetFloat("_Cull", (float)CullMode.Off);
+            EditorUtility.SetDirty(m.Leviathan);
             for (int i = 0; i < 4; i++)
                 m.Avatar[i] = Lit("M_Avatar_Q" + i, QuadrantColors[i] * 0.6f, 0.3f, 0.6f, QuadrantColors[i]);
             for (int i = 0; i < 6; i++)
@@ -254,6 +278,32 @@ namespace Abysses.EditorTools
             material.SetFloat("_Cutoff", 0.5f);
             material.EnableKeyword("_ALPHATEST_ON");
             material.renderQueue = (int)RenderQueue.AlphaTest;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        static void Textured(Material material, Texture2D albedo, Texture2D normal, float bumpScale)
+        {
+            material.SetTexture("_BaseMap", albedo);
+            material.SetTexture("_BumpMap", normal);
+            material.SetFloat("_BumpScale", bumpScale);
+            material.EnableKeyword("_NORMALMAP");
+            EditorUtility.SetDirty(material);
+        }
+
+        /// <summary>Particules en alpha classique (silhouettes sombres, vapeur) : visibles sur le fond du brouillard.</summary>
+        static Material ParticleAlpha(string name, Color color, Texture2D texture)
+        {
+            Material material = GetOrCreate(name, "Universal Render Pipeline/Particles/Unlit");
+            material.SetColor("_BaseColor", color);
+            material.SetTexture("_BaseMap", texture);
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue = (int)RenderQueue.Transparent;
             EditorUtility.SetDirty(material);
             return material;
         }
@@ -552,7 +602,13 @@ namespace Abysses.EditorTools
                     neighborOpenings.Add(new Opening(mod.Center.x + mod.Sx * 2f - r.xMin, 0.5f, 0.9f, 1.4f));
             }
             Wall(m, t, "Wall_Neighbor", new Vector3(r.xMin, 0f, sharedZ), new Vector3(r.xMax, 0f, sharedZ), neighborOpenings, true, open);
-            Wall(m, t, "Wall_Outer", new Vector3(r.xMin, 0f, outerZ), new Vector3(r.xMax, 0f, outerZ), null, false, false);
+            // Mur extérieur : deux hublots sur l'océan (créatures, neige marine, bioluminescence derrière).
+            var oceanWindows = new List<Opening>();
+            foreach (float x in OceanWindowX)
+                oceanWindows.Add(new Opening(mod.Center.x + mod.Sx * x - r.xMin, OceanWindowWidth, 1.0f, 2.0f));
+            Wall(m, t, "Wall_Outer", new Vector3(r.xMin, 0f, outerZ), new Vector3(r.xMax, 0f, outerZ), oceanWindows, true, false);
+
+            BuildModuleKit(m, t, mod, r);
 
             // Bandeaux lumineux au plafond + deux lumières ponctuelles.
             foreach (float x in new[] { -4f, 4f })
@@ -571,6 +627,106 @@ namespace Abysses.EditorTools
                 light.shadows = LightShadows.Soft;
                 light.shadowRadius = 0.2f;
             }
+        }
+
+        /// <summary>Position (x local du module) et largeur des hublots du mur extérieur, entre deux nervures.</summary>
+        static readonly float[] OceanWindowX = { -5f, 5f };
+        const float OceanWindowWidth = 1.4f;
+
+        /// <summary>
+        /// Habillage modulaire de la coque (remplace l'aspect « boîte » du blockout) : nervures verticales sur les murs
+        /// pleins, poutres sous le plafond, deux conduites avec colliers le long du mur extérieur.
+        /// Positions choisies entre les éléments d'énigme fixés aux murs (digicode, fusible, écrans, hublots).
+        /// </summary>
+        static void BuildModuleKit(Mats m, Transform t, Module mod, Rect r)
+        {
+            Transform kit = new GameObject("Kit").transform;
+            kit.SetParent(t, false);
+            float outerFace = mod.Vz < 0 ? r.yMin : r.yMax;
+            float backFace = mod.Sx > 0 ? r.xMin : r.xMax;
+            const float depth = 0.08f;
+
+            // Nervures du mur extérieur (tous les 2,5 m) et du mur du fond.
+            foreach (float x in new[] { -6.25f, -3.75f, -1.25f, 1.25f, 3.75f, 6.25f })
+            {
+                Vector3 p = mod.P(x, WallHeight / 2f, 0f);
+                p.z = outerFace - mod.Vz * depth / 2f;
+                Static(Prim(PrimitiveType.Cube, "Rib", kit, p, Quaternion.identity, new Vector3(0.16f, WallHeight, depth), m.Panel, false));
+            }
+            foreach (float z in new[] { -3.1f, -1.25f, 1.25f, 3.1f })
+            {
+                var p = new Vector3(backFace + mod.Sx * depth / 2f, WallHeight / 2f, mod.Center.z + z);
+                Static(Prim(PrimitiveType.Cube, "Rib", kit, p, Quaternion.identity, new Vector3(depth, WallHeight, 0.16f), m.Panel, false));
+            }
+
+            // Poutres sous le plafond, entre les bandeaux lumineux.
+            foreach (float x in new[] { -6.5f, -1.5f, 1.5f, 6.5f })
+                Static(Prim(PrimitiveType.Cube, "Beam", kit, mod.P(x, WallHeight - 0.08f, 0f), Quaternion.identity, new Vector3(0.18f, 0.14f, r.height), m.Panel, false));
+
+            // Conduites le long du mur extérieur, au-dessus des hublots, avec colliers sur les nervures.
+            float length = r.width - 0.1f;
+            for (int i = 0; i < 2; i++)
+            {
+                float y = 2.62f + i * 0.17f;
+                float radius = i == 0 ? 0.075f : 0.05f;
+                var p = new Vector3(r.center.x, y, outerFace - mod.Vz * (0.17f + i * 0.04f));
+                Static(Prim(PrimitiveType.Cylinder, "Pipe", kit, p, Quaternion.Euler(0f, 0f, 90f), new Vector3(radius * 2f, length / 2f, radius * 2f), m.Pipe, false));
+            }
+            foreach (float x in new[] { -6.25f, -3.75f, -1.25f, 1.25f, 3.75f, 6.25f })
+            {
+                Vector3 p = mod.P(x, 2.7f, 0f);
+                p.z = outerFace - mod.Vz * 0.12f;
+                Static(Prim(PrimitiveType.Cube, "PipeClamp", kit, p, Quaternion.identity, new Vector3(0.06f, 0.36f, 0.12f), m.Hull, false));
+            }
+            // Plinthe technique au pied du mur extérieur.
+            var plinth = new Vector3(r.center.x, 0.06f, outerFace - mod.Vz * 0.05f);
+            Static(Prim(PrimitiveType.Cube, "Plinth", kit, plinth, Quaternion.identity, new Vector3(r.width, 0.12f, 0.1f), m.Panel, false));
+        }
+
+        /// <summary>
+        /// Les primitives Unity ont des UV 0..1 par face, quelle que soit leur taille : une texture de tôle serait étirée.
+        /// On remplace le maillage des cubes texturés par une copie aux UV projetées en coordonnées monde
+        /// (motif de 2 m pour la coque, 1 m pour le plancher), plus des UV de lightmap générées.
+        /// Les maillages sont enregistrés dans la scène.
+        /// </summary>
+        static void ApplyWorldUVs(Transform root, Mats m)
+        {
+            int count = 0;
+            foreach (MeshFilter filter in root.GetComponentsInChildren<MeshFilter>(true))
+            {
+                Mesh source = filter.sharedMesh;
+                if (source == null || source.name != "Cube" || source.vertexCount != 24) continue;
+                var renderer = filter.GetComponent<MeshRenderer>();
+                Material material = renderer != null ? renderer.sharedMaterial : null;
+                if (material != m.Hull && material != m.Panel && material != m.Floor) continue;
+                filter.sharedMesh = WorldUVCube(filter.transform, source, material == m.Floor ? 1f : 2f);
+                count++;
+            }
+            Debug.Log($"[Abysses] UV monde appliquées à {count} éléments de coque.");
+        }
+
+        static Mesh WorldUVCube(Transform t, Mesh cube, float tile)
+        {
+            Vector3[] vertices = cube.vertices;
+            Vector3[] normals = cube.normals;
+            var uvs = new Vector2[vertices.Length];
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Vector3 w = t.TransformPoint(vertices[i]);
+                Vector3 n = t.TransformDirection(normals[i]);
+                float ax = Mathf.Abs(n.x), ay = Mathf.Abs(n.y), az = Mathf.Abs(n.z);
+                Vector2 uv = ay >= ax && ay >= az ? new Vector2(w.x, w.z) : ax >= az ? new Vector2(w.z, w.y) : new Vector2(w.x, w.y);
+                uvs[i] = uv / tile;
+            }
+            var mesh = new Mesh { name = "Hull_" + t.name };
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uvs;
+            mesh.triangles = cube.triangles;
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+            Unwrapping.GenerateSecondaryUVSet(mesh);
+            return mesh;
         }
 
         static void Wall(Mats m, Transform parent, string name, Vector3 a, Vector3 b, List<Opening> openings, bool glass, bool fullGlass)
@@ -644,6 +800,8 @@ namespace Abysses.EditorTools
             foreach (Module mod in modules)
                 Plankton(root, mod, m.PlanktonHabitat, new Color(0.55f, 0.95f, 1f), new Color(0.85f, 1f, 0.95f));
             BuildCaustics(root);
+            OceanView(m, root, modules, 1);
+            StationLife(m, root, modules, 1);
 
             var keypads = new CodeKeypad[4];
             var fuses = new NetworkTransform[4];
@@ -659,7 +817,7 @@ namespace Abysses.EditorTools
             {
                 Module mod = modules[q];
                 BuildCodeDisplay(m, root, mod.P(-7.16f, 1.6f, 0f), mod.Facing(-1f, 0f), keypads[mod.Partner],
-                    "CODE DU MODULE " + QuadrantNames[mod.Partner], true, false, "CodeDisplay_For_Q" + mod.Partner);
+                    "CODE DU MODULE " + QuadrantNames[mod.Partner], true, false, "CodeDisplay_For_Q" + mod.Partner, "CODE FOR MODULE " + QuadrantNamesEn[mod.Partner]);
                 prerequisites.Add(BuildFuseSocket(m, root, mod));
                 fuses[mod.Partner] = BuildFuse(m, root, mod, mod.Partner);
                 levers[q] = BuildLever(m, root, mod.Q, mod.P(5.4f, 0f, 2.6f), mod.Facing(0f, -1f));
@@ -677,10 +835,14 @@ namespace Abysses.EditorTools
                 BuildFallback(root, mod, monitor, fuses[q], fuseTarget);
             }
 
-            BuildSyncLevers(root, 1, "Remise sous tension", levers, prerequisites.ToArray());
+            PuzzleObjective powerObjective = BuildSyncLevers(root, 1, "Remise sous tension", "Power restore", "levers", levers, prerequisites.ToArray());
             BuildHatch(m, root, modules[0], PartnerHatchSpot(modules[0]), modules[1], PartnerHatchSpot(modules[1]));
             BuildHatch(m, root, modules[2], PartnerHatchSpot(modules[2]), modules[3], PartnerHatchSpot(modules[3]));
+            BuildKnockWall(m, root, modules[0], modules[1]);
+            BuildKnockWall(m, root, modules[2], modules[3]);
+            BuildPowerOutage(m, root, modules, powerObjective);
 
+            ApplyWorldUVs(root, m);
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[0]);
             SaveScene(scene, FloorScenes[0]);
@@ -700,6 +862,8 @@ namespace Abysses.EditorTools
                 // Gyrophare de secours : le faisceau tournant balaie le brouillard (rendu additif, aucune lumière temps réel).
                 Beacon(m, root, mod.P(-7.05f, 2.75f, 2.2f));
             }
+            OceanView(m, root, modules, 2);
+            StationLife(m, root, modules, 2);
 
             var keypads = new CodeKeypad[4];
             var gauges = new PressureGauge[4];
@@ -717,7 +881,8 @@ namespace Abysses.EditorTools
                 Module mod = modules[q];
                 // Code du partenaire écrit à l'encre UV sur le mur du fond : il faut la lampe pour le lire.
                 BuildCodeDisplay(m, root, mod.P(-7.16f, 1.6f, -2f), mod.Facing(-1f, 0f), keypads[mod.Partner],
-                    "CODE DU MODULE " + QuadrantNames[mod.Partner] + "  (encre UV)", true, true, "UVCode_For_Q" + mod.Partner);
+                    "CODE DU MODULE " + QuadrantNames[mod.Partner] + "  (encre UV)", true, true, "UVCode_For_Q" + mod.Partner,
+                    "CODE FOR MODULE " + QuadrantNamesEn[mod.Partner] + "  (UV ink)");
                 BuildFallback(root, mod, BuildFallbackMonitor(m, root, mod, keypads[q]), null, null);
             }
 
@@ -747,7 +912,12 @@ namespace Abysses.EditorTools
             BuildHatch(m, root, modules[2], PartnerHatchSpot(modules[2]), modules[3], PartnerHatchSpot(modules[3]));
             BuildHatch(m, root, modules[0], NeighborHatchSpot(modules[0]), modules[2], NeighborHatchSpot(modules[2]));
             BuildHatch(m, root, modules[1], NeighborHatchSpot(modules[1]), modules[3], NeighborHatchSpot(modules[3]));
+            BuildKnockWall(m, root, modules[0], modules[1]);
+            BuildKnockWall(m, root, modules[2], modules[3]);
+            for (int q = 0; q < 4; q++)
+                BuildLeaks(m, root, modules[q], gauges[q].GetComponent<PuzzleObjective>());
 
+            ApplyWorldUVs(root, m);
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[1]);
             SaveScene(scene, FloorScenes[1]);
@@ -765,6 +935,8 @@ namespace Abysses.EditorTools
             // Bioluminescence : plancton cyan / magenta.
             foreach (Module mod in modules)
                 Plankton(root, mod, m.PlanktonCoeur, new Color(0.2f, 0.9f, 1f), new Color(1f, 0.25f, 0.85f));
+            OceanView(m, root, modules, 3);
+            StationLife(m, root, modules, 3);
 
             // Fissures lumineuses dans les allées entre les modules (bioluminescence).
             Static(Prim(PrimitiveType.Cube, "Rift_X", root, new Vector3(center.x, 0.01f, center.z), Quaternion.identity, new Vector3(PlayArea.ArenaWidth, 0.02f, 0.12f), m.EmitPurple, false));
@@ -796,7 +968,8 @@ namespace Abysses.EditorTools
                 GameObject button = Prim(PrimitiveType.Cube, "Button", console, position + Vector3.up * 1.12f, facingReactor, new Vector3(0.18f, 0.18f, 0.06f), m.Avatar[q], true);
                 button.AddComponent<XRPokeFilter>();
                 consoles[q] = (q, button.AddComponent<XRSimpleInteractable>());
-                Label(console, "APPUIE QUAND TA COULEUR S'ALLUME", position + Vector3.up * 1.32f - toCenter * 0.02f, 0.45f, facingReactor);
+                Halo(m, button, button);
+                Label(console, "APPUIE QUAND TA COULEUR S'ALLUME", position + Vector3.up * 1.32f - toCenter * 0.02f, 0.45f, facingReactor, "PRESS WHEN YOUR COLOUR LIGHTS UP");
                 levers[q] = BuildLever(m, console, q, position + inward * 0.55f, Quaternion.LookRotation(-toCenter));
             }
 
@@ -804,7 +977,7 @@ namespace Abysses.EditorTools
             reactorGo.transform.SetParent(root, false);
             reactorGo.transform.position = center + Vector3.up * 1.5f;
             reactorGo.AddComponent<NetworkObject>();
-            PuzzleObjective sequenceObjective = Objective(reactorGo, 3, -1, "Séquence du réacteur");
+            PuzzleObjective sequenceObjective = Objective(reactorGo, 3, -1, "Séquence du réacteur", "Reactor sequence", "reactor");
             var sequence = reactorGo.AddComponent<ReactorSequence>();
             // Le cœur est au centre de la piste : son à moitié spatialisé pour que tous l'entendent bien.
             AudioSource tone = Sfx(reactorGo, fx.ReactorTone, 0.9f, 0.4f);
@@ -827,7 +1000,7 @@ namespace Abysses.EditorTools
             rso.FindProperty("failSound").objectReferenceValue = reactorFail;
             rso.ApplyModifiedPropertiesWithoutUndo();
 
-            BuildSyncLevers(root, 3, "Remontée d'urgence", levers, new[] { sequenceObjective });
+            BuildSyncLevers(root, 3, "Remontée d'urgence", "Emergency ascent", "ascent", levers, new[] { sequenceObjective });
 
             // Fin : faisceau de lumière venu de la surface + bulles dans les colonnes d'eau.
             var beamGo = new GameObject("Sunbeam");
@@ -867,6 +1040,7 @@ namespace Abysses.EditorTools
             fso.FindProperty("sunShaft").objectReferenceValue = shaftRenderer;
             fso.ApplyModifiedPropertiesWithoutUndo();
 
+            ApplyWorldUVs(root, m);
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[2]);
             SaveScene(scene, FloorScenes[2]);
@@ -881,7 +1055,7 @@ namespace Abysses.EditorTools
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(mod.P(2.5f, 1.3f, mod.Vz * 3.66f), mod.Facing(0f, mod.Vz));
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, floor, mod.Q, "Digicode " + QuadrantNames[mod.Q]);
+            PuzzleObjective objective = Objective(root, floor, mod.Q, "Digicode " + QuadrantNames[mod.Q], "Keypad " + QuadrantNamesEn[mod.Q], floor == 1 ? "keypad" : "keypadUV");
             var keypad = root.AddComponent<CodeKeypad>();
             Transform t = root.transform;
 
@@ -904,11 +1078,12 @@ namespace Abysses.EditorTools
                 GameObject glyph = Prim(PrimitiveType.Quad, "Glyph" + s, t, new Vector3(x, y, -0.0315f), Quaternion.identity, new Vector3(0.075f, 0.075f, 1f), m.Glyphs[s], false);
                 button.AddComponent<XRSimpleInteractable>();
                 button.AddComponent<XRPokeFilter>();
+                Halo(m, button, button);
                 var key = button.AddComponent<CodeKeypadButton>();
                 SetFields(key, ("keypad", keypad), ("symbol", s), ("symbolRenderer", glyph.GetComponent<Renderer>()));
             }
 
-            Label(t, "DIGICODE", new Vector3(0f, 0.36f, -0.01f), 0.6f);
+            Label(t, "DIGICODE", new Vector3(0f, 0.36f, -0.01f), 0.6f, null, "KEYPAD");
 
             var so = new SerializedObject(keypad);
             so.FindProperty("objective").objectReferenceValue = objective;
@@ -926,7 +1101,7 @@ namespace Abysses.EditorTools
             return keypad;
         }
 
-        static GameObject BuildCodeDisplay(Mats m, Transform parent, Vector3 position, Quaternion rotation, CodeKeypad keypad, string title, bool large, bool uvInk, string name)
+        static GameObject BuildCodeDisplay(Mats m, Transform parent, Vector3 position, Quaternion rotation, CodeKeypad keypad, string title, bool large, bool uvInk, string name, string englishTitle = null)
         {
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
@@ -943,7 +1118,7 @@ namespace Abysses.EditorTools
                 Prim(PrimitiveType.Cube, "SymbolBack" + i, t, slotPosition, Quaternion.identity, new Vector3(size, size, 0.01f), m.SlotEmpty, false);
                 slots[i] = Prim(PrimitiveType.Quad, "Symbol" + i, t, slotPosition + new Vector3(0f, 0f, -0.0065f), Quaternion.identity, new Vector3(size * 0.88f, size * 0.88f, 1f), m.SlotEmpty, false).GetComponent<Renderer>();
             }
-            Label(t, title, new Vector3(0f, size / 2f + 0.06f, -0.01f), large ? 0.9f : 0.5f);
+            Label(t, title, new Vector3(0f, size / 2f + 0.06f, -0.01f), large ? 0.9f : 0.5f, null, englishTitle);
 
             var display = root.AddComponent<CodeDisplay>();
             var so = new SerializedObject(display);
@@ -965,7 +1140,8 @@ namespace Abysses.EditorTools
         static GameObject BuildFallbackMonitor(Mats m, Transform parent, Module mod, CodeKeypad ownKeypad)
         {
             GameObject monitor = BuildCodeDisplay(m, parent, mod.P(0.6f, 1.6f, mod.Vz * 3.66f), mod.Facing(0f, mod.Vz), ownKeypad,
-                "SURVEILLANCE — MODULE " + QuadrantNames[mod.Partner] + " VIDE", false, false, "FallbackMonitor_Q" + mod.Q);
+                "SURVEILLANCE — MODULE " + QuadrantNames[mod.Partner] + " VIDE", false, false, "FallbackMonitor_Q" + mod.Q,
+                "MONITOR — MODULE " + QuadrantNamesEn[mod.Partner] + " EMPTY");
             monitor.SetActive(false);
             return monitor;
         }
@@ -991,13 +1167,13 @@ namespace Abysses.EditorTools
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(mod.P(-2.5f, 1.2f, mod.Vz * 3.66f), mod.Facing(0f, mod.Vz));
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, 1, mod.Q, "Fusible " + QuadrantNames[mod.Q]);
+            PuzzleObjective objective = Objective(root, 1, mod.Q, "Fusible " + QuadrantNames[mod.Q], "Fuse " + QuadrantNamesEn[mod.Q], "fuse");
             var socketBehaviour = root.AddComponent<FuseSocket>();
             Transform t = root.transform;
 
             Prim(PrimitiveType.Cube, "Panel", t, new Vector3(0f, 0f, 0.02f), Quaternion.identity, new Vector3(0.4f, 0.5f, 0.04f), m.Panel, false);
             Prim(PrimitiveType.Cylinder, "ColorRing", t, new Vector3(0f, 0f, -0.005f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.18f, 0.005f, 0.18f), m.Symbols[mod.Q], false);
-            Label(t, "FUSIBLE " + SymbolNames[mod.Q], new Vector3(0f, 0.3f, -0.01f), 0.55f);
+            Label(t, "FUSIBLE " + SymbolNames[mod.Q], new Vector3(0f, 0.3f, -0.01f), 0.55f, null, SymbolNamesEn[mod.Q] + " FUSE");
 
             var socketGo = new GameObject("Socket");
             socketGo.transform.SetParent(t, false);
@@ -1028,6 +1204,7 @@ namespace Abysses.EditorTools
             Static(Prim(PrimitiveType.Cube, "Shelf_Q" + mod.Q, parent, mod.P(-5.5f, 0.85f, z), Quaternion.identity, new Vector3(1.0f, 0.05f, 0.4f), m.Panel, true));
             GameObject fuse = Prim(PrimitiveType.Cylinder, "Fuse_" + SymbolNames[fuseId], parent, mod.P(-5.5f, 0.97f, z), Quaternion.identity, new Vector3(0.06f, 0.08f, 0.06f), m.Symbols[fuseId], true);
             NetworkTransform networkTransform = MakeNetworkGrabbable(fuse, 0.3f);
+            Halo(m, fuse, fuse);
             SetFields(fuse.AddComponent<FuseItem>(), ("fuseId", fuseId));
             return networkTransform;
         }
@@ -1044,6 +1221,8 @@ namespace Abysses.EditorTools
             networkTransform.SyncScaleX = networkTransform.SyncScaleY = networkTransform.SyncScaleZ = false;
             networkTransform.UseQuaternionCompression = true;
             go.AddComponent<NetworkGrabbable>();
+            // Tombé derrière un mur ou hors zone : revient tout seul (personne ne sort de sa zone pour le ramasser).
+            SetFields(go.AddComponent<LostItemReturn>(), ("returnSound", Sfx(go, fx.Bubbles, 0.7f)));
             return networkTransform;
         }
 
@@ -1055,7 +1234,7 @@ namespace Abysses.EditorTools
             lamp.transform.SetPositionAndRotation(position, Quaternion.identity);
             var collider = lamp.AddComponent<BoxCollider>();
             collider.size = new Vector3(0.07f, 0.07f, 0.28f);
-            Prim(PrimitiveType.Cylinder, "Body", lamp.transform, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.045f, 0.11f, 0.045f), m.Hull, false);
+            GameObject lampBody = Prim(PrimitiveType.Cylinder, "Body", lamp.transform, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.045f, 0.11f, 0.045f), m.Hull, false);
             Prim(PrimitiveType.Cylinder, "Head", lamp.transform, new Vector3(0f, 0f, 0.12f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.07f, 0.03f, 0.07f), m.Panel, false);
             Prim(PrimitiveType.Cylinder, "Lens", lamp.transform, new Vector3(0f, 0f, 0.151f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.06f, 0.003f, 0.06f), m.EmitPurple, false);
 
@@ -1071,6 +1250,7 @@ namespace Abysses.EditorTools
             beam.shadows = LightShadows.None;
 
             MakeNetworkGrabbable(lamp, 0.5f);
+            Halo(m, lamp, lampBody, 1.35f);
             SetFields(lamp.AddComponent<UVLamp>(), ("beam", beam));
         }
 
@@ -1080,7 +1260,7 @@ namespace Abysses.EditorTools
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(mod.P(-3f, 1.5f, mod.Vz * 3.66f), mod.Facing(0f, mod.Vz));
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, floor, mod.Q, "Manomètre " + QuadrantNames[mod.Q]);
+            PuzzleObjective objective = Objective(root, floor, mod.Q, "Manomètre " + QuadrantNames[mod.Q], "Gauge " + QuadrantNamesEn[mod.Q], "gauge");
             var gauge = root.AddComponent<PressureGauge>();
             Transform t = root.transform;
 
@@ -1099,8 +1279,8 @@ namespace Abysses.EditorTools
             Prim(PrimitiveType.Sphere, "Hub", t, new Vector3(0f, 0f, -0.016f), Quaternion.identity, Vector3.one * 0.035f, m.Hull, false);
 
             Renderer status = Prim(PrimitiveType.Sphere, "Status", t, new Vector3(0.3f, 0.2f, -0.01f), Quaternion.identity, Vector3.one * 0.05f, m.StatusIdle, false).GetComponent<Renderer>();
-            Label(t, "MANOMÈTRE " + QuadrantNames[mod.Q], new Vector3(0f, 0.34f, -0.01f), 0.6f);
-            Label(t, "Une autre équipe contrôle ta pression", new Vector3(0f, -0.32f, -0.01f), 0.4f);
+            Label(t, "MANOMÈTRE " + QuadrantNames[mod.Q], new Vector3(0f, 0.34f, -0.01f), 0.6f, null, "GAUGE " + QuadrantNamesEn[mod.Q]);
+            Label(t, "Un autre plongeur contrôle ta pression", new Vector3(0f, -0.32f, -0.01f), 0.4f, null, "Another diver controls your pressure");
 
             SetFields(gauge, ("objective", objective), ("needle", needlePivot), ("targetMarker", targetPivot), ("statusLight", status),
                 ("idleMaterial", m.StatusIdle), ("inBandMaterial", m.EmitCyan), ("solvedMaterial", m.StatusOk));
@@ -1118,7 +1298,7 @@ namespace Abysses.EditorTools
             root.transform.SetPositionAndRotation(mod.P(5.4f, 1.25f, 2.6f), mod.Facing(0f, -1f) * Quaternion.Euler(-35f, 0f, 0f));
             var wheel = new GameObject("Wheel").transform;
             wheel.SetParent(root.transform, false);
-            Prim(PrimitiveType.Cylinder, "Rim", wheel, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.4f, 0.015f, 0.4f), m.EmitRed, false);
+            GameObject rim = Prim(PrimitiveType.Cylinder, "Rim", wheel, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.4f, 0.015f, 0.4f), m.EmitRed, false);
             Prim(PrimitiveType.Cube, "SpokeA", wheel, new Vector3(0f, 0f, 0.02f), Quaternion.identity, new Vector3(0.38f, 0.035f, 0.03f), m.Hull, false);
             Prim(PrimitiveType.Cube, "SpokeB", wheel, new Vector3(0f, 0f, 0.02f), Quaternion.identity, new Vector3(0.035f, 0.38f, 0.03f), m.Hull, false);
             Prim(PrimitiveType.Sphere, "Handle", wheel, new Vector3(0.17f, 0f, 0.04f), Quaternion.identity, Vector3.one * 0.06f, m.Avatar[mod.Q], false);
@@ -1126,9 +1306,10 @@ namespace Abysses.EditorTools
             var collider = root.AddComponent<SphereCollider>();
             collider.radius = 0.22f;
             root.AddComponent<XRSimpleInteractable>();
+            Halo(m, root, rim, 1.12f);
             var valve = root.AddComponent<ValveWheel>();
             SetFields(valve, ("wheel", wheel));
-            Label(parent, "VANNE " + QuadrantNames[mod.Q], mod.P(5.4f, 1.6f, 2.6f), 0.55f, mod.Facing(0f, 1f));
+            Label(parent, "VANNE " + QuadrantNames[mod.Q], mod.P(5.4f, 1.6f, 2.6f), 0.55f, mod.Facing(0f, 1f), "VALVE " + QuadrantNamesEn[mod.Q]);
             return valve;
         }
 
@@ -1148,17 +1329,18 @@ namespace Abysses.EditorTools
             Prim(PrimitiveType.Cylinder, "Arm", pivot, new Vector3(0f, 0.22f, 0f), Quaternion.identity, new Vector3(0.04f, 0.22f, 0.04f), m.Hull, false);
             GameObject knob = Prim(PrimitiveType.Sphere, "Knob", pivot, new Vector3(0f, 0.45f, 0f), Quaternion.identity, Vector3.one * 0.1f, m.EmitRed, true);
             knob.AddComponent<XRSimpleInteractable>();
+            Halo(m, knob, knob);
             var lever = knob.AddComponent<LeverHandle>();
             SetFields(lever, ("pivot", pivot));
             return lever;
         }
 
-        static void BuildSyncLevers(Transform parent, int floor, string label, LeverHandle[] levers, PuzzleObjective[] prerequisites)
+        static PuzzleObjective BuildSyncLevers(Transform parent, int floor, string label, string english, string hintKey, LeverHandle[] levers, PuzzleObjective[] prerequisites)
         {
             var root = new GameObject("SyncLevers");
             root.transform.SetParent(parent, false);
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, floor, -1, label);
+            PuzzleObjective objective = Objective(root, floor, -1, label, english, hintKey);
             var group = root.AddComponent<SyncLeverGroup>();
             AudioSource fail = Sfx(root, fx.LeverFail, 0.9f, 0f);
             var so = new SerializedObject(group);
@@ -1174,6 +1356,7 @@ namespace Abysses.EditorTools
                 entry.FindPropertyRelative("lever").objectReferenceValue = levers[q];
             }
             so.ApplyModifiedPropertiesWithoutUndo();
+            return objective;
         }
 
         // ---------- Sas à objets
@@ -1245,7 +1428,8 @@ namespace Abysses.EditorTools
             GameObject button = Prim(PrimitiveType.Cube, "SendButton_Q" + q, parent, spot.Button, spot.ButtonFacing, new Vector3(0.12f, 0.12f, 0.06f), m.EmitRed, true);
             var interactable = button.AddComponent<XRSimpleInteractable>();
             button.AddComponent<XRPokeFilter>();
-            Label(parent, "ENVOYER", spot.Label, 0.5f, spot.ButtonFacing);
+            Halo(m, button, button);
+            Label(parent, "ENVOYER", spot.Label, 0.5f, spot.ButtonFacing, "SEND");
 
             endpoint.FindPropertyRelative("quadrant").intValue = q;
             endpoint.FindPropertyRelative("zone").objectReferenceValue = zone;
@@ -1693,11 +1877,41 @@ namespace Abysses.EditorTools
 
         // ------------------------------------------------------------------ Utilitaires
 
-        static PuzzleObjective Objective(GameObject go, int floor, int quadrant, string label)
+        static PuzzleObjective Objective(GameObject go, int floor, int quadrant, string label, string english = null, string hintKey = null)
         {
             var objective = go.AddComponent<PuzzleObjective>();
-            SetFields(objective, ("floor", floor), ("quadrant", quadrant), ("label", label));
+            SetFields(objective, ("floor", floor), ("quadrant", quadrant), ("label", label), ("labelEnglish", english ?? label));
+            if (hintKey != null && AbyssesHints.Table.TryGetValue(hintKey, out (string[] fr, string[] en) hints))
+            {
+                var so = new SerializedObject(objective);
+                SetStrings(so.FindProperty("hints"), hints.fr);
+                SetStrings(so.FindProperty("hintsEnglish"), hints.en);
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
             return objective;
+        }
+
+        static void SetStrings(SerializedProperty property, string[] values)
+        {
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) property.GetArrayElementAtIndex(i).stringValue = values[i];
+        }
+
+        /// <summary>Halo de survol (copie additive légèrement agrandie du visuel) piloté par <see cref="HoverHighlight"/>.</summary>
+        static void Halo(Mats m, GameObject interactable, GameObject visual, float scale = 1.18f)
+        {
+            var filter = visual.GetComponent<MeshFilter>();
+            if (filter == null) return;
+            var halo = new GameObject("Halo");
+            halo.transform.SetParent(visual.transform, false);
+            halo.transform.localScale = Vector3.one * scale;
+            halo.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh;
+            var renderer = halo.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = m.Highlight;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.enabled = false;
+            SetFields(interactable.AddComponent<HoverHighlight>(), ("halo", renderer));
         }
 
         static GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 position, Quaternion rotation, Vector3 scale, Material material, bool keepCollider)
@@ -1722,7 +1936,7 @@ namespace Abysses.EditorTools
                 StaticEditorFlags.OccludeeStatic | StaticEditorFlags.ReflectionProbeStatic);
         }
 
-        static void Label(Transform parent, string text, Vector3 localPosition, float size, Quaternion? rotation = null)
+        static void Label(Transform parent, string text, Vector3 localPosition, float size, Quaternion? rotation = null, string english = null)
         {
             var go = new GameObject("Label", typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -1735,6 +1949,7 @@ namespace Abysses.EditorTools
             tmp.color = new Color(0.75f, 0.92f, 1f);
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             ((RectTransform)go.transform).sizeDelta = new Vector2(2f, 0.3f);
+            if (english != null) SetFields(go.AddComponent<LocalizedText>(), ("french", text), ("english", english));
         }
 
         static Transform Find(Transform root, string name)

@@ -86,16 +86,19 @@ namespace Abysses.Network
 
         int AllocateQuadrant()
         {
+            // Un casque qui revient après une coupure retrouve son module.
+            int preferred = ConnectionManager.PreferredQuadrant(OwnerClientId);
+            if (PlayArea.IsValid(preferred) && !IsTaken(preferred)) return preferred;
             for (int q = 0; q < PlayArea.QuadrantCount; q++)
-            {
-                bool taken = false;
-                for (int i = 0; i < All.Count; i++)
-                {
-                    if (All[i] != this && All[i].Quadrant.Value == q) { taken = true; break; }
-                }
-                if (!taken) return q;
-            }
+                if (!IsTaken(q)) return q;
             return -1;
+        }
+
+        bool IsTaken(int quadrant)
+        {
+            for (int i = 0; i < All.Count; i++)
+                if (All[i] != this && All[i].Quadrant.Value == quadrant) return true;
+            return false;
         }
 
         void OnQuadrantChanged(int previous, int current) => ApplyQuadrant(current);

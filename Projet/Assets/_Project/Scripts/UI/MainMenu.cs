@@ -39,12 +39,21 @@ namespace Abysses.UI
         [SerializeField] Button recenterButton;
         [SerializeField] Button leaveButton;
 
+        [Header("Réglages")]
+        [SerializeField] Button languageButton;
+        [Tooltip("Mode facile (à la surface seulement).")]
+        [SerializeField] Button easyButton;
+        [Tooltip("Classement des équipes, affiché à la fin.")]
+        [SerializeField] TMP_Text leaderboardText;
+
         [Header("Placement")]
         [SerializeField, Min(0.3f)] float distance = 0.75f;
         [SerializeField] float heightOffset = -0.12f;
 
         ConnectionManager connection;
         TMP_Text startLabel;
+        TMP_Text easyLabel;
+        TMP_Text languageLabel;
         InputAction toggleAction;
         bool openedDuringGame;
         bool wasVisible;
@@ -59,6 +68,8 @@ namespace Abysses.UI
             toggleAction.AddBinding("<Keyboard>/m");
             toggleAction.performed += OnToggle;
             startLabel = startButton.GetComponentInChildren<TMP_Text>(true);
+            if (easyButton != null) easyLabel = easyButton.GetComponentInChildren<TMP_Text>(true);
+            if (languageButton != null) languageLabel = languageButton.GetComponentInChildren<TMP_Text>(true);
         }
 
         void OnEnable() => toggleAction.Enable();
@@ -74,6 +85,10 @@ namespace Abysses.UI
             leaveButton.onClick.AddListener(OnLeavePressed);
             startButton.onClick.AddListener(OnStartPressed);
             recenterButton.onClick.AddListener(OnRecenterPressed);
+            if (languageButton != null) languageButton.onClick.AddListener(Loc.Toggle);
+            if (easyButton != null) easyButton.onClick.AddListener(OnEasyPressed);
+            Loc.Changed += Refresh;
+            GameStateManager.SettingsChanged += Refresh;
 
             connection.StateChanged += Refresh;
             NetworkPlayer.Spawned += OnPlayersChanged;
@@ -94,6 +109,14 @@ namespace Abysses.UI
             GameStateManager.PhaseChanged -= OnPhaseChanged;
             GameStateManager.ReadyChanged -= OnReadyChanged;
             LocalRig.QuadrantAssigned -= OnQuadrantAssigned;
+            Loc.Changed -= Refresh;
+            GameStateManager.SettingsChanged -= Refresh;
+        }
+
+        void OnEasyPressed()
+        {
+            GameStateManager state = GameStateManager.Instance;
+            if (state != null && state.Phase.Value == GamePhase.Lobby) state.SetEasyModeRpc(!state.EasyMode.Value);
         }
 
         void OnPlayersChanged(NetworkPlayer player) => Refresh();
@@ -164,10 +187,19 @@ namespace Abysses.UI
             bool everyoneReady = state != null && state.EveryoneReady;
             startButton.gameObject.SetActive(Online && (phase == GamePhase.Lobby || finished));
             startButton.interactable = finished || everyoneReady;
-            if (startLabel != null) startLabel.text = finished ? "Nouvelle plongée" : "Lancer la plongée";
+            if (startLabel != null) startLabel.text = finished ? Loc.T("Nouvelle plongée", "New dive") : Loc.T("Lancer la plongée", "Start the dive");
+            if (languageLabel != null) languageLabel.text = Loc.English ? "Français" : "English";
+            bool easy = state != null && state.EasyMode.Value;
+            if (easyButton != null) easyButton.gameObject.SetActive(Online && phase == GamePhase.Lobby);
+            if (easyLabel != null) easyLabel.text = easy ? Loc.T("Mode facile : OUI", "Easy mode: ON") : Loc.T("Mode facile : non", "Easy mode: off");
+            if (leaderboardText != null)
+            {
+                leaderboardText.gameObject.SetActive(finished && state != null);
+                if (finished && state != null) leaderboardText.text = Leaderboard.Format(state.Leaderboard.Value.ToString());
+            }
 
             statusText.text = finished && state != null
-                ? "Remontée réussie en " + FormatDuration(state.EndTime.Value - state.StartTime.Value)
+                ? Loc.T("Remontée réussie en ", "Ascent completed in ") + FormatDuration(state.EndTime.Value - state.StartTime.Value)
                 : connection.Status;
             playersText.text = Online ? PlayersLine(state) : string.Empty;
             if (hintText != null) hintText.text = Hint(state, phase);
@@ -177,24 +209,25 @@ namespace Abysses.UI
         {
             int occupied = NetworkPlayer.OccupiedQuadrantMask();
             int ready = state != null ? CountBits(state.ReadyMask.Value & occupied) : 0;
-            return "Plongeurs : " + NetworkPlayer.All.Count + " / " + GameConfig.Instance.MaxPlayers
-                + "   ·   en cabine : " + ready + " / " + CountBits(occupied);
+            return Loc.T("Plongeurs : ", "Divers: ") + NetworkPlayer.All.Count + " / " + GameConfig.Instance.MaxPlayers
+                + Loc.T("   ·   en cabine : ", "   ·   in cabin: ") + ready + " / " + CountBits(occupied);
         }
 
         string Hint(GameStateManager state, GamePhase phase)
         {
-            if (!Online) return connection.IsBusy ? string.Empty : "Choisis comment rejoindre l'équipe.";
-            if (InGame) return "Bouton Menu (manette gauche) pour fermer.";
-            if (phase == GamePhase.Finished) return "Bravo ! « Nouvelle plongée » pour recommencer avec la même équipe.";
+            if (!Online) return connection.IsBusy ? string.Empty : Loc.T("Choisis comment rejoindre l'équipe.", "Choose how to join the team.");
+            if (InGame) return Loc.T("Bouton Menu (manette gauche) pour fermer.", "Menu button (left controller) to close.");
+            if (phase == GamePhase.Finished) return Loc.T("Bravo ! « Nouvelle plongée » pour recommencer avec la même équipe.", "Well done! “New dive” to play again with the same team.");
 
             LocalRig rig = LocalRig.Instance;
             bool meReady = state != null && rig != null && PlayArea.IsValid(rig.Quadrant)
                 && (state.ReadyMask.Value & (1 << rig.Quadrant)) != 0;
             if (!meReady)
-                return "Entre dans ta cabine, place-toi sur le repère lumineux face à la porte, puis « Recalibrer ma position ».";
+                return Loc.T("Entre dans ta cabine, fais l'entraînement, place-toi sur le repère lumineux face à la porte, puis « Recalibrer ma position ».",
+                    "Step into your cabin, do the training, stand on the glowing marker facing the door, then “Recalibrate my position”.");
             return state.EveryoneReady
-                ? "Tout le monde est à bord : lancez la plongée !"
-                : "Tu es à bord. On attend les autres plongeurs…";
+                ? Loc.T("Tout le monde est à bord : lancez la plongée !", "Everyone is aboard: start the dive!")
+                : Loc.T("Tu es à bord. On attend les autres plongeurs…", "You are aboard. Waiting for the other divers…");
         }
 
         void PlaceInFrontOfPlayer()

@@ -76,6 +76,7 @@ namespace Abysses.Interaction
         {
             if (!IsSpawned || objective.Solved.Value || entryCount >= CodeLength) return;
             if (keySound != null) keySound.Play();
+            LocalRig.Pulse(0.25f, 0.03f);
 
             entry[entryCount] = symbol;
             if (entryCount < entrySlots.Length && entrySlots[entryCount] != null)

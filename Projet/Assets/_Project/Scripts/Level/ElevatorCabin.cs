@@ -117,6 +117,8 @@ namespace Abysses.Level
             }
             else if (!descending && wasDescending)
             {
+                // Arrivée au palier : le bathyscaphe se pose.
+                if (LocalRig.Instance != null && LocalRig.Instance.Quadrant == quadrant) LocalRig.Pulse(0.7f, 0.25f);
                 if (bubbles != null) bubbles.Stop();
                 if (rumble != null) rumble.Stop();
             }
