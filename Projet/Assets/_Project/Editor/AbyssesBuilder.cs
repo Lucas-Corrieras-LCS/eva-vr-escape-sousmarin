@@ -85,6 +85,24 @@ namespace Abysses.EditorTools
             Debug.Log("[Abysses] Construction terminée. Penser à baker l'éclairage (Abysses → Baker l'éclairage des étages).");
         }
 
+        /// <summary>
+        /// Régénère uniquement la Station (menu, réseau, rig, cabines) et ses prefabs, sans toucher aux étages :
+        /// leur éclairage baké reste valide (évite de recommiter des Mo de lightmaps identiques).
+        /// </summary>
+        [MenuItem("Abysses/Reconstruire la Station seulement", priority = 3)]
+        public static void BuildStationOnly()
+        {
+            SetBuildScenes();
+            fx = AbyssesContent.Build();
+            Mats m = BuildMaterials();
+            BuildConfig();
+            GameObject player = BuildPlayerPrefab(m);
+            GameObject cabin = BuildCabinPrefab(m);
+            BuildStation(m, player, cabin);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[Abysses] Station reconstruite (étages et éclairage inchangés).");
+        }
+
         [MenuItem("Abysses/Tout construire + baker l'éclairage", priority = 1)]
         public static void BuildAllAndBake()
         {
@@ -180,6 +198,8 @@ namespace Abysses.EditorTools
         {
             Material material = GetOrCreate(name, "Universal Render Pipeline/Lit");
             material.SetColor("_BaseColor", color);
+            // Propriété héritée que l'importeur URP synchronise sur _BaseColor : on l'écrit nous-mêmes (pas de faux diff git).
+            material.SetColor("_Color", color);
             material.SetFloat("_Metallic", metallic);
             material.SetFloat("_Smoothness", smoothness);
             if (emission.HasValue)
@@ -202,6 +222,7 @@ namespace Abysses.EditorTools
         {
             Material material = GetOrCreate(name, "Universal Render Pipeline/Unlit");
             material.SetColor("_BaseColor", color);
+            material.SetColor("_Color", color);
             EditorUtility.SetDirty(material);
             return material;
         }
@@ -218,6 +239,8 @@ namespace Abysses.EditorTools
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.renderQueue = (int)RenderQueue.Transparent;
             if (!unlit) material.SetFloat("_Smoothness", 0.95f);
+            // Valeurs de blend canoniques d'URP : sinon Unity les réécrit à l'ouverture et git voit un faux changement.
+            BaseShaderGUI.SetupMaterialBlendMode(material);
             EditorUtility.SetDirty(material);
             return material;
         }
@@ -1260,6 +1283,7 @@ namespace Abysses.EditorTools
             networkManager.NetworkConfig.PlayerPrefab = playerPrefab;
             networkManager.NetworkConfig.Prefabs.NetworkPrefabsLists = new List<NetworkPrefabsList> { BuildPrefabList(playerPrefab) };
             SetFields(connection, ("networkManager", networkManager), ("transport", transport), ("lanDiscovery", discovery));
+            SetFields(network.AddComponent<DevAutoConnect>(), ("connection", connection));
 
             var gameState = new GameObject("GameState");
             gameState.AddComponent<NetworkObject>();
@@ -1368,7 +1392,7 @@ namespace Abysses.EditorTools
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = camera;
             canvasGo.AddComponent<TrackedDeviceGraphicRaycaster>();
-            ((RectTransform)canvasGo.transform).sizeDelta = new Vector2(820f, 900f);
+            ((RectTransform)canvasGo.transform).sizeDelta = new Vector2(820f, 1000f);
 
             RectTransform panel = UIRect("Panel", canvasGo.transform);
             Stretch(panel);
@@ -1385,6 +1409,7 @@ namespace Abysses.EditorTools
             UIText(panel, "Subtitle", "Station HADAL-4", 34f, FontStyles.Italic, 44f, new Color(0.7f, 0.85f, 0.9f));
             TextMeshProUGUI status = UIText(panel, "Status", "Hors ligne", 34f, FontStyles.Normal, 96f, Color.white);
             TextMeshProUGUI players = UIText(panel, "Players", "", 30f, FontStyles.Normal, 40f, new Color(0.7f, 0.9f, 1f));
+            TextMeshProUGUI hint = UIText(panel, "Hint", "", 28f, FontStyles.Italic, 80f, new Color(1f, 0.85f, 0.5f));
 
             RectTransform offline = Group(panel, "Offline");
             Button joinOnline = UIButton(offline, "Rejoindre l'équipe (en ligne)");
@@ -1402,7 +1427,7 @@ namespace Abysses.EditorTools
                 ("panel", panel.gameObject), ("statusText", status), ("playersText", players),
                 ("offlineGroup", offline.gameObject), ("joinOnlineButton", joinOnline), ("hostLanButton", hostLan),
                 ("joinLanButton", joinLan), ("soloButton", solo), ("onlineGroup", online.gameObject),
-                ("startButton", start), ("recenterButton", recenter), ("leaveButton", leave));
+                ("startButton", start), ("recenterButton", recenter), ("leaveButton", leave), ("hintText", hint));
         }
 
         static RectTransform Group(Transform parent, string name)

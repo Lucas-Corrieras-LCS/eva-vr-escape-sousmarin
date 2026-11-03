@@ -6,8 +6,8 @@
 
 ## Où on en est
 
-- **Dernière session** : 2026-10-16 — passe ambiance : éclairage baké des 3 étages, caustiques, plancton, gyrophares, sons procéduraux, digicode accessible (branche `feat/ambiance-son-lumiere`)
-- **Prochaine action** : test en Play Mode (solo puis Multiplayer Play Mode) pour valider la passe ambiance en jeu (sons, caustiques, light probes en additif) ; haptique des manettes ; régler les volumes au casque
+- **Dernière session** : 2026-11-03 — audit + corrections : multijoueur testé à 2 dans l'éditeur (3 bugs réseau corrigés), calibration guidée, menu en jeu, nouvelle plongée, vibrations, chaîne de build APK
+- **Prochaine action** : build APK debug + premier test sur Quest 2 (mesures de perf sur casque) ; passe artistique sur la géométrie (blockout → décor) ; playtests
 - **Bloquants** : pas de casque pour tester pour l'instant (tout est validé dans l'éditeur + simulateur XR) ; date/format de rendu inconnus ; Relay à activer dans le dashboard Unity
 
 ## Décisions
@@ -34,7 +34,7 @@
 - [x] Serveur MCP Unity connecté — transport **Stdio** (port 6400), instance `Projet` (CC)
 - [x] Packages + Player Settings + OpenXR + URP Quest 2 selon `docs/setup-unity.md` (CC)
 - [x] Dépôt Git (LFS + Smart Merge) → https://github.com/Lucas-Corrieras-LCS/eva-vr-escape-sousmarin (public)
-- [ ] Inviter le binôme comme collaborateur (B)
+- [x] Binôme (Jeremy) collaborateur du dépôt
 - [ ] Build « hello VR » sur le Quest 2 (valider la chaîne de build) — **en attente d'un casque**
 
 ## Phase 1 — Cadrage & conception
@@ -52,11 +52,12 @@
 - [x] Attribution d'un quadrant (0–3) par joueur + calibration de l'origine (CC) — vérifié en Play Mode
 - [x] Avatars réseau légers (casque + gants, couleur par quadrant, NetworkTransform propriétaire) (CC)
 - [x] Objets/leviers synchronisés (ownership au grab, sas à objets, leviers synchronisés) (CC)
-- [ ] Test multi dans l'éditeur (Multiplayer Play Mode) puis 2 casques (CC + B)
+- [x] Test multi dans l'éditeur à 2 joueurs (Multiplayer Play Mode, *Abysses → Test multijoueur*) : partie complète surface → fin ; 3 bugs corrigés (fusible posé visible chez les autres, sas qui renvoyait l'objet au départ, chrono de fin à 0 chez le client) ; arrivée en cours de partie refusée (CC)
+- [ ] Test sur 2 casques (CC + B)
 - [x] Repli mono-joueur 15 × 8 m fonctionnel (même build, session solo, auto-résolution + écran de surveillance + fusible rapatrié) (CC) — vérifié en Play Mode
 - [x] XR Origin + interactions (grab, poke, levier, bouton) + simulateur XR dans l'éditeur (EditorOnly)
 - [x] Locomotion joystick derrière un flag, **off en build prod** via define `ABYSSES_PROD` ; téléportation/rotation au stick toujours coupées (C3)
-- [ ] Recentrage / calibration de l'origine sur la piste
+- [x] Calibration guidée : consigne dans le menu, départ impossible tant qu'un joueur n'est pas dans sa cabine, porte qui se ferme quand le joueur est à bord, « Recalibrer » accessible en partie (bouton Menu manette gauche) (CC)
 - [x] Système d'ascenseur : cabines fixes, étages en scènes additives synchronisées, portes/bulles/profondeur (C8) — vérifié en Play Mode
 - [x] Gestionnaire d'énigmes / états de progression (GameStateManager + PuzzleObjective, événements)
 - [x] Blockout à l'échelle 1:1 généré par `Abysses → Tout construire` : 3 étages complets
@@ -67,16 +68,16 @@
 - [x] Lighting baked par niveau + light/reflection probes (C6) : lumières des modules en Baked (ombres douces, AO, 2 rebonds), 336 light probes + 4 reflection probes box-projetées par étage, bake GPU ~10 s/étage via `Abysses → Tout construire + baker l'éclairage` (CC) — vérifié sur captures, pas encore en jeu
 - [x] Ambiance sous-marine bon marché : fog URP, caustiques (cookie animé 16 images sur une directionnelle sans ombres, étage 1), plancton par module (cyan / braises / bioluminescence), gyrophares de secours à faisceaux additifs (étage 2), rayon de lumière révélé au final (étage 3) (CC)
 - [x] Sound design procédural (`AbyssesContent`, aucun asset externe) : 4 ambiances en boucle (station, habitat, labo, cœur), ascenseur, alarme de zone, digicode (touche/erreur/succès), fusible, sas, leviers ratés, réacteur, étage résolu, final ; spatialisé sur les objets (CC) — volumes à régler au casque
-- [~] Feedbacks : sons et lumière sur les énigmes réussies OK ; **reste l'haptique des manettes**
+- [x] Feedbacks : sons, lumière et **vibrations** (énigme réussie, mauvais code, leviers ratés, réacteur, descente, sortie de zone) (CC)
 - [x] Symboles du digicode : formes + couleurs (● rouge, ▲ vert, ■ bleu, ★ jaune, ◆ blanc, ✚ violet) sur touches, saisie et codes muraux (CC)
 - [x] Sons : ambiance, bulles, grondement de l'ascenseur, alarme de zone (CC)
 - [x] Captures automatiques des étages → `docs/captures/` (`Abysses → Captures d'écran des étages`) (CC)
 
 ## Phase 4 — Optimisation (Quest 2, 72 FPS)
 
-- [ ] Relevé « avant » : FPS, draw calls, triangles, GC alloc → `docs/optimisation.md`
-- [ ] Static batching / GPU instancing / atlas
-- [ ] Occlusion culling par niveau ; un seul niveau actif à la fois (chargement additif)
+- [~] Relevé « avant » dans l'éditeur → `docs/optimisation.md` (154 draw calls, 29 SetPass, 22 k triangles, 0 ombre dynamique) ; **à refaire sur le casque**
+- [x] Static batching actif (60 draw calls regroupés), matériaux partagés SRP Batcher
+- [~] Un seul étage chargé à la fois (fait) ; occlusion culling à tester si la mesure casque dépasse le budget
 - [ ] Compression ASTC, tailles de textures, LOD
 - [ ] Scripts sans alloc par frame
 - [ ] Relevé « après » sur le casque
@@ -84,8 +85,8 @@
 ## Phase 5 — Qualité & rendu
 
 - [ ] Playtests (confort, durée, compréhension des énigmes)
-- [ ] Vérifier chaque ligne de `CONSIGNES.md`
-- [ ] Build **prod EVA** (joystick off) + build debug
+- [~] Vérifier chaque ligne de `CONSIGNES.md` : tableau des statuts à jour (2026-11-03) ; C5/C6/C7 à valider au casque
+- [~] Chaîne de build : *Abysses → Build → APK debug / APK EVA* (define `ABYSSES_PROD`) ; reste à produire et installer les APK
 - [ ] Livrables selon le format demandé
 
 ## Tâches déléguées
@@ -104,3 +105,4 @@
 - **2026-10-16** — Game design v1. 23 scripts (réseau, jeu, énigmes, UI) + générateur de scènes `Abysses → Tout construire`. Partie solo testée de bout en bout en Play Mode : connexion, descente, étage 1 résolu (digicode, fusible, leviers), ascenseur, fin à -4000 m. Bug corrigé : identifiants réseau à 0 sur les objets générés par script.
 - **2026-10-16** — Étages 2 et 3 construits et testés en Play Mode (solo) de la surface jusqu'au final. Leviers = dernière étape (prérequis). Couleur jaune → vert (confusion avec l'orange). Fusible consommé via Despawn(false).
 - **2026-10-16** — Passe ambiance (branche `feat/ambiance-son-lumiere`, travail hors MCP : générateur relancé en batchmode, console sans erreur ni avertissement). Éclairage baké + probes, caustiques, plancton, gyrophares, rayon final, 17 sons procéduraux, digicode formes + couleurs, captures auto. Corrigé au passage : coque trop métallique (les lightmaps n'avaient presque aucun effet), lampe de cabine qui éclairait le plafond du module (isolée par rendering layer), intensités recalées pour l'atténuation physique du bake.
+- **2026-11-03** — Pull de la passe ambiance de Jeremy (vérifiée en jeu : lightmaps, 336 light probes, caustiques, sons). Audit + corrections : calibration guidée et départ conditionné à la présence en cabine, menu en jeu (bouton Menu), « Nouvelle plongée », refus des arrivées en cours de partie, vibrations, menu de build APK debug/EVA, test multijoueur MPPM 2 joueurs (Host/Client auto) → 3 bugs réseau corrigés, matériaux sans faux diff, menu « Reconstruire la Station seulement ».

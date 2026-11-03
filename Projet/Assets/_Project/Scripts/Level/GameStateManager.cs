@@ -41,6 +41,14 @@ namespace Abysses.Level
         /// <summary>Changement de phase, sur tous les clients.</summary>
         public static event Action<GamePhase> PhaseChanged;
 
+        /// <summary>Changement des joueurs présents dans leur cabine, sur tous les clients.</summary>
+        public static event Action<int> ReadyChanged;
+
+        // ⚠️ Netcode applique les variables chez les clients dans leur ordre de déclaration :
+        // les horaires sont déclarés AVANT la phase, pour être déjà à jour quand l'événement de phase arrive.
+        public readonly NetworkVariable<double> StartTime = new NetworkVariable<double>(0);
+        public readonly NetworkVariable<double> EndTime = new NetworkVariable<double>(0);
+
         public readonly NetworkVariable<GamePhase> Phase = new NetworkVariable<GamePhase>(GamePhase.Lobby);
         /// <summary>0 = surface, puis 1..N.</summary>
         public readonly NetworkVariable<int> Floor = new NetworkVariable<int>(0);
@@ -48,8 +56,6 @@ namespace Abysses.Level
         public readonly NetworkVariable<int> ActiveMask = new NetworkVariable<int>(0);
         /// <summary>Quadrants dont le joueur est dans sa cabine.</summary>
         public readonly NetworkVariable<int> ReadyMask = new NetworkVariable<int>(0);
-        public readonly NetworkVariable<double> StartTime = new NetworkVariable<double>(0);
-        public readonly NetworkVariable<double> EndTime = new NetworkVariable<double>(0);
 
         public int FloorCount => floorScenes.Length;
         public float DescentDuration => descentDuration;
@@ -59,10 +65,21 @@ namespace Abysses.Level
 
         public int DepthOf(int floor) => floorDepths[Mathf.Clamp(floor, 0, floorDepths.Length - 1)];
 
+        /// <summary>Vrai si chaque joueur connecté est dans sa cabine (condition de départ d'une descente).</summary>
+        public bool EveryoneReady
+        {
+            get
+            {
+                int occupied = NetworkPlayer.OccupiedQuadrantMask();
+                return occupied != 0 && (ReadyMask.Value & occupied) == occupied;
+            }
+        }
+
         public override void OnNetworkSpawn()
         {
             Instance = this;
             Phase.OnValueChanged += OnPhaseChanged;
+            ReadyMask.OnValueChanged += OnReadyChanged;
 
             if (IsServer)
             {
@@ -73,11 +90,13 @@ namespace Abysses.Level
             }
 
             PhaseChanged?.Invoke(Phase.Value);
+            ReadyChanged?.Invoke(ReadyMask.Value);
         }
 
         public override void OnNetworkDespawn()
         {
             Phase.OnValueChanged -= OnPhaseChanged;
+            ReadyMask.OnValueChanged -= OnReadyChanged;
             if (IsServer)
             {
                 if (NetworkManager != null && NetworkManager.SceneManager != null)
@@ -92,16 +111,28 @@ namespace Abysses.Level
         }
 
         void OnPhaseChanged(GamePhase previous, GamePhase current) => PhaseChanged?.Invoke(current);
+        void OnReadyChanged(int previous, int current) => ReadyChanged?.Invoke(current);
 
         // ---------- Requêtes des clients ----------
 
-        /// <summary>Lance la plongée depuis la surface (bouton du menu, n'importe quel joueur).</summary>
+        /// <summary>
+        /// Lance la plongée depuis la surface (bouton du menu, n'importe quel joueur).
+        /// Refusé tant qu'un joueur n'est pas dans sa cabine : tout le monde doit être calibré et à l'abri.
+        /// </summary>
         [Rpc(SendTo.Server)]
         public void RequestStartRpc()
         {
-            if (Phase.Value != GamePhase.Lobby) return;
+            if (Phase.Value != GamePhase.Lobby || !EveryoneReady) return;
             StartTime.Value = NetworkManager.ServerTime.Time;
             StartCoroutine(DescendTo(1));
+        }
+
+        /// <summary>Après la remontée : retour à la surface pour une nouvelle partie, sans relancer la session.</summary>
+        [Rpc(SendTo.Server)]
+        public void RequestRestartRpc()
+        {
+            if (Phase.Value != GamePhase.Finished) return;
+            StartCoroutine(ReturnToSurface());
         }
 
         /// <summary>Le joueur local signale s'il est dans sa cabine.</summary>
@@ -152,6 +183,22 @@ namespace Abysses.Level
                 OnObjectiveSolved(null);
             }
             TryStartDescent();
+        }
+
+        IEnumerator ReturnToSurface()
+        {
+            if (loadedFloor.IsValid() && loadedFloor.isLoaded)
+            {
+                sceneEventDone = false;
+                if (NetworkManager.SceneManager.UnloadScene(loadedFloor) == SceneEventProgressStatus.Started)
+                    yield return new WaitUntil(() => sceneEventDone);
+            }
+            Floor.Value = 0;
+            ActiveMask.Value = 0;
+            ReadyMask.Value = 0;
+            StartTime.Value = 0;
+            EndTime.Value = 0;
+            Phase.Value = GamePhase.Lobby;
         }
 
         IEnumerator DescendTo(int floor)

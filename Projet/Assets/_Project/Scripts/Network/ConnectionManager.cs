@@ -7,6 +7,7 @@ using Unity.Services.Multiplayer;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Abysses.Core;
+using Abysses.Level;
 
 namespace Abysses.Network
 {
@@ -115,6 +116,17 @@ namespace Abysses.Network
             if (!lanDiscovery.IsActive) Fail("Réseau local indisponible.");
         }
 
+        /// <summary>Rejoint directement une adresse connue (tests multijoueur dans l'éditeur, secours si la découverte LAN est bloquée).</summary>
+        public void JoinDirect(string address)
+        {
+            if (IsBusy) return;
+            Mode = ConnectionMode.LanClient;
+            SetState(ConnectionState.Connecting, "Connexion à " + address + "…");
+            lanJoinDeadline = Time.unscaledTime + config.LanJoinTimeout;
+            transport.SetConnectionData(address, config.LanPort);
+            if (!networkManager.StartClient()) Fail("Connexion à " + address + " impossible.");
+        }
+
         /// <summary>Repli mono-joueur : hôte local sans annonce.</summary>
         public void PlaySolo()
         {
@@ -148,10 +160,14 @@ namespace Abysses.Network
 
         void ApproveConnection(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
+            // L'hôte passe aussi par ici (avant que l'état de partie n'existe) : toujours accepté.
+            bool isHost = request.ClientNetworkId == NetworkManager.ServerClientId;
             bool hasRoom = networkManager.ConnectedClientsIds.Count < config.MaxPlayers;
-            response.Approved = hasRoom;
-            response.CreatePlayerObject = hasRoom;
-            response.Reason = hasRoom ? string.Empty : "Partie complète";
+            bool inLobby = GameStateManager.Instance == null || GameStateManager.Instance.Phase.Value == GamePhase.Lobby;
+
+            response.Approved = isHost || (hasRoom && inLobby);
+            response.CreatePlayerObject = response.Approved;
+            response.Reason = response.Approved ? string.Empty : !hasRoom ? "Partie complète" : "Plongée déjà commencée";
             response.Pending = false;
         }
 
@@ -182,7 +198,9 @@ namespace Abysses.Network
             if (State == ConnectionState.Offline) return;
             session = null;
             Mode = ConnectionMode.None;
-            SetState(ConnectionState.Failed, "Connexion perdue.");
+            // Motif envoyé par l'hôte en cas de refus (partie complète, plongée commencée…).
+            string reason = networkManager.DisconnectReason;
+            SetState(ConnectionState.Failed, string.IsNullOrEmpty(reason) ? "Connexion perdue." : "Refusé : " + reason);
         }
 
         void OnLanHostFound(string address, ushort port)

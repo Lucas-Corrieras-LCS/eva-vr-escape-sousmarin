@@ -72,13 +72,22 @@ namespace Abysses.Interaction
 
             // Le serveur reprend la main sur l'objet avant de le déplacer.
             item.RemoveOwnership();
-            if (item.TryGetComponent(out Rigidbody body) && !body.isKinematic)
+            Vector3 position = destination.arrivalPoint.position;
+            Quaternion rotation = destination.arrivalPoint.rotation;
+            // Le Rigidbody doit être déplacé lui aussi : sinon, au pas de physique suivant,
+            // il ramène l'objet à son ancienne position (dans le sas de départ).
+            if (item.TryGetComponent(out Rigidbody body))
             {
-                body.linearVelocity = Vector3.zero;
-                body.angularVelocity = Vector3.zero;
+                body.position = position;
+                body.rotation = rotation;
+                if (!body.isKinematic)
+                {
+                    body.linearVelocity = Vector3.zero;
+                    body.angularVelocity = Vector3.zero;
+                }
             }
             if (item.TryGetComponent(out NetworkTransform networkTransform))
-                networkTransform.Teleport(destination.arrivalPoint.position, destination.arrivalPoint.rotation, item.transform.localScale);
+                networkTransform.Teleport(position, rotation, item.transform.localScale);
 
             PlayEffectsRpc();
         }

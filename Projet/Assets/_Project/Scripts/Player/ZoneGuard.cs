@@ -49,7 +49,10 @@ namespace Abysses.Player
             float dx = Mathf.Max(safe.xMin - head.x, 0f, head.x - safe.xMax);
             float dz = Mathf.Max(safe.yMin - head.z, 0f, head.z - safe.yMax);
             float outside = Mathf.Sqrt(dx * dx + dz * dz);
-            Apply(Mathf.Clamp01(outside / fullWarningDistance));
+            float intensity = Mathf.Clamp01(outside / fullWarningDistance);
+            Apply(intensity);
+            // Les manettes vibrent aussi : on sent la limite même sans regarder.
+            if (intensity > 0f) LocalRig.Pulse(0.2f + 0.6f * intensity, checkInterval);
         }
 
         void Apply(float intensity)

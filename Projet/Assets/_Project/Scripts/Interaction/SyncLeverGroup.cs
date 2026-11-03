@@ -118,6 +118,7 @@ namespace Abysses.Interaction
         void FailRpc()
         {
             if (failSound != null) failSound.Play();
+            LocalRig.Pulse(0.6f, 0.25f);
         }
 
         void OnMaskChanged(int previous, int current) => ApplyLevers();

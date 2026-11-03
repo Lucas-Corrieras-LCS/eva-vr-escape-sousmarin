@@ -1,12 +1,13 @@
 using System;
 using Unity.XR.CoreUtils;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Haptics;
 using Abysses.Core;
 
 namespace Abysses.Player
 {
     /// <summary>
-    /// Point d'accès unique au rig XR local (non réseau) : tête, mains, calibration sur le quadrant.
+    /// Point d'accès unique au rig XR local (non réseau) : tête, mains, calibration sur le quadrant, vibrations.
     /// À placer sur le XR Origin.
     /// </summary>
     [RequireComponent(typeof(XROrigin))]
@@ -16,6 +17,7 @@ namespace Abysses.Player
         [SerializeField] Transform rightHand;
 
         XROrigin origin;
+        HapticImpulsePlayer[] haptics;
 
         public static LocalRig Instance { get; private set; }
 
@@ -36,6 +38,22 @@ namespace Abysses.Player
             }
             Instance = this;
             origin = GetComponent<XROrigin>();
+            haptics = GetComponentsInChildren<HapticImpulsePlayer>(true);
+        }
+
+        /// <summary>Vibration des deux manettes (retour d'événement de jeu : erreur, réussite, descente…).</summary>
+        public static void Pulse(float amplitude, float duration)
+        {
+            if (Instance == null) return;
+            HapticImpulsePlayer[] players = Instance.haptics;
+            for (int i = 0; i < players.Length; i++)
+                if (players[i] != null && players[i].isActiveAndEnabled) players[i].SendHapticImpulse(amplitude, duration);
+        }
+
+        /// <summary>Vrai si le quadrant donné est celui du joueur local (-1 = concerne tout le monde).</summary>
+        public static bool IsLocalOrShared(int quadrant)
+        {
+            return quadrant < 0 || (Instance != null && Instance.Quadrant == quadrant);
         }
 
         void OnDestroy()

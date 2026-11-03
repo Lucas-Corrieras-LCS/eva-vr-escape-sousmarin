@@ -53,6 +53,10 @@ namespace Abysses.Interaction
             if (installedVisual != null) installedVisual.SetActive(solved);
             if (solved)
             {
+                // Netcode ne désactive pas chez les clients un objet placé dans la scène qu'on « despawn » :
+                // chaque joueur masque lui-même le fusible consommé dès que l'objectif est résolu.
+                for (int i = 0; i < FuseItem.All.Count; i++)
+                    if (FuseItem.All[i].FuseId == socket.RequiredFuseId) FuseItem.All[i].gameObject.SetActive(false);
                 socket.socketActive = false;
                 if (insertSound != null && IsSpawned) insertSound.Play();
             }

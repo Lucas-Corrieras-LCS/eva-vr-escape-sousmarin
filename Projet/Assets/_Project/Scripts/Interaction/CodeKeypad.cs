@@ -3,6 +3,7 @@ using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using Abysses.Level;
+using Abysses.Player;
 
 namespace Abysses.Interaction
 {
@@ -101,6 +102,7 @@ namespace Abysses.Interaction
         void RejectRpc()
         {
             if (errorSound != null) errorSound.Play();
+            if (LocalRig.IsLocalOrShared(objective.Quadrant)) LocalRig.Pulse(0.6f, 0.25f);
             StopAllCoroutines();
             StartCoroutine(ShowError());
         }

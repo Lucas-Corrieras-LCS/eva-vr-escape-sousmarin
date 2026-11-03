@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
 using Abysses.Core;
+using Abysses.Player;
 
 namespace Abysses.Level
 {
@@ -48,6 +49,8 @@ namespace Abysses.Level
         void OnSolvedChanged(bool previous, bool current)
         {
             StateChanged?.Invoke(current);
+            // Retour haptique : énigme de mon module ou commune réussie.
+            if (current && LocalRig.IsLocalOrShared(quadrant)) LocalRig.Pulse(0.35f, 0.15f);
             if (IsServer && current) ServerSolved?.Invoke(this);
         }
 

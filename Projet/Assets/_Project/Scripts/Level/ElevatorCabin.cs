@@ -9,9 +9,10 @@ namespace Abysses.Level
     /// <summary>
     /// Cabine du bathyscaphe d'un module (consigne C8 : étendre l'univers).
     /// Toujours au même endroit physique : seul l'étage autour change pendant la descente.
-    /// - Portes pilotées par la phase de jeu.
+    /// - Portes pilotées par la phase de jeu : à la surface et une fois l'étage résolu, la porte reste ouverte
+    ///   tant que son joueur n'est pas rentré, puis se referme (« embarqué, on attend les autres »).
     /// - La cabine du joueur local signale au serveur si sa tête est dedans (prêt à descendre).
-    /// - Pendant la descente : bulles, grondement, lumière, profondeur qui défile.
+    /// - Pendant la descente : bulles, grondement, vibrations des manettes, lumière, profondeur qui défile.
     /// </summary>
     public class ElevatorCabin : MonoBehaviour
     {
@@ -37,6 +38,7 @@ namespace Abysses.Level
         [SerializeField] TMP_Text depthText;
 
         const float PresenceCheckInterval = 0.2f;
+        const float RumblePulseInterval = 0.5f;
 
         Vector3 leftClosed;
         Vector3 rightClosed;
@@ -50,6 +52,7 @@ namespace Abysses.Level
         int depthFrom;
         int depthTo;
         int shownDepth = int.MinValue;
+        float nextRumblePulse;
 
         public int Quadrant => quadrant;
 
@@ -60,13 +63,44 @@ namespace Abysses.Level
             SetDepth(0);
         }
 
-        void OnEnable() => GameStateManager.PhaseChanged += OnPhaseChanged;
-        void OnDisable() => GameStateManager.PhaseChanged -= OnPhaseChanged;
+        void OnEnable()
+        {
+            GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ReadyChanged += OnReadyChanged;
+        }
+
+        void OnDisable()
+        {
+            GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ReadyChanged -= OnReadyChanged;
+        }
+
+        void OnReadyChanged(int readyMask) => RefreshDoors();
+
+        void RefreshDoors()
+        {
+            GameStateManager state = GameStateManager.Instance;
+            if (state == null)
+            {
+                doorTarget = 0f;
+                return;
+            }
+            bool boarded = (state.ReadyMask.Value & (1 << quadrant)) != 0;
+            bool open = state.Phase.Value switch
+            {
+                GamePhase.Lobby => !boarded,
+                GamePhase.FloorSolved => !boarded,
+                GamePhase.Playing => true,
+                GamePhase.Finished => true,
+                _ => false,
+            };
+            doorTarget = open ? 1f : 0f;
+        }
 
         void OnPhaseChanged(GamePhase phase)
         {
             GameStateManager state = GameStateManager.Instance;
-            doorTarget = phase == GamePhase.Playing || phase == GamePhase.FloorSolved || phase == GamePhase.Finished ? 1f : 0f;
+            RefreshDoors();
 
             if (cabinLight != null)
                 cabinLight.color = phase == GamePhase.FloorSolved ? boardColor : phase == GamePhase.Descending ? descentColor : idleColor;
@@ -85,8 +119,9 @@ namespace Abysses.Level
             {
                 if (bubbles != null) bubbles.Stop();
                 if (rumble != null) rumble.Stop();
-                if (state != null) SetDepth(state.DepthOf(state.Floor.Value));
             }
+            // Hors descente, l'écran affiche la profondeur de l'étage courant (y compris au retour à la surface).
+            if (!descending && state != null) SetDepth(state.DepthOf(state.Floor.Value));
 
             // Nouvelle phase : on renverra l'état de présence si besoin.
             reportedInside = false;
@@ -96,8 +131,19 @@ namespace Abysses.Level
         void Update()
         {
             AnimateDoors();
-            if (descending) AnimateDepth();
+            if (descending)
+            {
+                AnimateDepth();
+                RumbleLocalHands();
+            }
             CheckLocalPresence();
+        }
+
+        void RumbleLocalHands()
+        {
+            if (Time.unscaledTime < nextRumblePulse || LocalRig.Instance == null || LocalRig.Instance.Quadrant != quadrant) return;
+            nextRumblePulse = Time.unscaledTime + RumblePulseInterval;
+            LocalRig.Pulse(0.12f, 0.3f);
         }
 
         void AnimateDoors()
@@ -130,7 +176,8 @@ namespace Abysses.Level
             GameStateManager state = GameStateManager.Instance;
             LocalRig rig = LocalRig.Instance;
             if (state == null || rig == null || rig.Quadrant != quadrant) return;
-            if (state.Phase.Value != GamePhase.FloorSolved) return;
+            GamePhase phase = state.Phase.Value;
+            if (phase != GamePhase.FloorSolved && phase != GamePhase.Lobby) return;
             if (Time.unscaledTime < nextPresenceCheck) return;
             nextPresenceCheck = Time.unscaledTime + PresenceCheckInterval;
 

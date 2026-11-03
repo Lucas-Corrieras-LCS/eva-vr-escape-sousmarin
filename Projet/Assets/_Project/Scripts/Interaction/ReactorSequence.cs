@@ -172,6 +172,7 @@ namespace Abysses.Interaction
         void FlashRpc(int quadrant)
         {
             PlayTone(quadrant);
+            if (LocalRig.Instance != null && LocalRig.Instance.Quadrant == quadrant) LocalRig.Pulse(0.4f, 0.08f);
             StopCoroutine(nameof(Flash));
             StartCoroutine(nameof(Flash), quadrant);
         }
@@ -187,6 +188,7 @@ namespace Abysses.Interaction
         void FailRpc()
         {
             if (failSound != null) failSound.Play();
+            LocalRig.Pulse(0.7f, 0.3f);
         }
 
         void OnDisplayChanged(int previous, int current)
