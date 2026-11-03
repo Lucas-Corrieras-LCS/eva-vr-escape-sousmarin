@@ -15,9 +15,12 @@ namespace Abysses.Network
         public const string HostTag = "Host";
         public const string ClientTag = "Client";
 
+        // Champs gardés dans les builds (même sérialisation que l'éditeur) mais utilisés seulement dans l'éditeur.
+#pragma warning disable CS0414
         [SerializeField] ConnectionManager connection;
         [SerializeField, Min(0.5f)] float retryDelay = 2f;
         [SerializeField, Min(1)] int maxAttempts = 15;
+#pragma warning restore CS0414
 
 #if UNITY_EDITOR
         bool asHost;

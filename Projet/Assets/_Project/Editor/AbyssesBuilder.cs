@@ -198,8 +198,8 @@ namespace Abysses.EditorTools
         {
             Material material = GetOrCreate(name, "Universal Render Pipeline/Lit");
             material.SetColor("_BaseColor", color);
-            // Propriété héritée que l'importeur URP synchronise sur _BaseColor : on l'écrit nous-mêmes (pas de faux diff git).
-            material.SetColor("_Color", color);
+            // Ne pas écrire _Color : URP la synchronise lui-même depuis _BaseColor (avec ses arrondis) ;
+            // l'écrire ici ferait osciller la valeur à chaque génération / build (faux diffs git).
             material.SetFloat("_Metallic", metallic);
             material.SetFloat("_Smoothness", smoothness);
             if (emission.HasValue)
@@ -222,7 +222,6 @@ namespace Abysses.EditorTools
         {
             Material material = GetOrCreate(name, "Universal Render Pipeline/Unlit");
             material.SetColor("_BaseColor", color);
-            material.SetColor("_Color", color);
             EditorUtility.SetDirty(material);
             return material;
         }
