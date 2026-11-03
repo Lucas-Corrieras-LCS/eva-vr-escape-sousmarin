@@ -48,6 +48,7 @@ Projet d'évaluation de fin de module, en binôme.
 
 | Fichier | Contenu |
 |---------|---------|
+| [docs/etat-du-projet.md](docs/etat-du-projet.md) | **Bilan : où on en est, ce qui reste** |
 | [CONSIGNES.md](CONSIGNES.md) | Énoncé et contraintes à respecter |
 | [BACKLOG.md](BACKLOG.md) | Tâches, progression, journal |
 | [WORKFLOW.md](WORKFLOW.md) | Règles de travail, optimisation |

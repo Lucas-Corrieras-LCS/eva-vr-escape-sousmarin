@@ -6,6 +6,8 @@
 
 ## Où on en est
 
+> Bilan complet de la dernière session : [`docs/etat-du-projet.md`](docs/etat-du-projet.md)
+
 - **Dernière session** : 2026-11-03 — audit + corrections : multijoueur testé à 2 dans l'éditeur (3 bugs réseau corrigés), calibration guidée, menu en jeu, nouvelle plongée, vibrations, chaîne de build APK
 - **Prochaine action** : build APK debug + premier test sur Quest 2 (mesures de perf sur casque) ; passe artistique sur la géométrie (blockout → décor) ; playtests
 - **Bloquants** : pas de casque pour tester pour l'instant (tout est validé dans l'éditeur + simulateur XR) ; date/format de rendu inconnus ; Relay à activer dans le dashboard Unity
