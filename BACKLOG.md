@@ -35,7 +35,7 @@
 - [x] Packages + Player Settings + OpenXR + URP Quest 2 selon `docs/setup-unity.md` (CC)
 - [x] Dépôt Git (LFS + Smart Merge) → https://github.com/Lucas-Corrieras-LCS/eva-vr-escape-sousmarin (public)
 - [x] Binôme (Jeremy) collaborateur du dépôt
-- [ ] Build « hello VR » sur le Quest 2 (valider la chaîne de build) — **en attente d'un casque**
+- [~] Build Quest 2 : APK debug produit sans erreur (`Projet/Builds/Abysses_debug.apk`) — **reste à l'installer sur un casque**
 
 ## Phase 1 — Cadrage & conception
 
@@ -86,7 +86,7 @@
 
 - [ ] Playtests (confort, durée, compréhension des énigmes)
 - [~] Vérifier chaque ligne de `CONSIGNES.md` : tableau des statuts à jour (2026-11-03) ; C5/C6/C7 à valider au casque
-- [~] Chaîne de build : *Abysses → Build → APK debug / APK EVA* (define `ABYSSES_PROD`) ; reste à produire et installer les APK
+- [~] Chaîne de build : *Abysses → Build → APK debug / APK EVA* (define `ABYSSES_PROD`) ; **APK debug produit sans erreur (67 Mo, 7 min)** ; reste : installer sur le Quest 2, produire l'APK EVA
 - [ ] Livrables selon le format demandé
 
 ## Tâches déléguées
