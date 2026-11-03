@@ -8,6 +8,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.XR.Interaction.Toolkit;
@@ -56,6 +57,12 @@ namespace Abysses.EditorTools
         };
 
         const float WallHeight = 3.2f;
+
+        /// <summary>Rendering layer 1 : éclairé par la lampe de cabine (cabines + avatars).</summary>
+        const uint CabinLayer = 1u << 1;
+
+        /// <summary>Sons et textures générés (voir <see cref="AbyssesContent"/>).</summary>
+        static AbyssesContent.Content fx;
         const float WallThickness = 0.2f;
 
         // ------------------------------------------------------------------ Menus
@@ -65,6 +72,7 @@ namespace Abysses.EditorTools
         {
             // Les scènes doivent être dans les Build Settings AVANT leur sauvegarde (identifiants réseau des objets placés).
             SetBuildScenes();
+            fx = AbyssesContent.Build();
             Mats m = BuildMaterials();
             BuildConfig();
             GameObject player = BuildPlayerPrefab(m);
@@ -74,7 +82,29 @@ namespace Abysses.EditorTools
             BuildFloor3(m);
             BuildStation(m, player, cabin);
             AssetDatabase.SaveAssets();
-            Debug.Log("[Abysses] Construction terminée.");
+            Debug.Log("[Abysses] Construction terminée. Penser à baker l'éclairage (Abysses → Baker l'éclairage des étages).");
+        }
+
+        [MenuItem("Abysses/Tout construire + baker l'éclairage", priority = 1)]
+        public static void BuildAllAndBake()
+        {
+            BuildAll();
+            BakeFloors();
+        }
+
+        /// <summary>Bake des lightmaps, light probes et reflection probes de chaque étage (scènes régénérées = bake à refaire).</summary>
+        [MenuItem("Abysses/Baker l'éclairage des étages", priority = 2)]
+        public static void BakeFloors()
+        {
+            foreach (string floor in FloorScenes)
+            {
+                Scene scene = EditorSceneManager.OpenScene(SceneDir + "/" + floor + ".unity", OpenSceneMode.Single);
+                var timer = System.Diagnostics.Stopwatch.StartNew();
+                bool ok = Lightmapping.Bake();
+                EditorSceneManager.SaveScene(scene);
+                Debug.Log($"[Abysses] Bake {floor} : {(ok ? "OK" : "ÉCHEC")} en {timer.Elapsed.TotalSeconds:F0} s");
+            }
+            EditorSceneManager.OpenScene(SceneDir + "/Station.unity", OpenSceneMode.Single);
         }
 
         // ------------------------------------------------------------------ Matériaux
@@ -82,8 +112,12 @@ namespace Abysses.EditorTools
         class Mats
         {
             public Material Hull, Panel, Floor, Glass, EmitCyan, EmitWarm, EmitRed, EmitPurple, Visor, SlotEmpty, StatusIdle, StatusOk, StatusError, Warning, Crate;
+            public Material Key, ShaftRed, SunShaft, PlanktonHabitat, PlanktonLabo, PlanktonCoeur;
             public Material[] Avatar = new Material[4];
+            /// <summary>Couleur seule (fusibles, anneaux).</summary>
             public Material[] Symbols = new Material[6];
+            /// <summary>Forme + couleur (digicode) : lisible sans distinguer les couleurs.</summary>
+            public Material[] Glyphs = new Material[6];
         }
 
         static Mats BuildMaterials()
@@ -91,9 +125,10 @@ namespace Abysses.EditorTools
             EnsureFolder(MaterialDir);
             var m = new Mats
             {
-                Hull = Lit("M_Hull", new Color(0.16f, 0.19f, 0.23f), 0.7f, 0.45f),
-                Panel = Lit("M_Panel", new Color(0.32f, 0.36f, 0.4f), 0.5f, 0.4f),
-                Floor = Lit("M_Floor", new Color(0.1f, 0.12f, 0.14f), 0.4f, 0.55f),
+                // Peu métalliques : un métal ne renvoie presque pas de lumière diffuse, les lightmaps n'auraient aucun effet.
+                Hull = Lit("M_Hull", new Color(0.22f, 0.26f, 0.3f), 0.3f, 0.45f),
+                Panel = Lit("M_Panel", new Color(0.34f, 0.38f, 0.42f), 0.3f, 0.4f),
+                Floor = Lit("M_Floor", new Color(0.13f, 0.15f, 0.17f), 0.15f, 0.55f),
                 Crate = Lit("M_Crate", new Color(0.35f, 0.3f, 0.22f), 0.1f, 0.3f),
                 Glass = Transparent("M_Glass", new Color(0.35f, 0.65f, 0.75f, 0.18f), false),
                 EmitCyan = Lit("M_Emit_Cyan", new Color(0.05f, 0.2f, 0.25f), 0f, 0.5f, new Color(0.2f, 0.85f, 1f) * 2.5f),
@@ -106,11 +141,20 @@ namespace Abysses.EditorTools
                 StatusOk = Lit("M_Status_Ok", Color.black, 0f, 0.5f, new Color(0.2f, 1f, 0.35f) * 2.5f),
                 StatusError = Lit("M_Status_Error", Color.black, 0f, 0.5f, new Color(1f, 0.08f, 0.05f) * 2.5f),
                 Warning = Transparent("M_ZoneWarning", new Color(0.8f, 0.05f, 0.02f, 0f), true),
+                Key = Lit("M_Key", new Color(0.07f, 0.08f, 0.09f), 0.2f, 0.6f),
+                ShaftRed = Additive("M_Shaft_Red", "Universal Render Pipeline/Unlit", new Color(1f, 0.12f, 0.05f, 0.14f), fx.ShaftGradient),
+                SunShaft = Additive("M_Shaft_Sun", "Universal Render Pipeline/Unlit", new Color(0.75f, 0.92f, 1f, 0.35f), fx.ShaftGradient),
+                PlanktonHabitat = Additive("M_Plankton_Habitat", "Universal Render Pipeline/Particles/Unlit", new Color(0.6f, 0.95f, 1f, 0.5f), fx.Dot),
+                PlanktonLabo = Additive("M_Plankton_Labo", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 0.6f, 0.35f, 0.35f), fx.Dot),
+                PlanktonCoeur = Additive("M_Plankton_Coeur", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 1f, 1f, 0.8f), fx.Dot),
             };
             for (int i = 0; i < 4; i++)
                 m.Avatar[i] = Lit("M_Avatar_Q" + i, QuadrantColors[i] * 0.6f, 0.3f, 0.6f, QuadrantColors[i]);
             for (int i = 0; i < 6; i++)
+            {
                 m.Symbols[i] = Unlit("M_Symbol_" + i, SymbolColors[i]);
+                m.Glyphs[i] = Glyph("M_Glyph_" + i, SymbolColors[i], fx.Glyphs[i]);
+            }
             AssetDatabase.SaveAssets();
             return m;
         }
@@ -178,6 +222,40 @@ namespace Abysses.EditorTools
             return material;
         }
 
+        /// <summary>Forme découpée (alpha clip) teintée : le fond sombre de la touche reste visible autour.</summary>
+        static Material Glyph(string name, Color color, Texture2D shape)
+        {
+            Material material = GetOrCreate(name, "Universal Render Pipeline/Unlit");
+            material.SetColor("_BaseColor", color);
+            material.SetTexture("_BaseMap", shape);
+            material.SetFloat("_AlphaClip", 1f);
+            material.SetFloat("_Cutoff", 0.5f);
+            material.EnableKeyword("_ALPHATEST_ON");
+            material.renderQueue = (int)RenderQueue.AlphaTest;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        /// <summary>Additif, double face, sans écriture de profondeur : rayons de lumière et particules qui « brillent » dans le brouillard.</summary>
+        static Material Additive(string name, string shader, Color color, Texture2D texture)
+        {
+            Material material = GetOrCreate(name, shader);
+            material.SetColor("_BaseColor", color);
+            material.SetTexture("_BaseMap", texture);
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 2f);
+            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)BlendMode.One);
+            material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+            material.SetFloat("_DstBlendAlpha", (float)BlendMode.One);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_Cull", (float)CullMode.Off);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue = (int)RenderQueue.Transparent;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         // ------------------------------------------------------------------ Config
 
         static void BuildConfig()
@@ -216,6 +294,7 @@ namespace Abysses.EditorTools
             SetArray(so.FindProperty("hiddenForOwner"), helmet, visor, lamp, leftGlove, rightGlove);
             so.ApplyModifiedPropertiesWithoutUndo();
 
+            foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask |= CabinLayer;
             return SavePrefab(root, PrefabDir + "/NetworkPlayer.prefab");
         }
 
@@ -277,6 +356,10 @@ namespace Abysses.EditorTools
             light.range = 4f;
             light.intensity = 1.6f;
             light.shadows = LightShadows.None;
+            // Sans ombres, elle éclairerait aussi le plafond du module à travers le toit : elle n'éclaire que la cabine et les avatars.
+            if (!lightGo.TryGetComponent(out UniversalAdditionalLightData lightData)) lightData = lightGo.AddComponent<UniversalAdditionalLightData>();
+            lightData.renderingLayers = CabinLayer;
+            foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask |= CabinLayer;
 
             // Profondeur affichée au-dessus de la porte, lisible depuis l'intérieur.
             var depthGo = new GameObject("DepthDisplay", typeof(RectTransform));
@@ -298,6 +381,8 @@ namespace Abysses.EditorTools
             rumble.playOnAwake = false;
             rumble.loop = true;
             rumble.spatialBlend = 0f;
+            rumble.clip = fx.Rumble;
+            rumble.volume = 0.8f;
 
             var so = new SerializedObject(cabin);
             so.FindProperty("leftDoor").objectReferenceValue = leftDoor.transform;
@@ -311,7 +396,7 @@ namespace Abysses.EditorTools
             return SavePrefab(root, PrefabDir + "/Cabin.prefab");
         }
 
-        static ParticleSystem Bubbles(Transform parent, Vector3 localPosition)
+        static ParticleSystem Bubbles(Transform parent, Vector3 localPosition, bool loop = true)
         {
             var go = new GameObject("Bubbles");
             go.transform.SetParent(parent, false);
@@ -320,7 +405,8 @@ namespace Abysses.EditorTools
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
             var main = ps.main;
             main.playOnAwake = false;
-            main.loop = true;
+            main.loop = loop;
+            main.duration = loop ? 5f : 0.8f;
             main.startLifetime = 1.6f;
             main.startSpeed = 2.2f;
             main.startSize = new ParticleSystem.MinMaxCurve(0.015f, 0.06f);
@@ -456,9 +542,12 @@ namespace Abysses.EditorTools
                 var light = lightGo.AddComponent<Light>();
                 light.type = LightType.Point;
                 light.color = lightColor;
-                light.range = 7f;
+                light.range = 9f;
                 light.intensity = lightIntensity;
-                light.shadows = LightShadows.None;
+                // Bakée : ombres douces et rebonds dans les lightmaps, zéro coût au rendu sur le Quest.
+                light.lightmapBakeType = LightmapBakeType.Baked;
+                light.shadows = LightShadows.Soft;
+                light.shadowRadius = 0.2f;
             }
         }
 
@@ -527,10 +616,12 @@ namespace Abysses.EditorTools
         static void BuildFloor1(Mats m)
         {
             Scene scene = NewFloorScene(1, out Transform root);
-            var ambience = root.gameObject.AddComponent<FloorAmbience>();
-            SetFields(ambience, ("fogColor", new Color(0.02f, 0.09f, 0.11f)), ("fogDensity", 0.05f), ("ambientColor", new Color(0.06f, 0.12f, 0.14f)));
+            FloorEnvironment(root, new Color(0.02f, 0.09f, 0.11f), 0.05f, new Color(0.06f, 0.12f, 0.14f), fx.AmbienceHabitat);
 
-            Module[] modules = BuildModules(m, root, Shell.Standard, new Color(0.6f, 0.9f, 1f), 1.3f, m.EmitCyan);
+            Module[] modules = BuildModules(m, root, Shell.Standard, new Color(0.55f, 0.88f, 1f), 6f, m.EmitCyan);
+            foreach (Module mod in modules)
+                Plankton(root, mod, m.PlanktonHabitat, new Color(0.55f, 0.95f, 1f), new Color(0.85f, 1f, 0.95f));
+            BuildCaustics(root);
 
             var keypads = new CodeKeypad[4];
             var fuses = new NetworkTransform[4];
@@ -568,6 +659,8 @@ namespace Abysses.EditorTools
             BuildHatch(m, root, modules[0], PartnerHatchSpot(modules[0]), modules[1], PartnerHatchSpot(modules[1]));
             BuildHatch(m, root, modules[2], PartnerHatchSpot(modules[2]), modules[3], PartnerHatchSpot(modules[3]));
 
+            BuildProbes(root, modules);
+            ConfigureLighting(FloorScenes[0]);
             SaveScene(scene, FloorScenes[0]);
         }
 
@@ -576,10 +669,15 @@ namespace Abysses.EditorTools
         static void BuildFloor2(Mats m)
         {
             Scene scene = NewFloorScene(2, out Transform root);
-            var ambience = root.gameObject.AddComponent<FloorAmbience>();
-            SetFields(ambience, ("fogColor", new Color(0.07f, 0.015f, 0.01f)), ("fogDensity", 0.07f), ("ambientColor", new Color(0.09f, 0.025f, 0.02f)));
+            FloorEnvironment(root, new Color(0.07f, 0.015f, 0.01f), 0.07f, new Color(0.09f, 0.025f, 0.02f), fx.AmbienceLabo);
 
-            Module[] modules = BuildModules(m, root, Shell.VerticalHatches, new Color(1f, 0.3f, 0.12f), 0.9f, m.EmitRed);
+            Module[] modules = BuildModules(m, root, Shell.VerticalHatches, new Color(1f, 0.32f, 0.14f), 10f, m.EmitRed);
+            foreach (Module mod in modules)
+            {
+                Plankton(root, mod, m.PlanktonLabo, new Color(1f, 0.55f, 0.3f), new Color(1f, 0.8f, 0.6f));
+                // Gyrophare de secours : le faisceau tournant balaie le brouillard (rendu additif, aucune lumière temps réel).
+                Beacon(m, root, mod.P(-7.05f, 2.75f, 2.2f));
+            }
 
             var keypads = new CodeKeypad[4];
             var gauges = new PressureGauge[4];
@@ -628,6 +726,8 @@ namespace Abysses.EditorTools
             BuildHatch(m, root, modules[0], NeighborHatchSpot(modules[0]), modules[2], NeighborHatchSpot(modules[2]));
             BuildHatch(m, root, modules[1], NeighborHatchSpot(modules[1]), modules[3], NeighborHatchSpot(modules[3]));
 
+            BuildProbes(root, modules);
+            ConfigureLighting(FloorScenes[1]);
             SaveScene(scene, FloorScenes[1]);
         }
 
@@ -636,11 +736,13 @@ namespace Abysses.EditorTools
         static void BuildFloor3(Mats m)
         {
             Scene scene = NewFloorScene(3, out Transform root);
-            var ambience = root.gameObject.AddComponent<FloorAmbience>();
-            SetFields(ambience, ("fogColor", new Color(0.005f, 0.015f, 0.03f)), ("fogDensity", 0.06f), ("ambientColor", new Color(0.02f, 0.04f, 0.07f)));
+            FloorEnvironment(root, new Color(0.005f, 0.015f, 0.03f), 0.06f, new Color(0.02f, 0.04f, 0.07f), fx.AmbienceCoeur);
 
-            Module[] modules = BuildModules(m, root, Shell.OpenHall, new Color(0.25f, 0.85f, 1f), 0.7f, m.EmitCyan);
+            Module[] modules = BuildModules(m, root, Shell.OpenHall, new Color(0.25f, 0.85f, 1f), 3.5f, m.EmitCyan);
             Vector3 center = new Vector3(PlayArea.ArenaWidth / 2f, 0f, PlayArea.ArenaDepth / 2f);
+            // Bioluminescence : plancton cyan / magenta.
+            foreach (Module mod in modules)
+                Plankton(root, mod, m.PlanktonCoeur, new Color(0.2f, 0.9f, 1f), new Color(1f, 0.25f, 0.85f));
 
             // Fissures lumineuses dans les allées entre les modules (bioluminescence).
             Static(Prim(PrimitiveType.Cube, "Rift_X", root, new Vector3(center.x, 0.01f, center.z), Quaternion.identity, new Vector3(PlayArea.ArenaWidth, 0.02f, 0.12f), m.EmitPurple, false));
@@ -678,11 +780,13 @@ namespace Abysses.EditorTools
 
             var reactorGo = new GameObject("Reactor");
             reactorGo.transform.SetParent(root, false);
+            reactorGo.transform.position = center + Vector3.up * 1.5f;
             reactorGo.AddComponent<NetworkObject>();
             PuzzleObjective sequenceObjective = Objective(reactorGo, 3, -1, "Séquence du réacteur");
             var sequence = reactorGo.AddComponent<ReactorSequence>();
-            var tone = reactorGo.AddComponent<AudioSource>();
-            tone.playOnAwake = false;
+            // Le cœur est au centre de la piste : son à moitié spatialisé pour que tous l'entendent bien.
+            AudioSource tone = Sfx(reactorGo, fx.ReactorTone, 0.9f, 0.4f);
+            AudioSource reactorFail = Sfx(reactorGo, fx.ReactorFail, 0.8f, 0.4f);
             var rso = new SerializedObject(sequence);
             rso.FindProperty("objective").objectReferenceValue = sequenceObjective;
             SerializedProperty consoleArray = rso.FindProperty("consoles");
@@ -698,6 +802,7 @@ namespace Abysses.EditorTools
             rso.FindProperty("successMaterial").objectReferenceValue = m.StatusOk;
             rso.FindProperty("errorMaterial").objectReferenceValue = m.StatusError;
             rso.FindProperty("tone").objectReferenceValue = tone;
+            rso.FindProperty("failSound").objectReferenceValue = reactorFail;
             rso.ApplyModifiedPropertiesWithoutUndo();
 
             BuildSyncLevers(root, 3, "Remontée d'urgence", levers, new[] { sequenceObjective });
@@ -718,12 +823,30 @@ namespace Abysses.EditorTools
             foreach (Vector3 offset in new[] { new Vector3(-7f, 0f, 0f), new Vector3(7f, 0f, 0f), new Vector3(0f, 0f, -4f), new Vector3(0f, 0f, 4f) })
                 bubbles.Add(Bubbles(root, center + offset));
 
+            // Rayon visible : cône additif sous le puits de lumière, révélé en fondu par FloorFinale.
+            var shaft = new GameObject("SunShaft");
+            shaft.transform.SetParent(root, false);
+            shaft.transform.position = center + Vector3.up * WallHeight;
+            shaft.transform.localScale = new Vector3(4f, WallHeight, 4f);
+            shaft.AddComponent<MeshFilter>().sharedMesh = fx.ShaftCone;
+            var shaftRenderer = shaft.AddComponent<MeshRenderer>();
+            shaftRenderer.sharedMaterial = m.SunShaft;
+            shaftRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            shaftRenderer.receiveShadows = false;
+            shaftRenderer.enabled = false;
+
+            AudioSource finaleSound = Sfx(root.gameObject, fx.Finale, 1f, 0f);
+
             var finale = root.gameObject.AddComponent<FloorFinale>();
             var fso = new SerializedObject(finale);
             fso.FindProperty("sunbeam").objectReferenceValue = beam;
             SetArray(fso.FindProperty("bubbles"), bubbles.ToArray());
+            fso.FindProperty("finaleSound").objectReferenceValue = finaleSound;
+            fso.FindProperty("sunShaft").objectReferenceValue = shaftRenderer;
             fso.ApplyModifiedPropertiesWithoutUndo();
 
+            BuildProbes(root, modules);
+            ConfigureLighting(FloorScenes[2]);
             SaveScene(scene, FloorScenes[2]);
         }
 
@@ -743,18 +866,24 @@ namespace Abysses.EditorTools
             Prim(PrimitiveType.Cube, "Panel", t, new Vector3(0f, 0f, 0.02f), Quaternion.identity, new Vector3(0.5f, 0.6f, 0.04f), m.Panel, false);
             var slots = new Renderer[CodeKeypad.CodeLength];
             for (int i = 0; i < slots.Length; i++)
-                slots[i] = Prim(PrimitiveType.Cube, "Slot" + i, t, new Vector3(-0.15f + 0.1f * i, 0.18f, -0.005f), Quaternion.identity, new Vector3(0.08f, 0.08f, 0.01f), m.SlotEmpty, false).GetComponent<Renderer>();
+            {
+                var slotPosition = new Vector3(-0.15f + 0.1f * i, 0.18f, -0.005f);
+                Prim(PrimitiveType.Cube, "SlotBack" + i, t, slotPosition, Quaternion.identity, new Vector3(0.08f, 0.08f, 0.01f), m.SlotEmpty, false);
+                slots[i] = Prim(PrimitiveType.Quad, "Slot" + i, t, slotPosition + new Vector3(0f, 0f, -0.0065f), Quaternion.identity, new Vector3(0.07f, 0.07f, 1f), m.SlotEmpty, false).GetComponent<Renderer>();
+            }
             Renderer status = Prim(PrimitiveType.Sphere, "Status", t, new Vector3(0.2f, 0.25f, -0.01f), Quaternion.identity, Vector3.one * 0.05f, m.StatusIdle, false).GetComponent<Renderer>();
 
             for (int s = 0; s < CodeKeypad.SymbolCount; s++)
             {
                 float x = -0.13f + 0.13f * (s % 3);
                 float y = -0.04f - 0.13f * (s / 3);
-                GameObject button = Prim(PrimitiveType.Cube, "Key" + s, t, new Vector3(x, y, -0.01f), Quaternion.identity, new Vector3(0.1f, 0.1f, 0.04f), m.Symbols[s], true);
+                // Touche sombre + symbole forme ET couleur (lisible par les daltoniens).
+                GameObject button = Prim(PrimitiveType.Cube, "Key" + s, t, new Vector3(x, y, -0.01f), Quaternion.identity, new Vector3(0.1f, 0.1f, 0.04f), m.Key, true);
+                GameObject glyph = Prim(PrimitiveType.Quad, "Glyph" + s, t, new Vector3(x, y, -0.0315f), Quaternion.identity, new Vector3(0.075f, 0.075f, 1f), m.Glyphs[s], false);
                 button.AddComponent<XRSimpleInteractable>();
                 button.AddComponent<XRPokeFilter>();
                 var key = button.AddComponent<CodeKeypadButton>();
-                SetFields(key, ("keypad", keypad), ("symbol", s), ("symbolRenderer", button.GetComponent<Renderer>()));
+                SetFields(key, ("keypad", keypad), ("symbol", s), ("symbolRenderer", glyph.GetComponent<Renderer>()));
             }
 
             Label(t, "DIGICODE", new Vector3(0f, 0.36f, -0.01f), 0.6f);
@@ -762,8 +891,11 @@ namespace Abysses.EditorTools
             var so = new SerializedObject(keypad);
             so.FindProperty("objective").objectReferenceValue = objective;
             SetArray(so.FindProperty("entrySlots"), slots);
-            SetArray(so.FindProperty("symbolMaterials"), m.Symbols);
+            SetArray(so.FindProperty("symbolMaterials"), m.Glyphs);
             so.FindProperty("emptySlotMaterial").objectReferenceValue = m.SlotEmpty;
+            so.FindProperty("keySound").objectReferenceValue = Sfx(root, fx.Key, 0.6f);
+            so.FindProperty("errorSound").objectReferenceValue = Sfx(root, fx.Error, 0.8f);
+            so.FindProperty("successSound").objectReferenceValue = Sfx(root, fx.Success, 0.9f);
             so.FindProperty("statusLight").objectReferenceValue = status;
             so.FindProperty("idleMaterial").objectReferenceValue = m.StatusIdle;
             so.FindProperty("successMaterial").objectReferenceValue = m.StatusOk;
@@ -784,7 +916,11 @@ namespace Abysses.EditorTools
             Static(Prim(PrimitiveType.Cube, "Backing", t, new Vector3(0f, 0f, 0.02f), Quaternion.identity, new Vector3(step * 4f + 0.1f, size + 0.2f, 0.04f), m.Panel, false));
             var slots = new Renderer[CodeKeypad.CodeLength];
             for (int i = 0; i < slots.Length; i++)
-                slots[i] = Prim(PrimitiveType.Cube, "Symbol" + i, t, new Vector3((i - 1.5f) * step, -0.02f, -0.005f), Quaternion.identity, new Vector3(size, size, 0.01f), m.SlotEmpty, false).GetComponent<Renderer>();
+            {
+                var slotPosition = new Vector3((i - 1.5f) * step, -0.02f, -0.005f);
+                Prim(PrimitiveType.Cube, "SymbolBack" + i, t, slotPosition, Quaternion.identity, new Vector3(size, size, 0.01f), m.SlotEmpty, false);
+                slots[i] = Prim(PrimitiveType.Quad, "Symbol" + i, t, slotPosition + new Vector3(0f, 0f, -0.0065f), Quaternion.identity, new Vector3(size * 0.88f, size * 0.88f, 1f), m.SlotEmpty, false).GetComponent<Renderer>();
+            }
             Label(t, title, new Vector3(0f, size / 2f + 0.06f, -0.01f), large ? 0.9f : 0.5f);
 
             var display = root.AddComponent<CodeDisplay>();
@@ -859,7 +995,7 @@ namespace Abysses.EditorTools
             SetArray(lo.FindProperty("components"), socket);
             lo.ApplyModifiedPropertiesWithoutUndo();
 
-            SetFields(socketBehaviour, ("socket", socket), ("objective", objective), ("installedVisual", installed));
+            SetFields(socketBehaviour, ("socket", socket), ("objective", objective), ("installedVisual", installed), ("insertSound", Sfx(root, fx.FuseInsert, 0.9f)));
             return objective;
         }
 
@@ -1002,8 +1138,7 @@ namespace Abysses.EditorTools
             root.AddComponent<NetworkObject>();
             PuzzleObjective objective = Objective(root, floor, -1, label);
             var group = root.AddComponent<SyncLeverGroup>();
-            var fail = root.AddComponent<AudioSource>();
-            fail.playOnAwake = false;
+            AudioSource fail = Sfx(root, fx.LeverFail, 0.9f, 0f);
             var so = new SerializedObject(group);
             so.FindProperty("objective").objectReferenceValue = objective;
             SetArray(so.FindProperty("prerequisites"), prerequisites);
@@ -1094,6 +1229,11 @@ namespace Abysses.EditorTools
             endpoint.FindPropertyRelative("zone").objectReferenceValue = zone;
             endpoint.FindPropertyRelative("arrivalPoint").objectReferenceValue = arrival;
             endpoint.FindPropertyRelative("sendButton").objectReferenceValue = interactable;
+            endpoint.FindPropertyRelative("bubbles").objectReferenceValue = Bubbles(parent, spot.Tray + Vector3.up * 0.06f, false);
+            var soundGo = new GameObject("HatchSound_Q" + q);
+            soundGo.transform.SetParent(parent, false);
+            soundGo.transform.position = spot.Tray;
+            endpoint.FindPropertyRelative("sound").objectReferenceValue = Sfx(soundGo, fx.Hatch, 0.9f);
         }
 
         // ------------------------------------------------------------------ Scène Station
@@ -1124,6 +1264,16 @@ namespace Abysses.EditorTools
             var gameState = new GameObject("GameState");
             gameState.AddComponent<NetworkObject>();
             gameState.AddComponent<GameStateManager>();
+
+            // Fond sonore permanent (bourdonnement de la station, sonar) ; chaque étage ajoute sa propre ambiance.
+            var ambience = new GameObject("Ambience").AddComponent<AudioSource>();
+            ambience.clip = fx.AmbienceStation;
+            ambience.loop = true;
+            ambience.playOnAwake = true;
+            ambience.spatialBlend = 0f;
+            ambience.volume = 0.3f;
+            AudioSource phaseSource = Sfx(new GameObject("PhaseAudio"), null, 1f, 0f);
+            SetFields(phaseSource.gameObject.AddComponent<PhaseAudio>(), ("source", phaseSource), ("floorSolved", fx.FloorSolved));
 
             new GameObject("XR Interaction Manager").AddComponent<XRInteractionManager>();
             var eventSystem = new GameObject("EventSystem");
@@ -1164,6 +1314,8 @@ namespace Abysses.EditorTools
             var alarm = cameraTransform.gameObject.AddComponent<AudioSource>();
             alarm.playOnAwake = false;
             alarm.loop = true;
+            alarm.clip = fx.ZoneAlarm;
+            alarm.spatialBlend = 0f;
             var guard = rig.AddComponent<ZoneGuard>();
             SetFields(guard, ("warningOverlay", overlayRenderer), ("alarm", alarm));
 
@@ -1316,6 +1468,193 @@ namespace Abysses.EditorTools
             label.alignment = TextAlignmentOptions.Center;
             label.color = Color.white;
             return button;
+        }
+
+        // ------------------------------------------------------------------ Ambiance et lumière
+
+        /// <summary>Brouillard, lumière ambiante et boucle sonore d'un étage. Valeurs posées aussi sur la scène (utilisées par le bake).</summary>
+        static void FloorEnvironment(Transform root, Color fog, float density, Color ambient, AudioClip loop)
+        {
+            SetFields(root.gameObject.AddComponent<FloorAmbience>(), ("fogColor", fog), ("fogDensity", density), ("ambientColor", ambient));
+            RenderSettings.skybox = null;
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = ambient;
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
+            RenderSettings.fogColor = fog;
+            RenderSettings.fogDensity = density;
+
+            var audio = root.gameObject.AddComponent<AudioSource>();
+            audio.clip = loop;
+            audio.loop = true;
+            audio.playOnAwake = true;
+            audio.spatialBlend = 0f;
+            audio.volume = 0.55f;
+        }
+
+        /// <summary>Particules en suspension dans un module (plancton, poussière) : donnent du volume au brouillard.</summary>
+        static void Plankton(Transform parent, Module mod, Material material, Color a, Color b)
+        {
+            var go = new GameObject("Plankton_Q" + mod.Q);
+            go.transform.SetParent(parent, false);
+            go.transform.position = mod.Center + Vector3.up * 1.5f;
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.playOnAwake = true;
+            main.loop = true;
+            main.prewarm = true;
+            main.duration = 10f;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(8f, 14f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.01f, 0.05f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.012f, 0.03f);
+            main.startColor = new ParticleSystem.MinMaxGradient(a, b);
+            main.maxParticles = 200;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var emission = ps.emission;
+            emission.rateOverTime = 16f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Box;
+            shape.scale = new Vector3(PlayArea.QuadrantWidth - 1.5f, 2.6f, PlayArea.QuadrantDepth - 1.5f);
+            var velocity = ps.velocityOverLifetime;
+            velocity.enabled = true;
+            velocity.space = ParticleSystemSimulationSpace.World;
+            velocity.x = new ParticleSystem.MinMaxCurve(-0.03f, 0.03f);
+            velocity.y = new ParticleSystem.MinMaxCurve(0f, 0.035f);
+            velocity.z = new ParticleSystem.MinMaxCurve(-0.03f, 0.03f);
+            var fade = ps.colorOverLifetime;
+            fade.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.2f), new GradientAlphaKey(1f, 0.8f), new GradientAlphaKey(0f, 1f) });
+            fade.color = gradient;
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.maxParticleSize = 0.02f;
+        }
+
+        /// <summary>Étage 1 : caustiques animées projetées par une directionnelle temps réel sans ombres (cookie).</summary>
+        static void BuildCaustics(Transform root)
+        {
+            var go = new GameObject("Caustics");
+            go.transform.SetParent(root, false);
+            go.transform.rotation = Quaternion.Euler(72f, 25f, 0f);
+            var light = go.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.color = new Color(0.45f, 0.85f, 1f);
+            light.intensity = 0.9f;
+            light.shadows = LightShadows.None;
+            light.lightmapBakeType = LightmapBakeType.Realtime;
+            light.cookie = fx.Caustics[0];
+            if (!go.TryGetComponent(out UniversalAdditionalLightData data)) data = go.AddComponent<UniversalAdditionalLightData>();
+            data.lightCookieSize = new Vector2(3.5f, 3.5f);
+            var animator = go.AddComponent<CausticsAnimator>();
+            var so = new SerializedObject(animator);
+            SetArray(so.FindProperty("frames"), fx.Caustics);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static void Beacon(Mats m, Transform parent, Vector3 position)
+        {
+            Transform root = new GameObject("Beacon").transform;
+            root.SetParent(parent, false);
+            root.position = position;
+            Static(Prim(PrimitiveType.Cylinder, "Base", root, Vector3.zero, Quaternion.identity, new Vector3(0.16f, 0.03f, 0.16f), m.Hull, false));
+            Prim(PrimitiveType.Sphere, "Dome", root, new Vector3(0f, 0.07f, 0f), Quaternion.identity, Vector3.one * 0.13f, m.EmitRed, false);
+            var pivot = new GameObject("Pivot").transform;
+            pivot.SetParent(root, false);
+            pivot.localPosition = new Vector3(0f, 0.07f, 0f);
+            SetFields(pivot.gameObject.AddComponent<Spin>(), ("degreesPerSecond", 150f));
+            foreach (float side in new[] { 90f, -90f })
+            {
+                var shaft = new GameObject("Shaft");
+                shaft.transform.SetParent(pivot, false);
+                shaft.transform.localRotation = Quaternion.Euler(0f, 0f, side);
+                shaft.transform.localScale = new Vector3(0.55f, 3.2f, 0.55f);
+                shaft.AddComponent<MeshFilter>().sharedMesh = fx.ShaftCone;
+                var renderer = shaft.AddComponent<MeshRenderer>();
+                renderer.sharedMaterial = m.ShaftRed;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+            }
+        }
+
+        static readonly float[] ProbeHeights = { 0.4f, 1.5f, 2.8f };
+
+        /// <summary>Light probes (éclairage des objets mobiles : avatars, fusibles, lampe) et une reflection probe par module.</summary>
+        static void BuildProbes(Transform root, Module[] modules)
+        {
+            var group = new GameObject("LightProbes").AddComponent<LightProbeGroup>();
+            group.transform.SetParent(root, false);
+            var positions = new List<Vector3>();
+            foreach (Module mod in modules)
+            {
+                Rect r = PlayArea.GetRect(mod.Q, PlayArea.WallInset + 0.25f);
+                for (int ix = 0; ix <= 6; ix++)
+                for (int iz = 0; iz <= 3; iz++)
+                foreach (float y in ProbeHeights)
+                    positions.Add(new Vector3(Mathf.Lerp(r.xMin, r.xMax, ix / 6f), y, Mathf.Lerp(r.yMin, r.yMax, iz / 3f)));
+
+                Rect inner = PlayArea.GetRect(mod.Q, PlayArea.WallInset);
+                var probe = new GameObject("ReflectionProbe_Q" + mod.Q).AddComponent<ReflectionProbe>();
+                probe.transform.SetParent(root, false);
+                probe.transform.position = mod.Center + Vector3.up * 1.6f;
+                probe.mode = ReflectionProbeMode.Baked;
+                probe.boxProjection = true;
+                probe.size = new Vector3(inner.width, WallHeight, inner.height);
+                probe.center = new Vector3(0f, WallHeight / 2f - 1.6f, 0f);
+                probe.resolution = 64;
+                probe.hdr = false;
+            }
+            group.probePositions = positions.ToArray();
+        }
+
+        /// <summary>Réglages de bake de l'étage (scène active) : lightmaps légères, AO, sans directionnalité (mobile).</summary>
+        static void ConfigureLighting(string sceneName)
+        {
+            string path = SceneDir + "/Lighting_" + sceneName + ".lighting";
+            var settings = AssetDatabase.LoadAssetAtPath<LightingSettings>(path);
+            if (settings == null)
+            {
+                EnsureFolder(SceneDir);
+                settings = new LightingSettings { name = "Lighting_" + sceneName };
+                AssetDatabase.CreateAsset(settings, path);
+            }
+            settings.bakedGI = true;
+            settings.realtimeGI = false;
+            settings.lightmapper = LightingSettings.Lightmapper.ProgressiveGPU;
+            settings.lightmapResolution = 10f;
+            settings.lightmapPadding = 2;
+            settings.lightmapMaxSize = 1024;
+            settings.directSampleCount = 16;
+            settings.indirectSampleCount = 128;
+            settings.environmentSampleCount = 64;
+            settings.maxBounces = 2;
+            settings.ao = true;
+            settings.aoMaxDistance = 0.8f;
+            settings.aoExponentIndirect = 1f;
+            settings.aoExponentDirect = 0.3f;
+            settings.directionalityMode = LightmapsMode.NonDirectional;
+            settings.lightmapCompression = LightmapCompression.NormalQuality;
+            EditorUtility.SetDirty(settings);
+            Lightmapping.lightingSettings = settings;
+        }
+
+        static AudioSource Sfx(GameObject go, AudioClip clip, float volume, float spatialBlend = 1f)
+        {
+            var source = go.AddComponent<AudioSource>();
+            source.clip = clip;
+            source.volume = volume;
+            source.playOnAwake = false;
+            source.spatialBlend = spatialBlend;
+            source.dopplerLevel = 0f;
+            source.rolloffMode = AudioRolloffMode.Logarithmic;
+            source.minDistance = 0.6f;
+            source.maxDistance = 12f;
+            return source;
         }
 
         // ------------------------------------------------------------------ Build Settings

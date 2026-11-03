@@ -17,8 +17,14 @@ namespace Abysses.Level
         [SerializeField, Min(0.5f)] float duration = 6f;
         [SerializeField] ParticleSystem[] bubbles;
         [SerializeField] AudioSource finaleSound;
+        [Tooltip("Rayon de lumière visible (cône additif), révélé en fondu avec le faisceau.")]
+        [SerializeField] Renderer sunShaft;
+        [SerializeField] Color sunShaftColor = new Color(0.75f, 0.92f, 1f, 0.35f);
+
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
         bool played;
+        MaterialPropertyBlock shaftBlock;
 
         void OnEnable() => GameStateManager.PhaseChanged += OnPhaseChanged;
         void OnDisable() => GameStateManager.PhaseChanged -= OnPhaseChanged;
@@ -26,6 +32,7 @@ namespace Abysses.Level
         void Start()
         {
             if (sunbeam != null) sunbeam.intensity = 0f;
+            if (sunShaft != null) sunShaft.enabled = false;
         }
 
         void OnPhaseChanged(GamePhase phase)
@@ -45,6 +52,11 @@ namespace Abysses.Level
             float densityFrom = RenderSettings.fogDensity;
             Color ambientFrom = RenderSettings.ambientLight;
             Camera main = Camera.main;
+            if (sunShaft != null)
+            {
+                shaftBlock = new MaterialPropertyBlock();
+                sunShaft.enabled = true;
+            }
 
             for (float t = 0f; t < 1f; t += Time.deltaTime / duration)
             {
@@ -54,6 +66,11 @@ namespace Abysses.Level
                 RenderSettings.ambientLight = Color.Lerp(ambientFrom, surfaceAmbient, k);
                 if (main != null) main.backgroundColor = RenderSettings.fogColor;
                 if (sunbeam != null) sunbeam.intensity = k * sunbeamIntensity;
+                if (sunShaft != null)
+                {
+                    shaftBlock.SetColor(BaseColorId, sunShaftColor * k);
+                    sunShaft.SetPropertyBlock(shaftBlock);
+                }
                 yield return null;
             }
         }
