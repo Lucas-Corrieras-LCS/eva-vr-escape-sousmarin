@@ -31,7 +31,7 @@ namespace Abysses.EditorTools
     /// Relançable à volonté : les assets existants sont mis à jour, les scènes régénérées.
     /// Le blockout sert de base : l'habillage artistique se fait ensuite à la main sur ces scènes.
     /// </summary>
-    public static class AbyssesBuilder
+    public static partial class AbyssesBuilder
     {
         const string Root = "Assets/_Project";
         const string MaterialDir = Root + "/Materials";
@@ -120,7 +120,10 @@ namespace Abysses.EditorTools
             {
                 Scene scene = EditorSceneManager.OpenScene(SceneDir + "/" + floor + ".unity", OpenSceneMode.Single);
                 var timer = System.Diagnostics.Stopwatch.StartNew();
-                bool ok = Lightmapping.Bake();
+                bool ok = true;
+                // Étage 1 : deux bakes (courant rétabli puis secours), échangés en jeu par PowerRestore.
+                if (floor == FloorScenes[0]) BakePowerVariants(scene);
+                else ok = Lightmapping.Bake();
                 EditorSceneManager.SaveScene(scene);
                 Debug.Log($"[Abysses] Bake {floor} : {(ok ? "OK" : "ÉCHEC")} en {timer.Elapsed.TotalSeconds:F0} s");
             }
@@ -357,13 +360,17 @@ namespace Abysses.EditorTools
             GameObject leftGlove = Prim(PrimitiveType.Sphere, "Glove", left, Vector3.zero, Quaternion.identity, new Vector3(0.09f, 0.06f, 0.12f), m.Avatar[0], false);
             GameObject rightGlove = Prim(PrimitiveType.Sphere, "Glove", right, Vector3.zero, Quaternion.identity, new Vector3(0.09f, 0.06f, 0.12f), m.Avatar[0], false);
 
+            var hidden = new List<GameObject> { helmet, visor, lamp, leftGlove, rightGlove };
+            var tinted = new List<Renderer> { helmet.GetComponent<Renderer>(), leftGlove.GetComponent<Renderer>(), rightGlove.GetComponent<Renderer>() };
+            BuildAvatarBody(m, root, head, left, right, hidden, tinted);
+
             var so = new SerializedObject(player);
             so.FindProperty("head").objectReferenceValue = head;
             so.FindProperty("leftHand").objectReferenceValue = left;
             so.FindProperty("rightHand").objectReferenceValue = right;
-            SetArray(so.FindProperty("tintedRenderers"), helmet.GetComponent<Renderer>(), leftGlove.GetComponent<Renderer>(), rightGlove.GetComponent<Renderer>());
+            SetArray(so.FindProperty("tintedRenderers"), tinted.ToArray());
             SetArray(so.FindProperty("quadrantMaterials"), m.Avatar);
-            SetArray(so.FindProperty("hiddenForOwner"), helmet, visor, lamp, leftGlove, rightGlove);
+            SetArray(so.FindProperty("hiddenForOwner"), hidden.ToArray());
             so.ApplyModifiedPropertiesWithoutUndo();
 
             foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask |= CabinLayer;
@@ -448,6 +455,9 @@ namespace Abysses.EditorTools
             ParticleSystem bubblesRight = Bubbles(t, new Vector3(half + 0.35f, 0.6f, 0f));
             // Une seule référence dans le script : la seconde suit la première.
             bubblesRight.transform.SetParent(bubblesLeft.transform, true);
+            DescentStreaks(m, bubblesLeft, half);
+            BuildCabinTutorial(m, t, -inner / 2f);
+            foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask |= CabinLayer;
 
             var rumble = root.AddComponent<AudioSource>();
             rumble.playOnAwake = false;
@@ -1471,6 +1481,7 @@ namespace Abysses.EditorTools
             var gameState = new GameObject("GameState");
             gameState.AddComponent<NetworkObject>();
             gameState.AddComponent<GameStateManager>();
+            gameState.AddComponent<HintSystem>();
 
             // Fond sonore permanent (bourdonnement de la station, sonar) ; chaque étage ajoute sa propre ambiance.
             var ambience = new GameObject("Ambience").AddComponent<AudioSource>();
@@ -1496,6 +1507,9 @@ namespace Abysses.EditorTools
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = RenderSettings.fogColor;
             camera.farClipPlane = 40f;
+            // Oreilles qui se bouchent pendant la descente (filtre sur l'auditeur, actif seulement en descente).
+            cameraTransform.gameObject.AddComponent<AudioLowPassFilter>();
+            cameraTransform.gameObject.AddComponent<DescentEars>();
 
             var localRig = rig.AddComponent<LocalRig>();
             SetFields(localRig, ("leftHand", Find(rig.transform, "Left Controller")), ("rightHand", Find(rig.transform, "Right Controller")));
@@ -1527,6 +1541,8 @@ namespace Abysses.EditorTools
             SetFields(guard, ("warningOverlay", overlayRenderer), ("alarm", alarm));
 
             BuildMenu(rig.transform, camera);
+            BuildDiveWatch(m, Find(rig.transform, "Left Controller"));
+            BuildGameMaster();
 
             // Simulateur XR : uniquement dans l'éditeur (tag EditorOnly = retiré des builds).
             var simulatorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SimulatorPath);
@@ -1575,7 +1591,7 @@ namespace Abysses.EditorTools
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = camera;
             canvasGo.AddComponent<TrackedDeviceGraphicRaycaster>();
-            ((RectTransform)canvasGo.transform).sizeDelta = new Vector2(820f, 1000f);
+            ((RectTransform)canvasGo.transform).sizeDelta = new Vector2(820f, 1200f);
 
             RectTransform panel = UIRect("Panel", canvasGo.transform);
             Stretch(panel);
@@ -1594,23 +1610,29 @@ namespace Abysses.EditorTools
             TextMeshProUGUI players = UIText(panel, "Players", "", 30f, FontStyles.Normal, 40f, new Color(0.7f, 0.9f, 1f));
             TextMeshProUGUI hint = UIText(panel, "Hint", "", 28f, FontStyles.Italic, 80f, new Color(1f, 0.85f, 0.5f));
 
+            TextMeshProUGUI leaderboard = UIText(panel, "Leaderboard", "", 26f, FontStyles.Normal, 190f, new Color(0.75f, 0.95f, 1f));
+
             RectTransform offline = Group(panel, "Offline");
-            Button joinOnline = UIButton(offline, "Rejoindre l'équipe (en ligne)");
-            Button hostLan = UIButton(offline, "Héberger (réseau local)");
-            Button joinLan = UIButton(offline, "Rejoindre (réseau local)");
-            Button solo = UIButton(offline, "Jouer en solo");
+            Button joinOnline = UIButton(offline, "Rejoindre l'équipe (en ligne)", "Join the team (online)");
+            Button hostLan = UIButton(offline, "Héberger (réseau local)", "Host (local network)");
+            Button joinLan = UIButton(offline, "Rejoindre (réseau local)", "Join (local network)");
+            Button solo = UIButton(offline, "Jouer en solo", "Play solo");
 
             RectTransform online = Group(panel, "Online");
             Button start = UIButton(online, "Lancer la plongée");
-            Button recenter = UIButton(online, "Recalibrer ma position");
-            Button leave = UIButton(online, "Quitter la partie");
+            Button easy = UIButton(online, "Mode facile : non");
+            Button recenter = UIButton(online, "Recalibrer ma position", "Recalibrate my position");
+            Button leave = UIButton(online, "Quitter la partie", "Leave the game");
+
+            Button language = UIButton(panel, "English");
 
             var menu = canvasGo.AddComponent<MainMenu>();
             SetFields(menu,
                 ("panel", panel.gameObject), ("statusText", status), ("playersText", players),
                 ("offlineGroup", offline.gameObject), ("joinOnlineButton", joinOnline), ("hostLanButton", hostLan),
                 ("joinLanButton", joinLan), ("soloButton", solo), ("onlineGroup", online.gameObject),
-                ("startButton", start), ("recenterButton", recenter), ("leaveButton", leave), ("hintText", hint));
+                ("startButton", start), ("recenterButton", recenter), ("leaveButton", leave), ("hintText", hint),
+                ("languageButton", language), ("easyButton", easy), ("leaderboardText", leaderboard));
         }
 
         static RectTransform Group(Transform parent, string name)
@@ -1654,7 +1676,7 @@ namespace Abysses.EditorTools
             return label;
         }
 
-        static Button UIButton(Transform parent, string text)
+        static Button UIButton(Transform parent, string text, string english = null)
         {
             RectTransform rect = UIRect("Button - " + text, parent);
             var image = rect.gameObject.AddComponent<Image>();
@@ -1675,6 +1697,7 @@ namespace Abysses.EditorTools
             label.fontSize = 36f;
             label.alignment = TextAlignmentOptions.Center;
             label.color = Color.white;
+            if (english != null) SetFields(labelRect.gameObject.AddComponent<LocalizedText>(), ("french", text), ("english", english));
             return button;
         }
 
@@ -1982,6 +2005,8 @@ namespace Abysses.EditorTools
                     case bool b: p.boolValue = b; break;
                     case string s: p.stringValue = s; break;
                     case Color c: p.colorValue = c; break;
+                    case Vector3 v3: p.vector3Value = v3; break;
+                    case Vector2 v2: p.vector2Value = v2; break;
                 }
             }
             so.ApplyModifiedPropertiesWithoutUndo();

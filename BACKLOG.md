@@ -75,6 +75,24 @@
 - [x] Sons : ambiance, bulles, grondement de l'ascenseur, alarme de zone (CC)
 - [x] Captures automatiques des étages → `docs/captures/` (`Abysses → Captures d'écran des étages`) (CC)
 
+### Améliorations (branche `feat/ameliorations-jeu`, 2026-11-04) — à valider au casque et par le binôme
+
+- [x] Vibrations partout : crans et butées de vanne, levier en butée, touches, fusible enclenché, sas, arrivée de l'ascenseur (CC)
+- [x] Objets perdus qui reviennent à leur dernier emplacement sûr (`LostItemReturn`) (CC)
+- [x] Étage 1 : départ en éclairage de secours, néons qui se rallument un par un à la remise sous tension (2 bakes échangés, `PowerRestore`) (CC)
+- [x] Hublots sur l'océan : neige marine, banc de poissons (-200 m), leurres lumineux (-1 500 m), bioluminescence (-4 000 m), silhouette géante (CC)
+- [x] Coque habillée : tôles rivetées + rouille (textures générées, UV monde), nervures, poutres, conduites, plancher en tôle larmée (CC)
+- [x] Station vivante : réverbération par module, coque qui grince, gouttes ; étage 2 : vapeur qui siffle, néon défaillant, eau qui monte (CC)
+- [x] Descente : oreilles qui se bouchent (filtre audio), traînées derrière les hublots, choc d'arrivée (CC)
+- [x] Montre de plongée au poignet (profondeur, O2, chrono) + indices progressifs de l'IA de la station (CC)
+- [x] Pupitre du maître du jeu / écran spectateur (PC, F1 ou `-pupitre`) : suivi, indice, message, résoudre, passer l'étage, relancer, caméras, vitrine (CC)
+- [x] Mode facile, classement des équipes, langue FR / EN (CC)
+- [x] Reconnexion automatique d'un casque (retrouve son quadrant, 20 s de grâce côté serveur) (CC)
+- [x] Avatars : buste, bouteilles, bras ; surbrillance des objets au survol de la main (CC)
+- [x] Tutoriel dans la cabine (bouton, fusible, prise), plaques de coque à frapper (morse), journaux de bord de l'équipage (CC)
+- [x] Vérification d'ergonomie automatique → `docs/ergonomie.md` (CC)
+- [ ] Hors de portée pour l'instant : spatialiseur Meta XR Audio, vrais bruitages libres de droits, énigmes morse / sonar / grue, Application SpaceWarp, modèles 3D importés
+
 ## Phase 4 — Optimisation (Quest 2, 72 FPS)
 
 - [~] Relevé « avant » dans l'éditeur → `docs/optimisation.md` (154 draw calls, 29 SetPass, 22 k triangles, 0 ombre dynamique) ; **à refaire sur le casque**
@@ -108,3 +126,4 @@
 - **2026-10-16** — Étages 2 et 3 construits et testés en Play Mode (solo) de la surface jusqu'au final. Leviers = dernière étape (prérequis). Couleur jaune → vert (confusion avec l'orange). Fusible consommé via Despawn(false).
 - **2026-10-16** — Passe ambiance (branche `feat/ambiance-son-lumiere`, travail hors MCP : générateur relancé en batchmode, console sans erreur ni avertissement). Éclairage baké + probes, caustiques, plancton, gyrophares, rayon final, 17 sons procéduraux, digicode formes + couleurs, captures auto. Corrigé au passage : coque trop métallique (les lightmaps n'avaient presque aucun effet), lampe de cabine qui éclairait le plafond du module (isolée par rendering layer), intensités recalées pour l'atténuation physique du bake.
 - **2026-11-03** — Pull de la passe ambiance de Jeremy (vérifiée en jeu : lightmaps, 336 light probes, caustiques, sons). Audit + corrections : calibration guidée et départ conditionné à la présence en cabine, menu en jeu (bouton Menu), « Nouvelle plongée », refus des arrivées en cours de partie, vibrations, menu de build APK debug/EVA, test multijoueur MPPM 2 joueurs (Host/Client auto) → 3 bugs réseau corrigés, matériaux sans faux diff, menu « Reconstruire la Station seulement ».
+- **2026-11-04** — Branche `feat/ameliorations-jeu` : vibrations, objets perdus, panne de courant (2 bakes), hublots sur l'océan, coque texturée, station vivante, montre de plongée + indices, pupitre MJ / spectateur, mode facile, classement, FR/EN, reconnexion, avatars complets, surbrillance, tutoriel de cabine, plaques à frapper, journaux de bord, vérification d'ergonomie.

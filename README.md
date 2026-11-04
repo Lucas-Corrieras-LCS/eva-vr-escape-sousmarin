@@ -35,6 +35,15 @@ Projet d'évaluation de fin de module, en binôme.
 | Captures d'écran des étages | Images dans `docs/captures/` |
 | Build → APK debug / APK EVA | APK dans `Projet/Builds/` ; la version EVA coupe le déplacement au joystick (`ABYSSES_PROD`) |
 | Test multijoueur | Active / désactive le scénario Multiplayer Play Mode 2 joueurs |
+| Vérifier l'ergonomie | Hauteur et accessibilité de chaque objet interactif → `docs/ergonomie.md` |
+
+## Pupitre du maître du jeu (staff EVA)
+
+Sur un PC sans casque (build bureau lancé avec `-pupitre`, ou **F1** en Play Mode dans l'éditeur) :
+héberger la partie en réseau local ou la rejoindre comme spectateur (sans avatar, même en cours de partie),
+suivre la progression, donner un indice, envoyer un message, résoudre une énigme, passer l'étage, relancer la partie.
+Caméras : touches **1–4** (surveillance de chaque module), **5** (derrière un plongeur), **6** (libre, ZQSD + clic droit),
+**F2** = mode vitrine plein écran pour le public qui attend.
 
 ## Règles de travail en binôme
 
