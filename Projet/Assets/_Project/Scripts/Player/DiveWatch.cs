@@ -32,12 +32,14 @@ namespace Abysses.Player
         {
             HintSystem.MessageReceived += OnMessage;
             Loc.Changed += Refresh;
+            GameStateManager.PhaseChanged += OnPhaseChanged;
         }
 
         void OnDisable()
         {
             HintSystem.MessageReceived -= OnMessage;
             Loc.Changed -= Refresh;
+            GameStateManager.PhaseChanged -= OnPhaseChanged;
         }
 
         void Start()
@@ -45,6 +47,9 @@ namespace Abysses.Player
             if (messagePanel != null) messagePanel.SetActive(false);
             Refresh();
         }
+
+        // Arrivée à un étage, fin de partie : la profondeur change tout de suite, sans attendre la seconde suivante.
+        void OnPhaseChanged(GamePhase phase) => Refresh();
 
         void OnMessage(string message)
         {

@@ -44,7 +44,9 @@ namespace Abysses.UI
         void Start()
         {
             bool requested = System.Environment.CommandLine.Contains("-pupitre") || System.Environment.CommandLine.Contains("-gm");
-            bool desktopWithoutHeadset = !Application.isEditor && !Application.isMobilePlatform && !XRSettings.isDeviceActive;
+            // -abysses-player : un PC sans casque qui joue quand même un plongeur (client de test multijoueur).
+            bool forcePlayer = System.Environment.CommandLine.Contains("-abysses-player");
+            bool desktopWithoutHeadset = !Application.isEditor && !Application.isMobilePlatform && !XRSettings.isDeviceActive && !forcePlayer;
             if (Application.isMobilePlatform && !Application.isEditor)
             {
                 // Dans le casque : jamais de pupitre.

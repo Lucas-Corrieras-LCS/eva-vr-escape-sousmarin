@@ -65,8 +65,11 @@ namespace Abysses.Player
         public void AssignQuadrant(int quadrant)
         {
             if (!PlayArea.IsValid(quadrant)) return;
+            // Reconnexion après une coupure : le joueur est déjà calibré et peut être n'importe où dans son module,
+            // un recentrage le décalerait par rapport au décor. On ne recentre que sur un nouveau quadrant.
+            bool alreadyCalibrated = Quadrant == quadrant;
             Quadrant = quadrant;
-            Recenter();
+            if (!alreadyCalibrated) Recenter();
             QuadrantAssigned?.Invoke(quadrant);
         }
 

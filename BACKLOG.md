@@ -91,6 +91,7 @@
 - [x] Avatars : buste, bouteilles, bras ; surbrillance des objets au survol de la main (CC)
 - [x] Tutoriel dans la cabine (bouton, fusible, prise), plaques de coque à frapper (morse), journaux de bord de l'équipage (CC)
 - [x] Vérification d'ergonomie automatique → `docs/ergonomie.md` (CC)
+- [x] Relecture complète + parties de test automatisées : solo (36/36) et 2 plongeurs + pupitre avec reconnexion (28/28), 0 erreur ; 6 bugs corrigés dont 1 existant (étage resté chargé après avoir quitté) (CC)
 - [ ] Hors de portée pour l'instant : spatialiseur Meta XR Audio, vrais bruitages libres de droits, énigmes morse / sonar / grue, Application SpaceWarp, modèles 3D importés
 
 ## Phase 4 — Optimisation (Quest 2, 72 FPS)

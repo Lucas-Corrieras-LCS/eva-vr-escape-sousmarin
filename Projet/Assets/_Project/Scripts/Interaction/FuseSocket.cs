@@ -22,14 +22,14 @@ namespace Abysses.Interaction
         public override void OnNetworkSpawn()
         {
             socket.selectEntered.AddListener(OnSocketed);
-            objective.StateChanged += Apply;
-            Apply(objective.Solved.Value);
+            objective.StateChanged += OnSolvedChanged;
+            Apply(objective.Solved.Value, false);
         }
 
         public override void OnNetworkDespawn()
         {
             socket.selectEntered.RemoveListener(OnSocketed);
-            objective.StateChanged -= Apply;
+            objective.StateChanged -= OnSolvedChanged;
         }
 
         void OnSocketed(SelectEnterEventArgs args)
@@ -49,7 +49,10 @@ namespace Abysses.Interaction
             objective.ServerSolve();
         }
 
-        void Apply(bool solved)
+        void OnSolvedChanged(bool solved) => Apply(solved, true);
+
+        /// <summary>Applique l'état ; <paramref name="announce"/> = son et vibration (pas à l'arrivée d'un joueur en cours de partie).</summary>
+        void Apply(bool solved, bool announce)
         {
             if (installedVisual != null) installedVisual.SetActive(solved);
             if (solved)
@@ -59,9 +62,10 @@ namespace Abysses.Interaction
                 for (int i = 0; i < FuseItem.All.Count; i++)
                     if (FuseItem.All[i].FuseId == socket.RequiredFuseId) FuseItem.All[i].gameObject.SetActive(false);
                 socket.socketActive = false;
-                if (insertSound != null && IsSpawned) insertSound.Play();
+                if (!announce) return;
+                if (insertSound != null) insertSound.Play();
                 // « Clac » du fusible qui s'enclenche, dans le module concerné.
-                if (IsSpawned && LocalRig.IsLocalOrShared(objective.Quadrant)) LocalRig.Pulse(0.8f, 0.12f);
+                if (LocalRig.IsLocalOrShared(objective.Quadrant)) LocalRig.Pulse(0.8f, 0.12f);
             }
         }
     }

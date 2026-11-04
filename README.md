@@ -36,6 +36,8 @@ Projet d'évaluation de fin de module, en binôme.
 | Build → APK debug / APK EVA | APK dans `Projet/Builds/` ; la version EVA coupe le déplacement au joystick (`ABYSSES_PROD`) |
 | Test multijoueur | Active / désactive le scénario Multiplayer Play Mode 2 joueurs |
 | Vérifier l'ergonomie | Hauteur et accessibilité de chaque objet interactif → `docs/ergonomie.md` |
+| Tests → Partie solo automatique | Joue une partie complète en Play Mode et vérifie chaque système → `docs/playtest-solo.md` |
+| Tests → Compiler le client de test Mac, puis Partie à 2 + pupitre | Un client Mac compilé rejoint comme 2e plongeur, un autre comme pupitre ; teste la reconnexion → `docs/playtest-multi.md` |
 
 ## Pupitre du maître du jeu (staff EVA)
 

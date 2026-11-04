@@ -36,6 +36,9 @@ namespace Abysses.Network
         const int ReconnectAttempts = 5;
         const float ReconnectDelay = 3f;
         const byte NoQuadrant = 255;
+        /// <summary>Refus volontaires de l'hôte : seuls motifs pour lesquels un casque ne retente pas sa connexion.</summary>
+        const string ReasonFull = "Partie complète / Game full";
+        const string ReasonStarted = "Plongée déjà commencée / Dive already started";
 
         /// <summary>Ce poste est le pupitre du maître du jeu : pas d'avatar, pas de quadrant.</summary>
         public bool Spectator { get; set; }
@@ -236,13 +239,12 @@ namespace Abysses.Network
             GameStateManager state = GameStateManager.Instance;
             bool hasRoom = NetworkPlayer.All.Count < config.MaxPlayers;
             bool inLobby = state == null || state.Phase.Value == GamePhase.Lobby;
-            // Retour d'un casque qui a décroché : son quadrant fait partie de l'équipe et personne ne l'a pris.
-            bool rejoin = !inLobby && PlayArea.IsValid(wanted) && state != null
-                && (state.ActiveMask.Value & (1 << wanted)) != 0 && (NetworkPlayer.OccupiedQuadrantMask() & (1 << wanted)) == 0;
+            // Retour d'un casque qui a décroché : son quadrant est libre (même si son module a été résolu entre-temps).
+            bool rejoin = !inLobby && PlayArea.IsValid(wanted) && (NetworkPlayer.OccupiedQuadrantMask() & (1 << wanted)) == 0;
 
             response.Approved = isHost || (hasRoom && (inLobby || rejoin));
             response.CreatePlayerObject = response.Approved;
-            response.Reason = response.Approved ? string.Empty : !hasRoom ? "Partie complète / Game full" : "Plongée déjà commencée / Dive already started";
+            response.Reason = response.Approved ? string.Empty : !hasRoom ? ReasonFull : ReasonStarted;
             response.Pending = false;
             if (response.Approved && PlayArea.IsValid(wanted)) preferredQuadrants[request.ClientNetworkId] = wanted;
         }
@@ -276,6 +278,7 @@ namespace Abysses.Network
         void OnClientStopped(bool wasHost)
         {
             lanDiscovery.Stop();
+            UnloadFloors();
             if (networkManager.IsServer || wasHost)
             {
                 gameMasters.Clear();
@@ -289,8 +292,10 @@ namespace Abysses.Network
             // Motif envoyé par l'hôte en cas de refus (partie complète, plongée commencée…).
             string reason = networkManager.DisconnectReason;
 
-            // Casque client qui décroche (Wi-Fi) : on retente seul, il retrouvera son quadrant.
-            bool canRetry = !wasHost && string.IsNullOrEmpty(reason)
+            // Casque client qui décroche (Wi-Fi, délai dépassé, coupure côté hôte) : on retente seul, il retrouvera son quadrant.
+            // Netcode remplit aussi le motif pour une simple coupure : seuls nos refus d'admission arrêtent les essais.
+            bool refused = reason == ReasonFull || reason == ReasonStarted;
+            bool canRetry = !wasHost && !refused
                 && (lastMode == ConnectionMode.LanClient || lastMode == ConnectionMode.Online);
             if (canRetry && (wasOnline || reconnecting))
             {
@@ -307,8 +312,23 @@ namespace Abysses.Network
                 }
                 StopReconnecting();
             }
-            SetState(ConnectionState.Failed, string.IsNullOrEmpty(reason) ? "Connexion perdue." : "Refusé : " + reason,
-                string.IsNullOrEmpty(reason) ? "Connection lost." : "Refused: " + reason);
+            SetState(ConnectionState.Failed, refused ? "Refusé : " + reason : "Connexion perdue.",
+                refused ? "Refused: " + reason : "Connection lost.");
+        }
+
+        /// <summary>
+        /// Netcode ne décharge pas les étages chargés en additif quand la session s'arrête : sans ça, un étage resterait
+        /// affiché (brouillard compris) et la partie suivante en chargerait un second par-dessus.
+        /// </summary>
+        void UnloadFloors()
+        {
+            Scene station = gameObject.scene;
+            for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (scene != station && scene.isLoaded && scene.name.StartsWith("Etage", StringComparison.Ordinal))
+                    SceneManager.UnloadSceneAsync(scene);
+            }
         }
 
         IEnumerator Reconnect()
@@ -366,6 +386,8 @@ namespace Abysses.Network
             State = state;
             statusFrench = status;
             statusEnglish = english;
+            // Trace dans le journal (logcat sur le Quest) : indispensable pour diagnostiquer une connexion chez EVA.
+            Debug.Log($"[Abysses] Connexion : {state} — {status}");
             StateChanged?.Invoke();
         }
     }
