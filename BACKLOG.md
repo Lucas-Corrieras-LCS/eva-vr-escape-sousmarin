@@ -8,8 +8,8 @@
 
 > Bilan complet de la dernière session : [`docs/etat-du-projet.md`](docs/etat-du-projet.md)
 
-- **Dernière session** : 2026-11-03 — audit + corrections : multijoueur testé à 2 dans l'éditeur (3 bugs réseau corrigés), calibration guidée, menu en jeu, nouvelle plongée, vibrations, chaîne de build APK
-- **Prochaine action** : build APK debug + premier test sur Quest 2 (mesures de perf sur casque) ; passe artistique sur la géométrie (blockout → décor) ; playtests
+- **Dernière session** : 2026-11-05 — **passe artistique** : textures PBR procédurales (coque rivetée, tôle larmée, plafond ondulé), habillage des modules (plinthes, membrures, poutres, conduites, appliques, luminaires), mobilier par étage, cabine bathyscaphe redessinée (hublots, dôme), supports d'appareils, vitres corrigées
+- **Prochaine action** : premier test sur Quest 2 (perf réelle : 266 batches dans l'éditeur après la passe artistique) ; playtests
 - **Bloquants** : pas de casque pour tester pour l'instant (tout est validé dans l'éditeur + simulateur XR) ; date/format de rendu inconnus ; Relay à activer dans le dashboard Unity
 
 ## Décisions
@@ -43,7 +43,7 @@
 
 - [x] Scénario de l'escape game coop → `docs/game-design.md` (première version, à relire par le binôme)
 - [x] Plan au sol : 4 quadrants 15 × 8 m, murs en retrait de 30 cm, alarme de pression si la tête sort de la zone sûre ; salle commune vitrée à l'étage 3 (C2, C4, C10)
-- [ ] Moodboard DA + palette lumière par profondeur (C6, C7)
+- [x] Palette lumière par profondeur (C6, C7) : cyan habitat → rouge de secours + halos verts labo → bleu nuit cœur + violet ; bandeau à la couleur du joueur
 - [ ] Répartition des tâches dans le binôme
 
 ## Phase 2 — Fondations techniques
@@ -74,10 +74,11 @@
 - [x] Symboles du digicode : formes + couleurs (● rouge, ▲ vert, ■ bleu, ★ jaune, ◆ blanc, ✚ violet) sur touches, saisie et codes muraux (CC)
 - [x] Sons : ambiance, bulles, grondement de l'ascenseur, alarme de zone (CC)
 - [x] Captures automatiques des étages → `docs/captures/` (`Abysses → Captures d'écran des étages`) (CC)
+- [x] **Passe artistique** (`AbyssesArt.cs` + générateur) : textures PBR procédurales albédo + normal map (coque rivetée, tôle larmée, plafond ondulé, casiers, marquage danger, écrans), UV en coordonnées monde (pas d'étirement), cadres arrondis sur hublots et sas, plinthes/bandeau couleur du joueur/membrures/poutres/conduites/appliques, luminaires encastrés, mobilier par étage (casiers, bureaux, caisses, fûts, paillasses, cuves à échantillons, baies serveurs, bobines), cabine bathyscaphe (hublots laiton, dôme, coins arrondis lumineux), supports des appareils (digicode, fusible, manomètre), habillage du réacteur (CC) — vérifié sur captures + Play Mode solo
 
 ## Phase 4 — Optimisation (Quest 2, 72 FPS)
 
-- [~] Relevé « avant » dans l'éditeur → `docs/optimisation.md` (154 draw calls, 29 SetPass, 22 k triangles, 0 ombre dynamique) ; **à refaire sur le casque**
+- [~] Relevé « avant » dans l'éditeur → `docs/optimisation.md` (154 draw calls, 29 SetPass, 22 k triangles, 0 ombre dynamique) ; après passe artistique : 266 batches, 40 SetPass, 41 k triangles ; **à refaire sur le casque**
 - [x] Static batching actif (60 draw calls regroupés), matériaux partagés SRP Batcher
 - [~] Un seul étage chargé à la fois (fait) ; occlusion culling à tester si la mesure casque dépasse le budget
 - [ ] Compression ASTC, tailles de textures, LOD
@@ -108,3 +109,4 @@
 - **2026-10-16** — Étages 2 et 3 construits et testés en Play Mode (solo) de la surface jusqu'au final. Leviers = dernière étape (prérequis). Couleur jaune → vert (confusion avec l'orange). Fusible consommé via Despawn(false).
 - **2026-10-16** — Passe ambiance (branche `feat/ambiance-son-lumiere`, travail hors MCP : générateur relancé en batchmode, console sans erreur ni avertissement). Éclairage baké + probes, caustiques, plancton, gyrophares, rayon final, 17 sons procéduraux, digicode formes + couleurs, captures auto. Corrigé au passage : coque trop métallique (les lightmaps n'avaient presque aucun effet), lampe de cabine qui éclairait le plafond du module (isolée par rendering layer), intensités recalées pour l'atténuation physique du bake.
 - **2026-11-03** — Pull de la passe ambiance de Jeremy (vérifiée en jeu : lightmaps, 336 light probes, caustiques, sons). Audit + corrections : calibration guidée et départ conditionné à la présence en cabine, menu en jeu (bouton Menu), « Nouvelle plongée », refus des arrivées en cours de partie, vibrations, menu de build APK debug/EVA, test multijoueur MPPM 2 joueurs (Host/Client auto) → 3 bugs réseau corrigés, matériaux sans faux diff, menu « Reconstruire la Station seulement ».
+- **2026-11-05** — Passe artistique (le décor n'est plus en blockout). Nouveau `AbyssesArt.cs` : textures PBR générées (albédo + normal map), meshes en UV monde, cadres arrondis. Habillage complet des modules, mobilier propre à chaque étage, cabine redessinée, supports d'appareils, réacteur. Corrigé : vitres blanches sous angle rasant (reflets d'environnement + specular non multiplié par l'alpha), montants qui masquaient le réacteur, support de digicode qui chevauchait le bandeau. Étage 2 : halos verts dans les cuves pour casser le tout-rouge. Perf éditeur : 266 batches / 40 SetPass / 41 k triangles. Play Mode solo OK (descente, étage 1).
