@@ -48,6 +48,7 @@ namespace Abysses.UI
         InputAction toggleAction;
         bool openedDuringGame;
         bool wasVisible;
+        GamePhase lastPhase = GamePhase.Lobby;
 
         void Awake()
         {
@@ -102,6 +103,11 @@ namespace Abysses.UI
         void OnPhaseChanged(GamePhase phase)
         {
             openedDuringGame = false;
+            // Retour à la surface : au joystick (debug), le joueur peut être n'importe où dans l'étage qui vient d'être
+            // déchargé (et tomber, gravité active) ; on le replace dans sa cabine. En build EVA, il y retourne à pied.
+            if (phase == GamePhase.Lobby && lastPhase != GamePhase.Lobby && GameConfig.Instance.AllowJoystickLocomotion && LocalRig.Instance != null)
+                LocalRig.Instance.Recenter();
+            lastPhase = phase;
             Refresh();
         }
 
@@ -122,7 +128,7 @@ namespace Abysses.UI
         {
             GameStateManager state = GameStateManager.Instance;
             if (state == null) return;
-            if (state.Phase.Value == GamePhase.Finished) state.RequestRestartRpc();
+            if (state.Phase.Value == GamePhase.Finished || InGame) state.RequestRestartRpc();
             else state.RequestStartRpc();
         }
 
@@ -146,6 +152,10 @@ namespace Abysses.UI
         /// <summary>En partie : le menu est masqué par défaut et s'ouvre au bouton.</summary>
         bool InGame => Online && Phase != GamePhase.Lobby && Phase != GamePhase.Finished;
 
+        /// <summary>Seul l'hôte (ou le joueur solo) peut abandonner la partie en cours : ça ramène toute l'équipe à la surface.</summary>
+        bool CanAbandon => InGame && Phase != GamePhase.Descending
+                           && Unity.Netcode.NetworkManager.Singleton != null && Unity.Netcode.NetworkManager.Singleton.IsHost;
+
         void Refresh()
         {
             if (connection == null) return;
@@ -162,9 +172,10 @@ namespace Abysses.UI
 
             bool finished = phase == GamePhase.Finished;
             bool everyoneReady = state != null && state.EveryoneReady;
-            startButton.gameObject.SetActive(Online && (phase == GamePhase.Lobby || finished));
-            startButton.interactable = finished || everyoneReady;
-            if (startLabel != null) startLabel.text = finished ? "Nouvelle plongée" : "Lancer la plongée";
+            bool abandon = CanAbandon;
+            startButton.gameObject.SetActive(Online && (phase == GamePhase.Lobby || finished || abandon));
+            startButton.interactable = finished || abandon || everyoneReady;
+            if (startLabel != null) startLabel.text = abandon ? "Recommencer (retour surface)" : finished ? "Nouvelle plongée" : "Lancer la plongée";
 
             statusText.text = finished && state != null
                 ? "Remontée réussie en " + FormatDuration(state.EndTime.Value - state.StartTime.Value)
