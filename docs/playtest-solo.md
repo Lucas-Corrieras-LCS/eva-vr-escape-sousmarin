@@ -1,6 +1,6 @@
 # Partie de test automatique — solo
 
-> 2026-11-04 14:23 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-05 12:17 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Les énigmes sont résolues par les commandes du maître du jeu : on vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Partie solo lancée, quadrant ORANGE attribué
@@ -31,7 +31,7 @@
 - ✅ Montre : -4 000 m
 - ✅ Séquence du réacteur + remontée → fin de partie
 - ✅ Chrono de fin cohérent
-- ✅ Temps enregistré au classement : 1.  0:26  ·  1 plongeur
+- ✅ Temps enregistré au classement : 1.  0:33  ·  1 plongeur
 - ✅ « Nouvelle plongée » : retour surface, étages déchargés
 - ✅ Joueur de nouveau prêt en cabine
 - ✅ Seconde plongée → étage 1

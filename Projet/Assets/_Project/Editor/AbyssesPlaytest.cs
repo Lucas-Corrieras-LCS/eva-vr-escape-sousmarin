@@ -318,10 +318,10 @@ namespace Abysses.EditorTools
             yield return Wait(1f);
             State.GmSkipFloorRpc();
             yield return Until(() => Phase(GamePhase.FloorSolved, 1), 6f, "Étage 1 : « passer l'étage » (pupitre) → étage résolu");
-            yield return Wait(6f);
-            bool swapped = offset >= 0 && powered != null && LightmapSettings.lightmaps.Length > offset
-                && LightmapSettings.lightmaps[offset].lightmapColor == powered[0];
-            Check(swapped, "Étage 1 : courant rétabli (néons rallumés un par un, lightmaps échangées)");
+            // 16 diffuseurs rallumés un par un (~7 s) avant l'échange des lightmaps.
+            yield return Until(() => offset >= 0 && powered != null && LightmapSettings.lightmaps.Length > offset
+                && LightmapSettings.lightmaps[offset].lightmapColor == powered[0], 12f,
+                "Étage 1 : courant rétabli (néons rallumés un par un, lightmaps échangées)");
             Check(State.Phase.Value == GamePhase.FloorSolved, "Pas de descente tant que le plongeur n'est pas revenu dans sa cabine");
             rig.position -= new Vector3(3f, 0f, 0f);
         }

@@ -1,11 +1,29 @@
 # État du projet — ABYSSES
 
-> Bilan de la session du **2026-11-03** (audit, corrections, ajouts).
+> Bilan des sessions du **2026-11-03** (audit, corrections, ajouts) et du **2026-11-05** (passe artistique).
 > Suivi détaillé tâche par tâche : [`BACKLOG.md`](../BACKLOG.md) · statut des consignes : [`CONSIGNES.md`](../CONSIGNES.md).
 
 ## Où on en est
 
 Les **3 étages se jouent de bout en bout**, de la surface jusqu'à la remontée finale, **en solo et à 2 joueurs** dans l'éditeur. Console sans erreur ; seul avertissement : les manettes *simulées* de l'éditeur ne savent pas vibrer (sans conséquence sur le Quest).
+
+## Passe artistique (2026-11-05)
+
+Le décor n'est plus en blockout. Tout reste généré par *Abysses → Tout construire + baker l'éclairage* (nouveau fichier `AbyssesArt.cs`), sans aucun asset externe. Captures : [`docs/captures/`](captures/).
+
+- **Matières** : textures PBR générées (couleur + relief) — coque à plaques rivetées, sol en tôle larmée, plafond ondulé, casiers, bandes de danger, écrans animés. Les textures suivent les coordonnées du monde, donc pas d'étirement quelle que soit la taille du mur.
+- **Modules** : plinthes, bandeau lumineux à la couleur du joueur, membrures, poutres, conduites avec colliers, appliques murales, luminaires encastrés, cadres arrondis sur les hublots et les sas.
+- **Mobilier propre à chaque étage** :
+  - habitat : casiers, bureau, caisses, fûts ;
+  - labo : paillasse avec fioles, cuves à échantillons lumineuses, baies serveurs ;
+  - cœur : bobines en laiton, colonnes de conduites.
+- **Cabine bathyscaphe** redessinée : hublots ronds cerclés de laiton, dôme, coins arrondis lumineux, console et main courante.
+- **Appareils** (digicode, fusible, manomètre) montés sur des platines cerclées de bandes de danger, avec gaine vers le plafond. Le réacteur est habillé (socle, anneaux, haubans).
+- **Lumière** : étage 2 moins monochrome (halos verts dans les cuves, contre le rouge de secours) ; vitres corrigées (elles devenaient blanches sous un angle rasant).
+- **Étage 2 (labo)** : coque peinte claire et faïence blanche au lieu de l'acier sombre (le rouge de secours éclaire enfin les murs), hottes avec réglette froide au-dessus des paillasses, armoire à échantillons, fuite de vapeur et sol mouillé.
+- **Étage 3 (cœur)** : armoires électriques, cage en laiton qui tourne autour du réacteur, liseré et lumière du réacteur, **balisage au sol à la couleur du joueur** de sa cabine jusqu'à sa console, lumière remontée au niveau de l'étage 1 (un écran LCD de Quest rend mal les scènes très sombres).
+- **Corrigé** : bureaux, paillasses et baies serveurs étaient tournés vers le mur.
+- **Perf (éditeur)** : 187 à 303 batches selon l'étage, 34 à 56 SetPass, 34 000 à 50 000 triangles, toujours 0 ombre dynamique — détail dans [`optimisation.md`](optimisation.md).
 
 ## Vérifié (dans l'éditeur, sans casque)
 
@@ -52,18 +70,18 @@ Les **3 étages se jouent de bout en bout**, de la surface jusqu'à la remontée
 | C4 | Empêcher de sortir de sa zone (idée originale) | ✅ |
 | C5 | Qualité finale | 🟡 playtests casque à faire |
 | C6 | Lumière | 🟡 à juger au casque |
-| C7 | DA claire et travaillée | 🟡 géométrie encore en blockout |
+| C7 | DA claire et travaillée | 🟡 passe artistique faite, à juger au casque |
 | C8 | Bonus « étendre l'univers » | ✅ bathyscaphe, 3 étages |
 | C9 | Coopération + avatars visibles | ✅ testé à 2 joueurs |
 | C10 | Marge de dérive 50 cm | ✅ |
 
 ## Ce qui reste, par priorité
 
-1. **Tester sur un vrai Quest 2** — rien n'a encore tourné sur un casque : performances, confort, volumes sonores, joystick réellement coupé. L'APK est prêt ; casque branché en USB, mode développeur activé :
+1. **Tester sur un vrai Quest 2** — rien n'a encore tourné sur un casque : performances, confort, volumes sonores, joystick réellement coupé. L'APK est à régénérer pour inclure la passe artistique (*Abysses → Build → APK debug*), puis, casque branché en USB, mode développeur activé :
    ```bash
    /Applications/Unity/Hub/Editor/6000.3.23f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb install -r /Users/Eleve/Desktop/IUTS5/UNITY/TP_Unity/Projet/Builds/Abysses_debug.apk
    ```
-2. **Passe artistique** — la géométrie est encore faite de formes simples : c'est le plus gros chantier pour les consignes C6 et C7 (lumière et direction artistique), à répartir dans le binôme.
+2. **Mesurer la perf sur le casque** après la passe artistique (jusqu'à 303 batches à l'étage 2 dans l'éditeur) ; si besoin : occlusion culling, puis fusion des pièces de décor.
 3. **Activer Relay** sur cloud.unity.com (projet *eva-vr-escape-sousmarin* → Multiplayer → Relay) pour jouer en ligne en plus du réseau local.
 4. **Playtests** avec de vraies personnes : durée, compréhension des énigmes.
 
@@ -74,7 +92,7 @@ Les **3 étages se jouent de bout en bout**, de la surface jusqu'à la remontée
 | Domaine | Ajout |
 |---------|-------|
 | Lumière (C6) | Étage 1 en éclairage de secours ; à la remise sous tension, les néons se rallument un par un et l'éclairage complet revient (2 bakes échangés, aucune lumière temps réel en plus) |
-| DA (C7) | Coque en tôles rivetées avec rouille et plancher en tôle larmée (textures générées, UV monde), nervures, poutres, conduites ; hublots sur l'océan (neige marine, poissons, bioluminescence, silhouette géante) |
+| DA (C7) | Passe artistique de `main` (textures PBR, habillage, mobilier) ; hublots sur l'océan (neige marine, poissons, bioluminescence, silhouette géante) |
 | Ambiance | Réverbération métallique, coque qui grince, gouttes, vapeur qui siffle, néon défaillant, eau qui monte (étage 2), oreilles qui se bouchent pendant la descente |
 | Ressenti | Vibrations sur chaque interaction, surbrillance des objets à portée de main, avatars avec buste et bras |
 | Prise en main | Tutoriel dans la cabine, montre de plongée (profondeur, O2, chrono), indices progressifs de l'IA de la station, mode facile, FR / EN |

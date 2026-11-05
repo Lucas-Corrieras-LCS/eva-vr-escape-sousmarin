@@ -34,6 +34,9 @@ namespace Abysses.EditorTools
                     new View("etage1_module", new Vector3(1.2f, 2.1f, 1.2f), new Vector3(12f, 1f, 6f)),
                     new View("etage1_hublot", new Vector3(6f, 1.6f, 2f), new Vector3(14.7f, 1.6f, 5.5f)),
                     new View("etage1_digicode", new Vector3(9.4f, 1.55f, 1.5f), new Vector3(10f, 1.3f, 0.34f)),
+                    // Hublots sur l'océan, aux deux bouts du mur extérieur du module Q0 (x = 1,1 et 13,9).
+                    new View("etage1_ocean_bureau", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
+                    new View("etage1_ocean_casiers", new Vector3(13.2f, 1.55f, 2.9f), new Vector3(13.9f, 1.45f, 0.3f)),
                 }
             },
             {
@@ -41,6 +44,8 @@ namespace Abysses.EditorTools
                 {
                     new View("etage2_module", new Vector3(13.5f, 2f, 1.2f), new Vector3(2f, 1.4f, 6f)),
                     new View("etage2_manometre", new Vector3(5f, 1.6f, 2.3f), new Vector3(4.5f, 1.4f, 0.34f)),
+                    new View("etage2_ocean", new Vector3(13.2f, 1.55f, 2.9f), new Vector3(13.9f, 1.45f, 0.3f)),
+                    new View("etage2_fuite", new Vector3(4f, 1.7f, 4.2f), new Vector3(0.45f, 2.1f, 1.7f)),
                 }
             },
             {
@@ -48,6 +53,7 @@ namespace Abysses.EditorTools
                 {
                     new View("etage3_reacteur", new Vector3(9f, 1.7f, 2f), new Vector3(15.5f, 1.4f, 8.25f)),
                     new View("etage3_salle", new Vector3(1.5f, 2.2f, 1.2f), new Vector3(20f, 0.8f, 12f)),
+                    new View("etage3_ocean", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
                 }
             },
         };

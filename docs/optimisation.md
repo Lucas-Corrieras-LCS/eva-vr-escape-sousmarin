@@ -25,6 +25,32 @@ Mesuré en Play Mode dans l'éditeur (Mac, simulateur XR, rendu mono), joueur da
 | Draw calls regroupés (static batching) | 60 | ✅ batching actif |
 | Ombres dynamiques (shadow casters) | 0 | ✅ tout est baké |
 
+## Relevé après la passe artistique — éditeur (2026-11-05)
+
+Mêmes conditions (étage 1, joueur dans sa cabine, porte ouverte).
+
+| Indicateur | Avant | Après | Verdict |
+|------------|-------|-------|---------|
+| Draw calls | 154 | 361 | au-dessus du budget prudent ; voir ci-dessous |
+| Batches | 143 | 266 | dans la fourchette courante Quest 2 (≈ 200–300), à confirmer au casque |
+| SetPass calls | 29 | 40 | ✅ |
+| Triangles | 21 800 | 40 600 | ✅ très large marge |
+| Draw calls regroupés (static batching) | 60 | 245 | ✅ |
+| Ombres dynamiques | 0 | 0 | ✅ |
+
+Après la finition des étages 2 et 3 (même mesure, joueur dans sa cabine à chaque étage) :
+
+| Étage | Batches | SetPass | Triangles |
+|-------|---------|---------|-----------|
+| 1 — Habitat | 266 | 40 | 41 k |
+| 2 — Labo | 303 | 56 | 50 k |
+| 3 — Cœur | 187 | 34 | 34 k |
+
+L'étage 2 est le plus chargé (4 modules fermés mais tous rendus, 5 matériaux de plus). C'est lui qu'il faut mesurer en premier sur le casque.
+
+Le décor ajoute beaucoup de petites pièces (membrures, colliers, appliques, mobilier). Elles partagent une quinzaine de matériaux : le **SRP Batcher** (actif) rend chaque draw call bon marché, et seul le nombre de SetPass coûte vraiment (40). Les textures générées font 128 à 512 px (≈ 2 Mo au total) et sont compressées en ASTC (format par défaut du build Android).
+Si le casque ne tient pas 72 FPS : occlusion culling d'abord (les murs pleins cachent les modules voisins), puis fusion des pièces de décor par module (`Mesh.CombineMeshes` à la génération).
+
 ## Ce qui est déjà en place
 
 - **Éclairage baké** par étage (lightmaps + 336 light probes + reflection probes) ; lumières temps réel limitées à la cabine, la lampe UV, le rayon final.

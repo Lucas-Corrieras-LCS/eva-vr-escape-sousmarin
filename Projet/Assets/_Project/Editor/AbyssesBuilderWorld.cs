@@ -297,8 +297,16 @@ namespace Abysses.EditorTools
 
         // ------------------------------------------------------------------ Étage 1 : panne de courant
 
+        /// <summary>Applique du mur du fond : ambre et forte en secours, chaude et discrète une fois le courant rétabli.</summary>
+        static void EmergencyLight(Light light, bool powered)
+        {
+            light.color = powered ? new Color(1f, 0.72f, 0.45f) : new Color(1f, 0.55f, 0.2f);
+            light.intensity = powered ? 1.6f : 2.8f;
+            light.range = powered ? 4f : 7f;
+        }
+
         /// <summary>
-        /// Départ en éclairage de secours : néons éteints, lumières des modules coupées, lampes ambre basses.
+        /// Départ en éclairage de secours : diffuseurs du plafond éteints, lumières des modules coupées, appliques en ambre.
         /// La scène est enregistrée dans cet état (bake « secours ») ; le bake « courant » est fait par <see cref="BakeFloors"/>.
         /// </summary>
         static void BuildPowerOutage(Mats m, Transform root, Module[] modules, PuzzleObjective trigger)
@@ -306,7 +314,7 @@ namespace Abysses.EditorTools
             var neons = new List<Renderer>();
             foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true))
             {
-                if (r.name != "CeilingStrip") continue;
+                if (r.name != "Diffuseur") continue;
                 r.sharedMaterial = m.NeonOff;
                 neons.Add(r);
             }
@@ -315,38 +323,17 @@ namespace Abysses.EditorTools
             foreach (Light light in root.GetComponentsInChildren<Light>(true))
                 if (light.name == "Light") light.enabled = false;
 
+            // Éclairage de secours : les appliques du mur du fond passent à l'ambre, plus fort et plus loin (voir EmergencyLight).
             var lamps = new List<Renderer>();
-            foreach (Module mod in modules)
+            foreach (Transform sconce in root.GetComponentsInChildren<Transform>(true))
             {
-                Rect r = PlayArea.GetRect(mod.Q, PlayArea.WallInset);
-                float outerFace = mod.Vz < 0 ? r.yMin : r.yMax;
-                float backFace = mod.Sx > 0 ? r.xMin : r.xMax;
-                var spots = new List<(Vector3 lamp, Vector3 scale)>();
-                foreach (float z in new[] { -2.4f, 2.4f })
-                    spots.Add((new Vector3(backFace + mod.Sx * 0.05f, 2.45f, mod.Center.z + z), new Vector3(0.1f, 0.12f, 0.32f)));
-                foreach (float x in new[] { -2.5f, 2.5f })
-                {
-                    Vector3 p = mod.P(x, 2.45f, 0f);
-                    p.z = outerFace - mod.Vz * 0.05f;
-                    spots.Add((p, new Vector3(0.32f, 0.12f, 0.1f)));
-                }
-                foreach ((Vector3 position, Vector3 scale) in spots)
-                {
-                    GameObject lamp = Prim(PrimitiveType.Cube, "EmergencyLamp", root, position, Quaternion.identity, scale, m.EmitAmber, false);
-                    Static(lamp);
-                    lamps.Add(lamp.GetComponent<Renderer>());
-                    var lightGo = new GameObject("EmergencyLight");
-                    lightGo.transform.SetParent(root, false);
-                    lightGo.transform.position = position + (mod.Center - position).normalized * 0.25f - Vector3.up * 0.1f;
-                    var light = lightGo.AddComponent<Light>();
-                    light.type = LightType.Point;
-                    light.color = new Color(1f, 0.55f, 0.2f);
-                    light.range = 7f;
-                    light.intensity = 2.8f;
-                    light.lightmapBakeType = LightmapBakeType.Baked;
-                    light.shadows = LightShadows.Soft;
-                    light.shadowRadius = 0.15f;
-                }
+                if (sconce.name != "Applique") continue;
+                Renderer bulb = sconce.Find("Ampoule").GetComponent<Renderer>();
+                bulb.sharedMaterial = m.EmitAmber;
+                lamps.Add(bulb);
+                Light light = sconce.Find("Lumiere").GetComponent<Light>();
+                light.name = "EmergencyLight";
+                EmergencyLight(light, false);
             }
 
             var power = root.gameObject.AddComponent<PowerRestore>();
@@ -356,7 +343,7 @@ namespace Abysses.EditorTools
             so.FindProperty("neonOff").objectReferenceValue = m.NeonOff;
             so.FindProperty("neonOn").objectReferenceValue = m.EmitCyan;
             SetArray(so.FindProperty("emergencyLamps"), lamps.ToArray());
-            so.FindProperty("emergencyOff").objectReferenceValue = m.NeonOff;
+            so.FindProperty("emergencyOff").objectReferenceValue = m.WarmBulb;
             so.FindProperty("powerUpSound").objectReferenceValue = Sfx(new GameObject("PowerUpSound"), fx.PowerUp, 1f, 0f);
             AudioSource buzz = Sfx(new GameObject("NeonSound"), fx.NeonBuzz, 0.7f);
             so.FindProperty("neonSound").objectReferenceValue = buzz;
@@ -383,6 +370,7 @@ namespace Abysses.EditorTools
             var so = new SerializedObject(power);
             Material neonOn = (Material)so.FindProperty("neonOn").objectReferenceValue;
             Material neonOff = (Material)so.FindProperty("neonOff").objectReferenceValue;
+            Material emergencyOff = (Material)so.FindProperty("emergencyOff").objectReferenceValue;
             var lights = new List<Light>();
             foreach (GameObject go in scene.GetRootGameObjects()) lights.AddRange(go.GetComponentsInChildren<Light>(true));
 
@@ -393,11 +381,11 @@ namespace Abysses.EditorTools
                     ((Renderer)neons.GetArrayElementAtIndex(i).objectReferenceValue).sharedMaterial = powered ? neonOn : neonOff;
                 SerializedProperty lamps = so.FindProperty("emergencyLamps");
                 for (int i = 0; i < lamps.arraySize; i++)
-                    ((Renderer)lamps.GetArrayElementAtIndex(i).objectReferenceValue).sharedMaterial = powered ? neonOff : amberForBake;
+                    ((Renderer)lamps.GetArrayElementAtIndex(i).objectReferenceValue).sharedMaterial = powered ? emergencyOff : amberForBake;
                 foreach (Light light in lights)
                 {
                     if (light.name == "Light") light.enabled = powered;
-                    else if (light.name == "EmergencyLight") light.enabled = !powered;
+                    else if (light.name == "EmergencyLight") EmergencyLight(light, powered);
                 }
             }
 
@@ -436,7 +424,7 @@ namespace Abysses.EditorTools
             leaks.SetParent(root, false);
 
             // Vapeur : tuyau percé au-dessus des têtes, jet horizontal vers le centre du module.
-            Vector3 nozzle = mod.P(-7.05f, 2.45f, -2.9f);
+            Vector3 nozzle = mod.P(-7.05f, 2.5f, -2.3f);
             Quaternion inward = mod.Facing(1f, 0f);
             Static(Prim(PrimitiveType.Cylinder, "SteamPipe", leaks, nozzle, inward * Quaternion.Euler(90f, 0f, 0f), new Vector3(0.09f, 0.1f, 0.09f), m.Pipe, false));
             var jetGo = new GameObject("SteamJet");
@@ -478,14 +466,14 @@ namespace Abysses.EditorTools
             hiss.loop = true;
             SetFields(jetGo.AddComponent<SteamVent>(), ("jet", jet), ("hiss", hiss), ("stopWhenSolved", gaugeObjective));
 
-            // Néon fatigué : le bandeau du côté du partenaire clignote par rafales.
+            // Néon fatigué : un diffuseur du plafond, côté partenaire, clignote par rafales.
             Transform module = root.Find("Module_Q" + mod.Q);
-            Vector3 stripPosition = mod.P(4f, WallHeight - 0.03f, 0f);
+            Vector3 stripPosition = mod.P(3f, WallHeight - 0.105f, 0f);
             if (module != null)
             {
                 foreach (Renderer r in module.GetComponentsInChildren<Renderer>(true))
                 {
-                    if (r.name != "CeilingStrip" || (r.transform.position - stripPosition).sqrMagnitude > 0.01f) continue;
+                    if (r.name != "Diffuseur" || (r.transform.position - stripPosition).sqrMagnitude > 0.01f) continue;
                     AudioSource buzz = Sfx(r.gameObject, fx.NeonBuzz, 0.5f);
                     SetFields(r.gameObject.AddComponent<NeonFlicker>(), ("neon", r), ("onMaterial", r.sharedMaterial), ("offMaterial", m.NeonOff), ("buzz", buzz));
                 }

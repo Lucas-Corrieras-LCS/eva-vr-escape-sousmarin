@@ -28,8 +28,6 @@ namespace Abysses.EditorTools
             public Texture2D[] Caustics;
             public Texture2D[] Glyphs;
             public Texture2D Dot, ShaftGradient;
-            /// <summary>Coque : tôles rivetées 1 × 1 m (motif de 2 m), joints, coulures de rouille. Plancher : tôle larmée.</summary>
-            public Texture2D HullAlbedo, HullNormal, FloorAlbedo, FloorNormal;
             /// <summary>Silhouettes vues par les hublots : poisson (banc) et créature géante.</summary>
             public Texture2D Fish, Leviathan;
             public Mesh ShaftCone;
@@ -79,12 +77,6 @@ namespace Abysses.EditorTools
             c.ShaftGradient = Png("T_ShaftGradient", ShaftGradient(8, 128), 8, 128, false, true);
             c.ShaftCone = ShaftConeMesh();
 
-            HullMaps(512, out Color[] hullAlbedo, out Color[] hullNormal);
-            c.HullAlbedo = Png("T_Hull_Albedo", hullAlbedo, 512, 512, false, false, false, 512);
-            c.HullNormal = Png("T_Hull_Normal", hullNormal, 512, 512, true, false, true, 512);
-            FloorMaps(256, out Color[] floorAlbedo, out Color[] floorNormal);
-            c.FloorAlbedo = Png("T_Floor_Albedo", floorAlbedo, 256, 256, false, false, false, 256);
-            c.FloorNormal = Png("T_Floor_Normal", floorNormal, 256, 256, true, false, true, 256);
             c.Fish = Png("T_Fish", Silhouette(128, 64, FishShape), 128, 64, false, true);
             c.Leviathan = Png("T_Leviathan", Silhouette(256, 128, LeviathanShape), 256, 128, false, true);
             return c;
@@ -658,115 +650,6 @@ namespace Abysses.EditorTools
             for (int o = 0, cells = baseCells; o < 4; o++, cells *= 2, amp *= 0.5f)
                 sum += ValueNoise(u * cells, v * cells, cells, seed + o) * amp;
             return sum / 0.9375f;
-        }
-
-        /// <summary>
-        /// Tôles de coque : le motif couvre 2 × 2 m (4 tôles). Joints creux, rivets en relief tous les 12,5 cm,
-        /// variation de teinte par tôle, coulures de rouille sous certains rivets, salissures en bas des tôles.
-        /// </summary>
-        static void HullMaps(int size, out Color[] albedo, out Color[] normal)
-        {
-            var height = new float[size * size];
-            albedo = new Color[size * size];
-            const int panels = 2;
-            float seam = 0.012f, rivetRadius = 0.012f, rivetInset = 0.035f;
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float u = (x + 0.5f) / size, v = (y + 0.5f) / size;
-                float pu = u * panels, pv = v * panels;
-                int px = Mathf.FloorToInt(pu), py = Mathf.FloorToInt(pv);
-                float lu = pu - px, lv = pv - py;
-                float edge = Mathf.Min(Mathf.Min(lu, 1f - lu), Mathf.Min(lv, 1f - lv));
-
-                // Rivets alignés le long des bords de chaque tôle.
-                float rivet = 0f;
-                float along = lu < rivetInset * 1.5f || lu > 1f - rivetInset * 1.5f ? lv : lu;
-                float across = Mathf.Min(Mathf.Min(lu, 1f - lu), Mathf.Min(lv, 1f - lv));
-                float spacing = 1f / 8f;
-                float k = Mathf.Repeat(along, spacing) - spacing / 2f;
-                float dr = Mathf.Sqrt(k * k + (across - rivetInset) * (across - rivetInset));
-                if (dr < rivetRadius) rivet = Mathf.Sqrt(1f - (dr / rivetRadius) * (dr / rivetRadius));
-
-                float grain = Fbm(u, v, 8, 3);
-                float panelTone = 0.88f + 0.12f * Hash(px, py, 5);
-                float h = 0.5f + grain * 0.08f;
-                if (edge < seam) h -= 0.4f * (1f - edge / seam);
-                h += rivet * 0.35f;
-                height[y * size + x] = h;
-
-                // Couleur : tôle (gris neutre, teintée par le matériau), joints sombres, rouille et salissures.
-                float shade = panelTone * (0.85f + 0.3f * grain);
-                if (edge < seam * 1.6f) shade *= Mathf.Lerp(0.45f, 1f, edge / (seam * 1.6f));
-                Color c = new Color(shade, shade, shade);
-
-                // Coulures de rouille : colonnes fines sous quelques rivets, qui s'effacent vers le bas (v croît vers le haut).
-                float column = Mathf.Repeat(u * panels * 8f, 1f);
-                int columnId = Mathf.FloorToInt(u * panels * 8f);
-                if (Hash(columnId, py, 11) > 0.72f)
-                {
-                    float width = 0.12f + 0.25f * Hash(columnId, py, 12);
-                    float dx = Mathf.Abs(column - 0.5f) / width;
-                    float top = 1f - rivetInset * 1.2f;
-                    float streakLength = 0.25f + 0.55f * Hash(columnId, py, 13);
-                    float t = (top - lv) / streakLength;
-                    if (dx < 1f && t > 0f && t < 1f)
-                    {
-                        float amount = (1f - dx) * (1f - t) * (0.55f + 0.45f * Fbm(u * 3f, v * 0.5f, 4, 17));
-                        c = Color.Lerp(c, new Color(0.62f, 0.33f, 0.16f) * shade * 1.2f, Mathf.Clamp01(amount));
-                    }
-                }
-                // Condensation et crasse au bas de chaque tôle.
-                float grime = Mathf.Clamp01(1f - lv * 4f) * (0.5f + 0.5f * Fbm(u * 2f, v * 2f, 4, 23));
-                c *= 1f - grime * 0.35f;
-                if (rivet > 0f) c = Color.Lerp(c, new Color(0.95f, 0.95f, 0.95f) * panelTone, rivet * 0.5f);
-                c.a = 1f;
-                albedo[y * size + x] = c;
-            }
-            normal = NormalFromHeight(height, size, 6f);
-        }
-
-        /// <summary>Plancher en tôle larmée : petits reliefs allongés croisés, usure plus claire sur les reliefs.</summary>
-        static void FloorMaps(int size, out Color[] albedo, out Color[] normal)
-        {
-            var height = new float[size * size];
-            albedo = new Color[size * size];
-            const int cells = 8;
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float u = (x + 0.5f) / size, v = (y + 0.5f) / size;
-                float cu = u * cells, cv = v * cells;
-                int ix = Mathf.FloorToInt(cu), iy = Mathf.FloorToInt(cv);
-                float lu = cu - ix - 0.5f, lv = cv - iy - 0.5f;
-                // Larme orientée à ±45° selon la case (damier).
-                float angle = ((ix + iy) & 1) == 0 ? 0.785f : -0.785f;
-                float ca = Mathf.Cos(angle), sa = Mathf.Sin(angle);
-                float a = lu * ca - lv * sa, b = lu * sa + lv * ca;
-                float d = (a * a) / (0.32f * 0.32f) + (b * b) / (0.09f * 0.09f);
-                float bump = d < 1f ? Mathf.Sqrt(1f - d) : 0f;
-                float grain = Fbm(u, v, 8, 31);
-                height[y * size + x] = 0.4f + bump * 0.5f + grain * 0.05f;
-                float shade = 0.75f + 0.25f * grain + bump * 0.25f;
-                float wear = Fbm(u * 2f, v * 2f, 4, 37);
-                shade *= 0.8f + 0.3f * wear;
-                albedo[y * size + x] = new Color(shade, shade, shade, 1f);
-            }
-            normal = NormalFromHeight(height, size, 4f);
-        }
-
-        static Color[] NormalFromHeight(float[] height, int size, float strength)
-        {
-            var normal = new Color[size * size];
-            for (int y = 0; y < size; y++)
-            for (int x = 0; x < size; x++)
-            {
-                float l = height[y * size + (x + size - 1) % size], r = height[y * size + (x + 1) % size];
-                float d = height[((y + size - 1) % size) * size + x], u = height[((y + 1) % size) * size + x];
-                var n = new Vector3((l - r) * strength, (d - u) * strength, 1f).normalized;
-                normal[y * size + x] = new Color(n.x * 0.5f + 0.5f, n.y * 0.5f + 0.5f, n.z * 0.5f + 0.5f, 1f);
-            }
-            return normal;
         }
 
         delegate float Shape(float u, float v);

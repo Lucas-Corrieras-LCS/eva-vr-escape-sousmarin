@@ -8,8 +8,8 @@
 
 > Bilan complet de la dernière session : [`docs/etat-du-projet.md`](docs/etat-du-projet.md)
 
-- **Dernière session** : 2026-11-03 — audit + corrections : multijoueur testé à 2 dans l'éditeur (3 bugs réseau corrigés), calibration guidée, menu en jeu, nouvelle plongée, vibrations, chaîne de build APK
-- **Prochaine action** : build APK debug + premier test sur Quest 2 (mesures de perf sur casque) ; passe artistique sur la géométrie (blockout → décor) ; playtests
+- **Dernière session** : 2026-11-05 — **passe artistique** : textures PBR procédurales (coque rivetée, tôle larmée, plafond ondulé, faïence), habillage des modules, mobilier par étage, cabine bathyscaphe redessinée, supports d'appareils ; étages 2 et 3 finis (identité labo, réacteur animé, balisage au sol)
+- **Prochaine action** : régénérer l'APK et premier test sur Quest 2 (perf réelle : 187 à 303 batches selon l'étage dans l'éditeur) ; playtests
 - **Bloquants** : pas de casque pour tester pour l'instant (tout est validé dans l'éditeur + simulateur XR) ; date/format de rendu inconnus ; Relay à activer dans le dashboard Unity
 
 ## Décisions
@@ -43,7 +43,7 @@
 
 - [x] Scénario de l'escape game coop → `docs/game-design.md` (première version, à relire par le binôme)
 - [x] Plan au sol : 4 quadrants 15 × 8 m, murs en retrait de 30 cm, alarme de pression si la tête sort de la zone sûre ; salle commune vitrée à l'étage 3 (C2, C4, C10)
-- [ ] Moodboard DA + palette lumière par profondeur (C6, C7)
+- [x] Palette lumière par profondeur (C6, C7) : cyan habitat → rouge de secours + halos verts labo → bleu nuit cœur + violet ; bandeau à la couleur du joueur
 - [ ] Répartition des tâches dans le binôme
 
 ## Phase 2 — Fondations techniques
@@ -74,6 +74,8 @@
 - [x] Symboles du digicode : formes + couleurs (● rouge, ▲ vert, ■ bleu, ★ jaune, ◆ blanc, ✚ violet) sur touches, saisie et codes muraux (CC)
 - [x] Sons : ambiance, bulles, grondement de l'ascenseur, alarme de zone (CC)
 - [x] Captures automatiques des étages → `docs/captures/` (`Abysses → Captures d'écran des étages`) (CC)
+- [x] **Passe artistique** (`AbyssesArt.cs` + générateur) : textures PBR procédurales albédo + normal map (coque rivetée, tôle larmée, plafond ondulé, casiers, marquage danger, écrans), UV en coordonnées monde (pas d'étirement), cadres arrondis sur hublots et sas, plinthes/bandeau couleur du joueur/membrures/poutres/conduites/appliques, luminaires encastrés, mobilier par étage (casiers, bureaux, caisses, fûts, paillasses, cuves à échantillons, baies serveurs, bobines), cabine bathyscaphe (hublots laiton, dôme, coins arrondis lumineux), supports des appareils (digicode, fusible, manomètre), habillage du réacteur (CC) — vérifié sur captures + Play Mode solo
+- [x] Finition étages 2 et 3 : labo (coque claire + faïence, hottes à réglette froide, armoires à échantillons, vapeur, sol mouillé) ; cœur (armoires électriques, cage tournante du réacteur, lumière du réacteur, balisage au sol vers la console) (CC) — Play Mode solo jusqu'à l'étage 3
 
 ### Améliorations (branche `feat/ameliorations-jeu`, 2026-11-04) — à valider au casque et par le binôme
 
@@ -81,7 +83,7 @@
 - [x] Objets perdus qui reviennent à leur dernier emplacement sûr (`LostItemReturn`) (CC)
 - [x] Étage 1 : départ en éclairage de secours, néons qui se rallument un par un à la remise sous tension (2 bakes échangés, `PowerRestore`) (CC)
 - [x] Hublots sur l'océan : neige marine, banc de poissons (-200 m), leurres lumineux (-1 500 m), bioluminescence (-4 000 m), silhouette géante (CC)
-- [x] Coque habillée : tôles rivetées + rouille (textures générées, UV monde), nervures, poutres, conduites, plancher en tôle larmée (CC)
+- [x] Coque habillée : remplacée par la passe artistique (ligne ci-dessus) lors de la fusion de `main` ; les hublots sur l'océan sont conservés (CC)
 - [x] Station vivante : réverbération par module, coque qui grince, gouttes ; étage 2 : vapeur qui siffle, néon défaillant, eau qui monte (CC)
 - [x] Descente : oreilles qui se bouchent (filtre audio), traînées derrière les hublots, choc d'arrivée (CC)
 - [x] Montre de plongée au poignet (profondeur, O2, chrono) + indices progressifs de l'IA de la station (CC)
@@ -96,7 +98,7 @@
 
 ## Phase 4 — Optimisation (Quest 2, 72 FPS)
 
-- [~] Relevé « avant » dans l'éditeur → `docs/optimisation.md` (154 draw calls, 29 SetPass, 22 k triangles, 0 ombre dynamique) ; **à refaire sur le casque**
+- [~] Relevé « avant » dans l'éditeur → `docs/optimisation.md` (154 draw calls, 29 SetPass, 22 k triangles, 0 ombre dynamique) ; après passe artistique : étage 1 = 266 batches / 40 SetPass / 41 k tri, étage 2 = 303 / 56 / 50 k, étage 3 = 187 / 34 / 34 k ; **à refaire sur le casque**
 - [x] Static batching actif (60 draw calls regroupés), matériaux partagés SRP Batcher
 - [~] Un seul étage chargé à la fois (fait) ; occlusion culling à tester si la mesure casque dépasse le budget
 - [ ] Compression ASTC, tailles de textures, LOD
@@ -127,4 +129,7 @@
 - **2026-10-16** — Étages 2 et 3 construits et testés en Play Mode (solo) de la surface jusqu'au final. Leviers = dernière étape (prérequis). Couleur jaune → vert (confusion avec l'orange). Fusible consommé via Despawn(false).
 - **2026-10-16** — Passe ambiance (branche `feat/ambiance-son-lumiere`, travail hors MCP : générateur relancé en batchmode, console sans erreur ni avertissement). Éclairage baké + probes, caustiques, plancton, gyrophares, rayon final, 17 sons procéduraux, digicode formes + couleurs, captures auto. Corrigé au passage : coque trop métallique (les lightmaps n'avaient presque aucun effet), lampe de cabine qui éclairait le plafond du module (isolée par rendering layer), intensités recalées pour l'atténuation physique du bake.
 - **2026-11-03** — Pull de la passe ambiance de Jeremy (vérifiée en jeu : lightmaps, 336 light probes, caustiques, sons). Audit + corrections : calibration guidée et départ conditionné à la présence en cabine, menu en jeu (bouton Menu), « Nouvelle plongée », refus des arrivées en cours de partie, vibrations, menu de build APK debug/EVA, test multijoueur MPPM 2 joueurs (Host/Client auto) → 3 bugs réseau corrigés, matériaux sans faux diff, menu « Reconstruire la Station seulement ».
-- **2026-11-04** — Branche `feat/ameliorations-jeu` : vibrations, objets perdus, panne de courant (2 bakes), hublots sur l'océan, coque texturée, station vivante, montre de plongée + indices, pupitre MJ / spectateur, mode facile, classement, FR/EN, reconnexion, avatars complets, surbrillance, tutoriel de cabine, plaques à frapper, journaux de bord, vérification d'ergonomie.
+- **2026-11-04** — Branche `feat/ameliorations-jeu` : vibrations, objets perdus, panne de courant (2 bakes), hublots sur l'océan, station vivante, montre de plongée + indices, pupitre MJ / spectateur, mode facile, classement, FR/EN, reconnexion, avatars complets, surbrillance, tutoriel de cabine, plaques à frapper, journaux de bord, vérification d'ergonomie.
+- **2026-11-05** — Passe artistique (le décor n'est plus en blockout). Nouveau `AbyssesArt.cs` : textures PBR générées (albédo + normal map), meshes en UV monde, cadres arrondis. Habillage complet des modules, mobilier propre à chaque étage, cabine redessinée, supports d'appareils, réacteur. Corrigé : vitres blanches sous angle rasant (reflets d'environnement + specular non multiplié par l'alpha), montants qui masquaient le réacteur, support de digicode qui chevauchait le bandeau. Étage 2 : halos verts dans les cuves pour casser le tout-rouge. Perf éditeur : 266 batches / 40 SetPass / 41 k triangles. Play Mode solo OK (descente, étage 1).
+- **2026-11-05** — Finition des étages 2 et 3. Labo : coque peinte claire + faïence (le rouge de secours n'est plus absorbé), hotte avec réglette froide au-dessus des paillasses, armoire à échantillons, fuite de vapeur + sol mouillé, lumière un peu moins saturée. Cœur : armoires électriques, 2e baie, câbles des bobines, cage tournante autour du réacteur, liseré + lumière bakée du réacteur, balisage au sol à la couleur du joueur (cabine → console), lumière remontée au niveau de l'étage 1, montants vitrés décalés de l'axe de la cabine. Corrigé : bureaux, paillasses et baies étaient tournés vers le mur. Perf éditeur : étage 2 = 303 batches / 56 SetPass / 50 k triangles, étage 3 = 187 / 34 / 34 k. Partie solo jouée jusqu'à l'étage 3 sans erreur.
+- **2026-11-05** — Fusion de `main` (passe artistique) dans `feat/ameliorations-jeu` : l'habillage et les textures de Lucas remplacent mon kit de modules et ma coque texturée ; hublots sur l'océan repositionnés aux deux bouts du mur extérieur (0,8 m, entre poteau d'angle et mobilier) ; à l'étage 1 les appliques servent d'éclairage de secours (ambre pendant la panne) ; main courante de la cabine descendue à 0,85 m (tutoriel).
