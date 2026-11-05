@@ -21,6 +21,7 @@ namespace Abysses.EditorTools
         {
             public Texture2D HullAlbedo, HullNormal, PlateAlbedo, PlateNormal, CeilingAlbedo, CeilingNormal;
             public Texture2D LockerAlbedo, LockerNormal, Hazard, ScreenWave, ScreenBars, ScreenText;
+            public Texture2D LabTileAlbedo, LabTileNormal;
             /// <summary>Cadre arrondi 1 x 1 (à mettre à l'échelle), bord de 0,1, profondeur 1.</summary>
             public Mesh RoundedFrame;
             /// <summary>Anneau de hublot (cadre circulaire) de diamètre 1, profondeur 1.</summary>
@@ -49,6 +50,10 @@ namespace Abysses.EditorTools
             float[] locker = LockerHeight(256, out Color[] lockerAlbedo);
             kit.LockerAlbedo = Png("T_Locker_Albedo", lockerAlbedo, 256, false);
             kit.LockerNormal = Png("T_Locker_Normal", NormalFromHeight(locker, 256, 5f), 256, true);
+
+            float[] labTile = LabTileHeight(256, out Color[] labTileAlbedo);
+            kit.LabTileAlbedo = Png("T_LabTile_Albedo", labTileAlbedo, 256, false);
+            kit.LabTileNormal = Png("T_LabTile_Normal", NormalFromHeight(labTile, 256, 5f), 256, true);
 
             kit.Hazard = Png("T_Hazard", Hazard(128), 128, false);
             kit.ScreenWave = Png("T_Screen_Wave", Screen(256, 0), 256, false);
@@ -474,6 +479,31 @@ namespace Abysses.EditorTools
                 if (door || vent) value = 0.2f;
                 if (handle) value = 0.8f;
                 albedo[y * size + x] = new Color(value, value, value, 1f);
+            }
+            return height;
+        }
+
+        /// <summary>Faïence de laboratoire : carreaux de 25 cm (texture = 1 m), joints creusés, carreaux biseautés, quelques taches.</summary>
+        static float[] LabTileHeight(int size, out Color[] albedo)
+        {
+            var height = new float[size * size];
+            albedo = new Color[size * size];
+            int cell = size / 4;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = x / (float)size, v = y / (float)size;
+                int px = x % cell, py = y % cell;
+                int edge = Mathf.Min(Mathf.Min(px, cell - 1 - px), Mathf.Min(py, cell - 1 - py));
+                float grout = edge < 2 ? 1f : 0f;
+                float bevel = edge < 2 ? 0f : edge < 5 ? (edge - 2) / 3f : 1f;
+                height[y * size + x] = 0.2f + 0.35f * bevel + 0.01f * Fbm(u, v, 16, 2, 53);
+
+                float tint = 0.93f + 0.07f * Hash(x / cell, y / cell, 59);
+                float stain = Mathf.Clamp01((Fbm(u, v, 4, 4, 61) - 0.58f) * 4f);
+                float value = 0.86f * tint * (1f - 0.25f * stain);
+                value = Mathf.Lerp(value, 0.38f, grout);
+                albedo[y * size + x] = new Color(value, value * 1.01f, value * 1.01f, 1f);
             }
             return height;
         }

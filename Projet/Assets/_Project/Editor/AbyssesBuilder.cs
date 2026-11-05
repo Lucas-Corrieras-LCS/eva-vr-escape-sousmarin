@@ -137,6 +137,8 @@ namespace Abysses.EditorTools
             public Material Key, ShaftRed, SunShaft, PlanktonHabitat, PlanktonLabo, PlanktonCoeur;
             // Habillage
             public Material HullDark, Ceiling, Frame, Brass, Rubber, PipeYellow, PipeRed, PipeGrey, Hazard, Locker, Liquid, WarmBulb;
+            // Étage 2 (laboratoires) : coque peinte claire, faïence, flaques, éclairage de paillasse froid, vapeur.
+            public Material HullLab, LabTile, Puddle, EmitCold, Steam;
             public Material[] Screens = new Material[3];
             public Material[] Avatar = new Material[4];
             /// <summary>Couleur seule (fusibles, anneaux).</summary>
@@ -167,6 +169,12 @@ namespace Abysses.EditorTools
                 Liquid = Lit("M_Liquid", new Color(0.04f, 0.2f, 0.12f), 0f, 0.9f, new Color(0.25f, 1f, 0.55f) * 1.6f),
                 WarmBulb = Lit("M_WarmBulb", new Color(0.3f, 0.2f, 0.1f), 0f, 0.6f, new Color(1f, 0.68f, 0.35f) * 3f),
                 Crate = Lit("M_Crate", new Color(0.35f, 0.3f, 0.22f), 0.1f, 0.3f),
+                HullLab = LitTex("M_HullLab", new Color(0.8f, 0.78f, 0.73f), 0.15f, 0.5f, art.HullAlbedo, art.HullNormal, 1f),
+                LabTile = LitTex("M_LabTile", new Color(0.9f, 0.94f, 0.94f), 0f, 0.7f, art.LabTileAlbedo, art.LabTileNormal, 1f),
+                // Sol mouillé plutôt que flaque noire : même tôle, plus sombre, reliefs noyés, très lisse.
+                Puddle = LitTex("M_Puddle", new Color(0.3f, 0.31f, 0.32f), 0.3f, 0.94f, art.PlateAlbedo, art.PlateNormal, 0.25f),
+                EmitCold = Lit("M_Emit_Cold", new Color(0.2f, 0.22f, 0.24f), 0f, 0.5f, new Color(0.75f, 0.95f, 1f) * 2.2f),
+                Steam = Additive("M_Steam", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 0.9f, 0.85f, 0.1f), fx.Dot),
                 Glass = Transparent("M_Glass", new Color(0.35f, 0.65f, 0.75f, 0.18f), false),
                 EmitCyan = Lit("M_Emit_Cyan", new Color(0.05f, 0.2f, 0.25f), 0f, 0.5f, new Color(0.2f, 0.85f, 1f) * 2.5f),
                 EmitWarm = Lit("M_Emit_Warm", new Color(0.25f, 0.15f, 0.05f), 0f, 0.5f, new Color(1f, 0.55f, 0.25f) * 2f),
@@ -638,6 +646,8 @@ namespace Abysses.EditorTools
             Box("Ceiling", t, new Vector3(r.center.x, WallHeight + 0.05f, r.center.y), Quaternion.identity, outerSize, m.Ceiling, 1f, true);
 
             bool open = shell == Shell.OpenHall;
+            // Les laboratoires ont une coque peinte claire : elle accroche l'éclairage de secours rouge au lieu de l'absorber.
+            Material hull = floor == 2 ? m.HullLab : m.Hull;
 
             // Mur commun avec le partenaire (axe Z).
             float partnerX = mod.Sx > 0 ? r.xMax + half : r.xMin - half;
@@ -647,8 +657,8 @@ namespace Abysses.EditorTools
                 new Opening(mod.Center.z + 1.5f - r.yMin, 2.0f, 1.1f, 2.1f),
                 new Opening(mod.Center.z - 1.5f - r.yMin, 0.5f, 0.9f, 1.4f),
             };
-            Wall(m, t, "Wall_Partner", new Vector3(partnerX, 0f, r.yMin), new Vector3(partnerX, 0f, r.yMax), partnerOpenings, true, open);
-            Wall(m, t, "Wall_Back", new Vector3(backX, 0f, r.yMin), new Vector3(backX, 0f, r.yMax), null, false, false);
+            Wall(m, t, "Wall_Partner", new Vector3(partnerX, 0f, r.yMin), new Vector3(partnerX, 0f, r.yMax), partnerOpenings, true, open, hull);
+            Wall(m, t, "Wall_Back", new Vector3(backX, 0f, r.yMin), new Vector3(backX, 0f, r.yMax), null, false, false, hull);
 
             // Long mur partagé avec le voisin du dessus/dessous (axe X).
             float sharedZ = mod.Vz < 0 ? r.yMax + half : r.yMin - half;
@@ -660,10 +670,10 @@ namespace Abysses.EditorTools
                 if (shell == Shell.VerticalHatches)
                     neighborOpenings.Add(new Opening(mod.Center.x + mod.Sx * 2f - r.xMin, 0.5f, 0.9f, 1.4f));
             }
-            Wall(m, t, "Wall_Neighbor", new Vector3(r.xMin, 0f, sharedZ), new Vector3(r.xMax, 0f, sharedZ), neighborOpenings, true, open);
-            Wall(m, t, "Wall_Outer", new Vector3(r.xMin, 0f, outerZ), new Vector3(r.xMax, 0f, outerZ), null, false, false);
+            Wall(m, t, "Wall_Neighbor", new Vector3(r.xMin, 0f, sharedZ), new Vector3(r.xMax, 0f, sharedZ), neighborOpenings, true, open, hull);
+            Wall(m, t, "Wall_Outer", new Vector3(r.xMin, 0f, outerZ), new Vector3(r.xMax, 0f, outerZ), null, false, false, hull);
 
-            DressShell(m, t, mod, r, open, floor);
+            DressShell(m, t, mod, r, open, floor, hull);
             CeilingFixtures(m, t, mod, strip, lightColor, lightIntensity);
         }
 
@@ -671,7 +681,7 @@ namespace Abysses.EditorTools
         /// Structure de sous-marin : plinthes, soubassement sombre, liseré à la couleur du module, membrures et poutres,
         /// chanfreins plafond, poteaux d'angle, tuyauteries, appliques, signalétique, marquage au sol autour de la cabine.
         /// </summary>
-        static void DressShell(Mats m, Transform t, Module mod, Rect r, bool open, int floor)
+        static void DressShell(Mats m, Transform t, Module mod, Rect r, bool open, int floor, Material hull)
         {
             Transform d = new GameObject("Habillage").transform;
             d.SetParent(t, false);
@@ -695,14 +705,15 @@ namespace Abysses.EditorTools
                 Box("Plinthe_" + f.name, d, mid + f.inward * 0.025f + Vector3.up * 0.06f, along, Abs(alongSize(0.12f, 0.05f)), m.Frame, 1f);
                 if (!f.glass)
                 {
-                    // Soubassement sombre + liseré lumineux à la couleur du module (repère d'identité, guide le regard).
-                    Box("Soubassement_" + f.name, d, mid + f.inward * 0.012f + Vector3.up * 0.43f, along, Abs(alongSize(0.86f, 0.022f)), m.HullDark, 2f);
+                    // Soubassement (sombre, faïence au labo) + liseré lumineux à la couleur du module (repère d'identité, guide le regard).
+                    if (floor == 2) Box("Faience_" + f.name, d, mid + f.inward * 0.012f + Vector3.up * 0.43f, along, Abs(alongSize(0.86f, 0.022f)), m.LabTile, 1f);
+                    else Box("Soubassement_" + f.name, d, mid + f.inward * 0.012f + Vector3.up * 0.43f, along, Abs(alongSize(0.86f, 0.022f)), m.HullDark, 2f);
                     Box("Lisere_" + f.name, d, mid + f.inward * 0.02f + Vector3.up * 0.875f, along, Abs(alongSize(0.03f, 0.03f)), accent, 1f);
                 }
                 // Chanfrein mur / plafond : section octogonale de coque.
                 Vector3 width = (f.inward + Vector3.up).normalized;
                 Quaternion chamfer = Quaternion.LookRotation(Vector3.Cross(f.dir, width), width);
-                Box("Chanfrein_" + f.name, d, mid + f.inward * 0.17f + Vector3.up * (WallHeight - 0.17f), chamfer, new Vector3(f.length, 0.5f, 0.05f), m.Hull, 2f);
+                Box("Chanfrein_" + f.name, d, mid + f.inward * 0.17f + Vector3.up * (WallHeight - 0.17f), chamfer, new Vector3(f.length, 0.5f, 0.05f), hull, 2f);
             }
 
             // Poteaux d'angle (sauf l'angle intérieur vitré de la salle commune : il masquerait le réacteur).
@@ -813,7 +824,7 @@ namespace Abysses.EditorTools
             }
         }
 
-        static void Wall(Mats m, Transform parent, string name, Vector3 a, Vector3 b, List<Opening> openings, bool glass, bool fullGlass)
+        static void Wall(Mats m, Transform parent, string name, Vector3 a, Vector3 b, List<Opening> openings, bool glass, bool fullGlass, Material hull)
         {
             Transform t = new GameObject(name).transform;
             t.SetParent(parent, false);
@@ -839,7 +850,10 @@ namespace Abysses.EditorTools
                 Piece("Top", 0f, length, WallHeight - 0.15f, WallHeight, m.HullDark, WallThickness, true);
                 Piece("Sill", 0f, length, 0f, 0.05f, m.EmitCyan, WallThickness, true);
                 // Montants intermédiaires seulement : aux extrémités, les poteaux d'angle (ou l'angle vitré ouvert sur le réacteur) suffisent.
-                float step = length / Mathf.Max(1, Mathf.Round(length / 2.5f));
+                // Nombre impair de panneaux : aucun montant dans l'axe de la porte de cabine (centre du module).
+                int panes = Mathf.Max(1, Mathf.RoundToInt(length / 2.5f));
+                if (panes % 2 == 0) panes++;
+                float step = length / panes;
                 for (float x = step; x < length - 0.01f; x += step)
                     Piece("Mullion", x - 0.07f, x + 0.07f, 0.05f, WallHeight - 0.15f, m.HullDark, WallThickness + 0.06f, true);
                 return;
@@ -852,9 +866,9 @@ namespace Abysses.EditorTools
                 foreach (Opening o in openings)
                 {
                     float start = o.Along - o.Width / 2f, end = o.Along + o.Width / 2f;
-                    Piece("Segment", cursor, start, 0f, WallHeight, m.Hull, WallThickness, true);
-                    Piece("Below", start, end, 0f, o.Bottom, m.Hull, WallThickness, true);
-                    Piece("Above", start, end, o.Top, WallHeight, m.Hull, WallThickness, true);
+                    Piece("Segment", cursor, start, 0f, WallHeight, hull, WallThickness, true);
+                    Piece("Below", start, end, 0f, o.Bottom, hull, WallThickness, true);
+                    Piece("Above", start, end, o.Top, WallHeight, hull, WallThickness, true);
                     if (glass && o.Width >= 1f) Piece("Glass", start, end, o.Bottom, o.Top, m.Glass, 0.03f, true);
 
                     // Encadrement arrondi qui mange les angles vifs de l'ouverture (hublot / sas).
@@ -871,7 +885,7 @@ namespace Abysses.EditorTools
                     cursor = end;
                 }
             }
-            Piece("Segment", cursor, length, 0f, WallHeight, m.Hull, WallThickness, true);
+            Piece("Segment", cursor, length, 0f, WallHeight, hull, WallThickness, true);
         }
 
         static Module[] BuildModules(Mats m, Transform root, Shell shell, Color lightColor, float lightIntensity, Material strip, int floor)
@@ -892,6 +906,7 @@ namespace Abysses.EditorTools
         }
 
         // ---------- Mobilier (contre les murs, hors des zones d'énigme et du passage)
+        // Convention : l'axe +Z local d'un meuble pointe vers le mur (son dos), la face avant est en -Z.
 
         /// <summary>Étage 1 — quartiers d'habitation : casiers, bureau avec écran, caisses, fûts, colonne technique.</summary>
         static void DressHabitat(Mats m, Transform root, Module mod)
@@ -902,7 +917,7 @@ namespace Abysses.EditorTools
             foreach (float x in new[] { 3.35f, 4.4f, 5.0f, 5.6f })
                 Locker(m, t, mod.P(x, 0f, s * 3.42f), mod.Facing(0f, -s));
             Crate(m, t, mod.P(6.5f, 0f, s * 3.38f), mod.Facing(0f, -s), new Vector3(0.6f, 0.55f, 0.5f));
-            Desk(m, t, mod.P(-5f, 0f, s * 3.36f), mod.Facing(0f, -s), m.Screens[mod.Q % 3]);
+            Desk(m, t, mod.P(-5f, 0f, s * 3.36f), mod.Facing(0f, s), m.Screens[mod.Q % 3]);
             Crate(m, t, mod.P(4.5f, 0f, -s * 3.4f), mod.Facing(0f, s), new Vector3(0.7f, 0.6f, 0.55f));
             Crate(m, t, mod.P(5.3f, 0f, -s * 3.42f), mod.Facing(0f, s), new Vector3(0.6f, 0.5f, 0.5f));
             Crate(m, t, mod.P(4.52f, 0.6f, -s * 3.42f), mod.Facing(0f, s), new Vector3(0.55f, 0.45f, 0.45f));
@@ -917,14 +932,19 @@ namespace Abysses.EditorTools
             Transform t = new GameObject("Mobilier_Q" + mod.Q).transform;
             t.SetParent(root, false);
             float s = mod.Vz;
-            LabBench(m, t, mod.P(-5f, 0f, s * 3.36f), mod.Facing(0f, -s));
+            LabBench(m, t, mod.P(-5f, 0f, s * 3.36f), mod.Facing(0f, s));
             SpecimenTank(m, t, mod.P(4.5f, 0f, s * 3.3f));
             SpecimenTank(m, t, mod.P(5.5f, 0f, s * 3.3f));
-            ServerRack(m, t, mod.P(-1.2f, 0f, -s * 3.42f), mod.Facing(0f, s));
-            ServerRack(m, t, mod.P(-0.55f, 0f, -s * 3.42f), mod.Facing(0f, s));
+            ServerRack(m, t, mod.P(-1.2f, 0f, -s * 3.42f), mod.Facing(0f, -s));
+            ServerRack(m, t, mod.P(-0.55f, 0f, -s * 3.42f), mod.Facing(0f, -s));
             SpecimenTank(m, t, mod.P(4.5f, 0f, -s * 3.3f));
             Crate(m, t, mod.P(5.3f, 0f, -s * 3.35f), mod.Facing(0f, s), new Vector3(0.7f, 0.55f, 0.55f));
             PipeColumn(m, t, mod.P(-6.85f, 0f, 3.35f));
+            SampleCabinet(m, t, mod.P(-7.2f + 0.24f, 0f, 1.25f), mod.Facing(-1f, 0f));
+            // Fuite de pression : jet de vapeur sur la conduite du plafond, flaques au sol.
+            SteamLeak(m, t, mod.P(-1.6f, 2.86f, -s * 2.2f));
+            Puddle(m, t, mod.P(-1.6f, 0f, -s * 2.0f), new Vector2(1.0f, 0.65f), -30f);
+            Puddle(m, t, mod.P(-6.1f, 0f, 2.6f), new Vector2(0.8f, 0.5f), 25f);
         }
 
         /// <summary>Étage 3 — cœur : machinerie lourde (bobines, collecteurs) et câbles qui convergent vers le réacteur.</summary>
@@ -935,7 +955,11 @@ namespace Abysses.EditorTools
             float s = mod.Vz;
             Coil(m, t, mod.P(-5f, 0f, s * 3.0f));
             Coil(m, t, mod.P(5f, 0f, s * 3.0f));
-            ServerRack(m, t, mod.P(-6.85f, 0f, -s * 1.5f), mod.Facing(1f, 0f));
+            // Armoires de distribution entre les membrures du mur extérieur.
+            PowerCabinet(m, t, mod.P(-1f, 0f, s * 3.46f), mod.Facing(0f, s), 0);
+            PowerCabinet(m, t, mod.P(1f, 0f, s * 3.46f), mod.Facing(0f, s), 2);
+            ServerRack(m, t, mod.P(-6.85f, 0f, -s * 1.5f), mod.Facing(-1f, 0f));
+            ServerRack(m, t, mod.P(-6.85f, 0f, -s * 0.85f), mod.Facing(-1f, 0f));
             PipeColumn(m, t, mod.P(-6.85f, 0f, 3.35f));
         }
 
@@ -996,6 +1020,22 @@ namespace Abysses.EditorTools
             Static(Prim(PrimitiveType.Cube, "Meuble", root, new Vector3(0f, 0.44f, 0.03f), Quaternion.identity, new Vector3(1.6f, 0.86f, 0.55f), m.Locker, false));
             Box("Etagere", root, new Vector3(0f, 1.45f, 0.24f), Quaternion.identity, new Vector3(1.6f, 0.03f, 0.2f), m.Frame, 1f);
             Static(Prim(PrimitiveType.Cube, "Ecran", root, new Vector3(0.55f, 1.2f, 0.29f), Quaternion.identity, new Vector3(0.5f, 0.32f, 0.02f), m.Screens[1], false));
+            // Hotte : caisson suspendu, réglette froide, lumière bakée qui découpe une flaque de lumière blanche dans le rouge.
+            Box("Hotte", root, new Vector3(0f, 2.05f, 0.05f), Quaternion.identity, new Vector3(1.7f, 0.08f, 0.5f), m.HullDark, 1f);
+            Static(Prim(PrimitiveType.Cube, "Reglette", root, new Vector3(0f, 2.005f, -0.05f), Quaternion.identity, new Vector3(1.5f, 0.012f, 0.08f), m.EmitCold, false));
+            foreach (float x in new[] { -0.75f, 0.75f })
+                Box("Suspente", root, new Vector3(x, (2.09f + WallHeight) / 2f, 0.05f), Quaternion.identity, new Vector3(0.025f, WallHeight - 2.09f, 0.025f), m.Frame, 1f);
+            var lamp = new GameObject("Lumiere");
+            lamp.transform.SetParent(root, false);
+            lamp.transform.localPosition = new Vector3(0f, 1.75f, -0.2f);
+            var lampLight = lamp.AddComponent<Light>();
+            lampLight.type = LightType.Point;
+            lampLight.color = new Color(0.78f, 0.93f, 1f);
+            lampLight.range = 2.8f;
+            lampLight.intensity = 1.8f;
+            lampLight.lightmapBakeType = LightmapBakeType.Baked;
+            lampLight.shadows = LightShadows.Soft;
+            lampLight.shadowRadius = 0.15f;
             for (int i = 0; i < 5; i++)
             {
                 float x = -0.7f + i * 0.22f;
@@ -1050,6 +1090,103 @@ namespace Abysses.EditorTools
                 Static(AbyssesArt.MeshObject("Spire", root, art.Ring, new Vector3(0f, 0.45f + i * 0.22f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.7f, 0.7f, 0.08f), m.Brass));
             Static(Prim(PrimitiveType.Cylinder, "Chapeau", root, new Vector3(0f, 1.62f, 0f), Quaternion.identity, new Vector3(0.52f, 0.03f, 0.52f), m.Frame, false));
             Static(AbyssesArt.MeshObject("Lueur", root, art.Ring, new Vector3(0f, 1.655f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.34f, 0.34f, 0.02f), m.EmitPurple));
+            Pipe(m.Rubber, root, new Vector3(0f, (1.64f + WallHeight) / 2f, 0f), Vector3.up, WallHeight - 1.64f, 0.05f);
+        }
+
+        /// <summary>Armoire à échantillons : meuble bas, bocaux lumineux dessus et sur une étagère murale.</summary>
+        static void SampleCabinet(Mats m, Transform parent, Vector3 floorPosition, Quaternion facing)
+        {
+            Transform root = Group("Armoire_Echantillons", parent, floorPosition, facing);
+            Static(Prim(PrimitiveType.Cube, "Corps", root, new Vector3(0f, 0.475f, 0f), Quaternion.identity, new Vector3(1.0f, 0.95f, 0.45f), m.Locker, false));
+            Box("Plateau", root, new Vector3(0f, 0.97f, 0f), Quaternion.identity, new Vector3(1.04f, 0.04f, 0.48f), m.Frame, 1f);
+            Box("Etagere", root, new Vector3(0f, 1.55f, 0.115f), Quaternion.identity, new Vector3(1.0f, 0.03f, 0.25f), m.Frame, 1f);
+            foreach (float x in new[] { -0.42f, 0.42f })
+                Box("Console", root, new Vector3(x, 1.49f, 0.2f), Quaternion.identity, new Vector3(0.03f, 0.1f, 0.08f), m.Frame, 1f);
+
+            void Jar(Vector3 basePosition, float h, Material liquid)
+            {
+                Static(Prim(PrimitiveType.Cylinder, "Bocal", root, basePosition + Vector3.up * h, Quaternion.identity, new Vector3(0.13f, h, 0.13f), m.Glass, false));
+                Static(Prim(PrimitiveType.Cylinder, "Contenu", root, basePosition + Vector3.up * h * 0.7f, Quaternion.identity, new Vector3(0.105f, h * 0.7f, 0.105f), liquid, false));
+                Static(Prim(PrimitiveType.Cylinder, "Couvercle", root, basePosition + Vector3.up * (h * 2f + 0.01f), Quaternion.identity, new Vector3(0.14f, 0.01f, 0.14f), m.Brass, false));
+            }
+            for (int i = 0; i < 4; i++)
+                Jar(new Vector3(-0.36f + i * 0.24f, 0.99f, -0.05f), 0.1f + 0.03f * (i % 2), i == 2 ? m.EmitCyan : m.Liquid);
+            for (int i = 0; i < 3; i++)
+                Jar(new Vector3(-0.3f + i * 0.3f, 1.565f, 0.11f), 0.08f, i == 1 ? m.EmitCyan : m.Liquid);
+        }
+
+        /// <summary>Flaque d'eau : disque très lisse et sombre, il reflète les luminaires via les reflection probes.</summary>
+        static void Puddle(Mats m, Transform parent, Vector3 floorPosition, Vector2 size, float angle)
+        {
+            Static(Prim(PrimitiveType.Cylinder, "Flaque", parent, floorPosition + Vector3.up * 0.004f, Quaternion.Euler(0f, angle, 0f), new Vector3(size.x, 0.002f, size.y), m.Puddle, false));
+        }
+
+        /// <summary>Jet de vapeur sous une conduite qui fuit : quelques dizaines de particules douces, aucune lumière.</summary>
+        static void SteamLeak(Mats m, Transform parent, Vector3 position)
+        {
+            var go = new GameObject("Fuite_Vapeur");
+            go.transform.SetParent(parent, false);
+            go.transform.SetPositionAndRotation(position, Quaternion.Euler(90f, 0f, 0f));
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.playOnAwake = true;
+            main.loop = true;
+            main.prewarm = true;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(1.4f, 2.2f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.22f);
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+            main.maxParticles = 40;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            var emission = ps.emission;
+            emission.rateOverTime = 16f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 14f;
+            shape.radius = 0.02f;
+            var drag = ps.limitVelocityOverLifetime;
+            drag.enabled = true;
+            drag.dampen = 0.08f;
+            drag.limit = 0.15f;
+            var grow = ps.sizeOverLifetime;
+            grow.enabled = true;
+            grow.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 4f));
+            var fade = ps.colorOverLifetime;
+            fade.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+                new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(1f, 0.15f), new GradientAlphaKey(0.4f, 0.6f), new GradientAlphaKey(0f, 1f) });
+            fade.color = gradient;
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = m.Steam;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.maxParticleSize = 0.4f;
+        }
+
+        /// <summary>Armoire électrique : portes, écran, deux cadrans, rangée de voyants, faisceau de câbles vers le plafond.</summary>
+        static void PowerCabinet(Mats m, Transform parent, Vector3 floorPosition, Quaternion facing, int screen)
+        {
+            Transform root = Group("Armoire_Puissance", parent, floorPosition, facing);
+            Box("Caisson", root, new Vector3(0f, 1.0f, 0f), Quaternion.identity, new Vector3(1.5f, 2.0f, 0.4f), m.HullDark, 2f);
+            Box("Socle", root, new Vector3(0f, 0.05f, 0f), Quaternion.identity, new Vector3(1.54f, 0.1f, 0.44f), m.Frame, 1f);
+            foreach (float x in new[] { -0.37f, 0.37f })
+                Static(Prim(PrimitiveType.Cube, "Porte", root, new Vector3(x, 0.75f, -0.205f), Quaternion.identity, new Vector3(0.7f, 1.25f, 0.01f), m.Locker, false));
+            Static(Prim(PrimitiveType.Cube, "Ecran", root, new Vector3(-0.36f, 1.7f, -0.205f), Quaternion.identity, new Vector3(0.62f, 0.34f, 0.01f), m.Screens[screen], false));
+            foreach (float x in new[] { 0.22f, 0.52f })
+            {
+                Static(AbyssesArt.MeshObject("Cadran", root, art.Ring, new Vector3(x, 1.7f, -0.21f), Quaternion.identity, new Vector3(0.26f, 0.26f, 0.03f), m.Brass));
+                Static(Prim(PrimitiveType.Cylinder, "Fond", root, new Vector3(x, 1.7f, -0.203f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.2f, 0.004f, 0.2f), m.Key, false));
+                Static(Prim(PrimitiveType.Cube, "Aiguille", root, new Vector3(x + 0.02f, 1.72f, -0.21f), Quaternion.Euler(0f, 0f, x > 0.3f ? -35f : 50f), new Vector3(0.012f, 0.08f, 0.004f), m.StatusIdle, false));
+            }
+            Material[] leds = { m.StatusOk, m.EmitCyan, m.StatusOk, m.StatusIdle, m.EmitCyan, m.StatusOk };
+            for (int i = 0; i < leds.Length; i++)
+                Static(Prim(PrimitiveType.Cube, "Voyant", root, new Vector3(-0.6f + i * 0.24f, 1.44f, -0.205f), Quaternion.identity, new Vector3(0.05f, 0.05f, 0.012f), leds[i], false));
+            Box("Bande", root, new Vector3(0f, 1.97f, 0f), Quaternion.identity, new Vector3(1.505f, 0.06f, 0.405f), m.Hazard, 0.4f);
+            foreach (float x in new[] { -0.3f, 0f, 0.3f })
+                Pipe(m.Rubber, root, new Vector3(x, (2f + WallHeight) / 2f, 0.06f), Vector3.up, WallHeight - 2f, 0.03f);
         }
 
         static Transform Group(string name, Transform parent, Vector3 position, Quaternion rotation)
@@ -1118,9 +1255,9 @@ namespace Abysses.EditorTools
         static void BuildFloor2(Mats m)
         {
             Scene scene = NewFloorScene(2, out Transform root);
-            FloorEnvironment(root, new Color(0.07f, 0.015f, 0.01f), 0.07f, new Color(0.09f, 0.025f, 0.02f), fx.AmbienceLabo);
+            FloorEnvironment(root, new Color(0.07f, 0.015f, 0.01f), 0.07f, new Color(0.1f, 0.035f, 0.03f), fx.AmbienceLabo);
 
-            Module[] modules = BuildModules(m, root, Shell.VerticalHatches, new Color(1f, 0.32f, 0.14f), 10f, m.EmitRed, 2);
+            Module[] modules = BuildModules(m, root, Shell.VerticalHatches, new Color(1f, 0.4f, 0.24f), 10f, m.EmitRed, 2);
             foreach (Module mod in modules)
             {
                 Plankton(root, mod, m.PlanktonLabo, new Color(1f, 0.55f, 0.3f), new Color(1f, 0.8f, 0.6f));
@@ -1185,9 +1322,9 @@ namespace Abysses.EditorTools
         static void BuildFloor3(Mats m)
         {
             Scene scene = NewFloorScene(3, out Transform root);
-            FloorEnvironment(root, new Color(0.005f, 0.015f, 0.03f), 0.06f, new Color(0.02f, 0.04f, 0.07f), fx.AmbienceCoeur);
+            FloorEnvironment(root, new Color(0.005f, 0.015f, 0.03f), 0.06f, new Color(0.03f, 0.055f, 0.09f), fx.AmbienceCoeur);
 
-            Module[] modules = BuildModules(m, root, Shell.OpenHall, new Color(0.25f, 0.85f, 1f), 3.5f, m.EmitCyan, 3);
+            Module[] modules = BuildModules(m, root, Shell.OpenHall, new Color(0.25f, 0.85f, 1f), 6f, m.EmitCyan, 3);
             Vector3 center = new Vector3(PlayArea.ArenaWidth / 2f, 0f, PlayArea.ArenaDepth / 2f);
             // Bioluminescence : plancton cyan / magenta.
             foreach (Module mod in modules)
@@ -1221,6 +1358,30 @@ namespace Abysses.EditorTools
                 Pipe(m.PipeGrey, reactor, center + offset * 0.6f + Vector3.up * 3.6f, Vector3.up, 1.2f, 0.06f);
             }
             Static(Prim(PrimitiveType.Cylinder, "Chapeau", reactor, center + Vector3.up * 3.18f, Quaternion.identity, new Vector3(1.1f, 0.08f, 1.1f), m.Frame, false));
+            // Liseré lumineux au pied du socle (le réacteur tient dans l'allée : rayon 0,55 m max côté Z, sinon il traverse les vitres).
+            Static(AbyssesArt.MeshObject("Halo", reactor, art.Ring, center + Vector3.up * 0.065f, Quaternion.Euler(90f, 0f, 0f), new Vector3(1.28f, 1.28f, 0.01f), m.EmitCyan));
+            // Cage qui tourne lentement autour du cœur, derrière la paroi de verre : le réacteur « vit » sans lumière temps réel.
+            var cage = new GameObject("Cage_Tournante").transform;
+            cage.SetParent(reactor, false);
+            cage.localPosition = center + Vector3.up * 1.55f;
+            SetFields(cage.gameObject.AddComponent<Spin>(), ("degreesPerSecond", 30f));
+            for (int i = 0; i < 3; i++)
+            {
+                float angle = 120f * i * Mathf.Deg2Rad;
+                Prim(PrimitiveType.Cube, "Barreau", cage, new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * 0.31f, Quaternion.Euler(8f, -120f * i, 0f), new Vector3(0.035f, 2.3f, 0.035f), m.Brass, false);
+            }
+            // Lumière bakée du cœur : éclaire le pied du réacteur, les allées et le bas des vitres des 4 modules.
+            var glowGo = new GameObject("Lumiere_Reacteur");
+            glowGo.transform.SetParent(reactor, false);
+            glowGo.transform.localPosition = center + Vector3.up * 1.4f;
+            var glow = glowGo.AddComponent<Light>();
+            glow.type = LightType.Point;
+            glow.color = new Color(0.3f, 0.85f, 1f);
+            glow.range = 7f;
+            glow.intensity = 2.5f;
+            glow.lightmapBakeType = LightmapBakeType.Baked;
+            glow.shadows = LightShadows.Soft;
+            glow.shadowRadius = 0.2f;
 
             var consoles = new (int quadrant, XRSimpleInteractable button)[4];
             var levers = new LeverHandle[4];
@@ -1243,6 +1404,14 @@ namespace Abysses.EditorTools
                 consoles[q] = (q, button.AddComponent<XRSimpleInteractable>());
                 Label(console, "APPUIE QUAND TA COULEUR S'ALLUME", position + Vector3.up * 1.32f - toCenter * 0.02f, 0.45f, facingReactor);
                 levers[q] = BuildLever(m, console, q, position + inward * 0.55f, Quaternion.LookRotation(-toCenter));
+
+                // Balisage au sol à la couleur du joueur, de sa cabine à sa console : guide le regard dans un grand volume sombre.
+                Vector3 path = position - modules[q].Center;
+                path.y = 0f;
+                float pathLength = path.magnitude;
+                path /= pathLength;
+                for (float dist = 2.1f; dist < pathLength - 0.6f; dist += 0.45f)
+                    Static(Prim(PrimitiveType.Cube, "Balise", console, modules[q].Center + path * dist + Vector3.up * 0.004f, Quaternion.LookRotation(path), new Vector3(0.09f, 0.008f, 0.2f), m.Avatar[q], false));
             }
 
             var reactorGo = new GameObject("Reactor");

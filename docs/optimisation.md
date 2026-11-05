@@ -38,6 +38,16 @@ Mêmes conditions (étage 1, joueur dans sa cabine, porte ouverte).
 | Draw calls regroupés (static batching) | 60 | 245 | ✅ |
 | Ombres dynamiques | 0 | 0 | ✅ |
 
+Après la finition des étages 2 et 3 (même mesure, joueur dans sa cabine à chaque étage) :
+
+| Étage | Batches | SetPass | Triangles |
+|-------|---------|---------|-----------|
+| 1 — Habitat | 266 | 40 | 41 k |
+| 2 — Labo | 303 | 56 | 50 k |
+| 3 — Cœur | 187 | 34 | 34 k |
+
+L'étage 2 est le plus chargé (4 modules fermés mais tous rendus, 5 matériaux de plus). C'est lui qu'il faut mesurer en premier sur le casque.
+
 Le décor ajoute beaucoup de petites pièces (membrures, colliers, appliques, mobilier). Elles partagent une quinzaine de matériaux : le **SRP Batcher** (actif) rend chaque draw call bon marché, et seul le nombre de SetPass coûte vraiment (40). Les textures générées font 128 à 512 px (≈ 2 Mo au total) et sont compressées en ASTC (format par défaut du build Android).
 Si le casque ne tient pas 72 FPS : occlusion culling d'abord (les murs pleins cachent les modules voisins), puis fusion des pièces de décor par module (`Mesh.CombineMeshes` à la génération).
 

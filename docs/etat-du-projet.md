@@ -20,7 +20,10 @@ Le décor n'est plus en blockout. Tout reste généré par *Abysses → Tout con
 - **Cabine bathyscaphe** redessinée : hublots ronds cerclés de laiton, dôme, coins arrondis lumineux, console et main courante.
 - **Appareils** (digicode, fusible, manomètre) montés sur des platines cerclées de bandes de danger, avec gaine vers le plafond. Le réacteur est habillé (socle, anneaux, haubans).
 - **Lumière** : étage 2 moins monochrome (halos verts dans les cuves, contre le rouge de secours) ; vitres corrigées (elles devenaient blanches sous un angle rasant).
-- **Perf (éditeur)** : 266 batches, 40 SetPass, 41 000 triangles, toujours 0 ombre dynamique — détail dans [`optimisation.md`](optimisation.md).
+- **Étage 2 (labo)** : coque peinte claire et faïence blanche au lieu de l'acier sombre (le rouge de secours éclaire enfin les murs), hottes avec réglette froide au-dessus des paillasses, armoire à échantillons, fuite de vapeur et sol mouillé.
+- **Étage 3 (cœur)** : armoires électriques, cage en laiton qui tourne autour du réacteur, liseré et lumière du réacteur, **balisage au sol à la couleur du joueur** de sa cabine jusqu'à sa console, lumière remontée au niveau de l'étage 1 (un écran LCD de Quest rend mal les scènes très sombres).
+- **Corrigé** : bureaux, paillasses et baies serveurs étaient tournés vers le mur.
+- **Perf (éditeur)** : 187 à 303 batches selon l'étage, 34 à 56 SetPass, 34 000 à 50 000 triangles, toujours 0 ombre dynamique — détail dans [`optimisation.md`](optimisation.md).
 
 ## Vérifié (dans l'éditeur, sans casque)
 
@@ -78,6 +81,6 @@ Le décor n'est plus en blockout. Tout reste généré par *Abysses → Tout con
    ```bash
    /Applications/Unity/Hub/Editor/6000.3.23f1/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb install -r /Users/Eleve/Desktop/IUTS5/UNITY/TP_Unity/Projet/Builds/Abysses_debug.apk
    ```
-2. **Mesurer la perf sur le casque** après la passe artistique (266 batches dans l'éditeur) ; si besoin : occlusion culling, puis fusion des pièces de décor.
+2. **Mesurer la perf sur le casque** après la passe artistique (jusqu'à 303 batches à l'étage 2 dans l'éditeur) ; si besoin : occlusion culling, puis fusion des pièces de décor.
 3. **Activer Relay** sur cloud.unity.com (projet *eva-vr-escape-sousmarin* → Multiplayer → Relay) pour jouer en ligne en plus du réseau local.
 4. **Playtests** avec de vraies personnes : durée, compréhension des énigmes.
