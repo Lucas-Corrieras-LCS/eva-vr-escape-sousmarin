@@ -2052,6 +2052,12 @@ namespace Abysses.EditorTools
             SetFields(connection, ("networkManager", networkManager), ("transport", transport), ("lanDiscovery", discovery));
             SetFields(network.AddComponent<DevAutoConnect>(), ("connection", connection));
 
+            // Filet de sécurité permanent : sol invisible sous toute la piste (et bien au-delà). Au joystick (debug, gravité
+            // active), un joueur qui traverse un mur ou se trouve entre deux étages ne tombe plus dans le vide.
+            var safetyFloor = new GameObject("SolDeSecours").AddComponent<BoxCollider>();
+            safetyFloor.center = new Vector3(PlayArea.ArenaWidth / 2f, -0.2f, PlayArea.ArenaDepth / 2f);
+            safetyFloor.size = new Vector3(PlayArea.ArenaWidth + 60f, 0.3f, PlayArea.ArenaDepth + 60f);
+
             var gameState = new GameObject("GameState");
             gameState.AddComponent<NetworkObject>();
             gameState.AddComponent<GameStateManager>();

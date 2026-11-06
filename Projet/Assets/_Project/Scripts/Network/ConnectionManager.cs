@@ -146,7 +146,9 @@ namespace Abysses.Network
             {
                 Debug.LogException(e);
                 session = null;
-                Fail("Connexion en ligne impossible.\nEssayez le réseau local.", "Online connection failed.\nTry the local network.");
+                // La cause s'affiche dans le menu : sans câble ni console, c'est le seul diagnostic possible au casque.
+                string cause = OnlineFailureCause(e);
+                Fail("Connexion en ligne impossible :\n" + cause, "Online connection failed:\n" + cause);
             }
         }
 
@@ -271,7 +273,13 @@ namespace Abysses.Network
             lastMode = Mode;
             if (Spectator) SetState(ConnectionState.Online, "Pupitre connecté", "Console connected");
             else if (Mode == ConnectionMode.Solo) SetState(ConnectionState.Online, "Partie solo", "Solo game");
-            else if (networkManager.IsHost) SetState(ConnectionState.Online, "Partie créée — en attente de l'équipe", "Game created — waiting for the team");
+            else if (networkManager.IsHost)
+            {
+                // Adresse affichée en réseau local : on vérifie d'un coup d'œil que les casques sont sur le même Wi-Fi.
+                string address = Mode == ConnectionMode.LanHost ? LanDiscovery.LocalAddress() : null;
+                string suffix = string.IsNullOrEmpty(address) ? string.Empty : "\n(" + address + ")";
+                SetState(ConnectionState.Online, "Partie créée — en attente de l'équipe" + suffix, "Game created — waiting for the team" + suffix);
+            }
             else SetState(ConnectionState.Online, "Équipe rejointe", "Team joined");
         }
 
@@ -364,8 +372,25 @@ namespace Abysses.Network
             if (Time.unscaledTime > lanJoinDeadline)
             {
                 lanDiscovery.Stop();
-                Fail("Aucune partie trouvée sur le réseau local.", "No game found on the local network.");
+                Fail("Aucune partie trouvée sur le réseau local.\nMême Wi-Fi que l'hôte ? Les réseaux d'école (eduroam) bloquent\nles casques entre eux : utilisez un partage de connexion.",
+                    "No game found on the local network.\nSame Wi-Fi as the host? School networks (eduroam) block\nheadsets from each other: use a phone hotspot.");
             }
+        }
+
+        /// <summary>Message court et compréhensible pour les échecs les plus courants des services en ligne.</summary>
+        static string OnlineFailureCause(Exception e)
+        {
+            string text = e.Message ?? string.Empty;
+            for (Exception inner = e.InnerException; inner != null; inner = inner.InnerException)
+                text += " | " + inner.Message;
+            string lower = text.ToLowerInvariant();
+            if (lower.Contains("project") && (lower.Contains("not found") || lower.Contains("link")))
+                return "projet Unity Cloud non lié (Project Settings → Services).";
+            if (lower.Contains("forbidden") || lower.Contains("not enabled") || lower.Contains("403"))
+                return "Relay / Lobby non activés sur cloud.unity.com.";
+            if (lower.Contains("timeout") || lower.Contains("timed out") || lower.Contains("network") || lower.Contains("host"))
+                return "pas d'accès Internet (ou réseau filtré).";
+            return text.Length > 90 ? text.Substring(0, 90) + "…" : text;
         }
 
         void Fail(string message, string english)
