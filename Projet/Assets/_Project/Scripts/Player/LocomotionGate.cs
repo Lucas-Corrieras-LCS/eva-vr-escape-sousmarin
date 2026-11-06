@@ -6,8 +6,8 @@ namespace Abysses.Player
 {
     /// <summary>
     /// Contrôle des déplacements artificiels (consigne C3).
-    /// - Joystick (Move / Gravity) : actif seulement en debug, coupé en build EVA.
-    /// - Téléportation, rotation au stick, escalade, saut, grab move : toujours coupés,
+    /// - Joystick (Move / Gravity) et rotation par crans au stick droit (StickTurn) : actifs seulement en debug, coupés en build EVA.
+    /// - Téléportation, rotation des Starter Assets, escalade, saut, grab move : toujours coupés,
     ///   ils casseraient la correspondance entre la piste réelle et le monde virtuel.
     /// </summary>
     public class LocomotionGate : MonoBehaviour

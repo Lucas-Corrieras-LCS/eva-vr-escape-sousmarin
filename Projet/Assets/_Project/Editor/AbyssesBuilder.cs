@@ -2050,12 +2050,19 @@ namespace Abysses.EditorTools
             cameraTransform.gameObject.AddComponent<AudioLowPassFilter>();
             cameraTransform.gameObject.AddComponent<DescentEars>();
 
+            rig.AddComponent<XRRenderSettings>();
             var localRig = rig.AddComponent<LocalRig>();
             SetFields(localRig, ("leftHand", Find(rig.transform, "Left Controller")), ("rightHand", Find(rig.transform, "Right Controller")));
 
+            // Debug : rotation de la vue par crans au stick droit (coupée en build EVA avec le reste du joystick).
+            var stickTurn = new GameObject("Stick Turn");
+            stickTurn.transform.SetParent(Find(rig.transform, "Locomotion"), false);
+            SetFields(stickTurn.AddComponent<StickTurn>(), ("origin", rig.GetComponent<Unity.XR.CoreUtils.XROrigin>()),
+                ("moveProvider", rig.GetComponentInChildren<UnityEngine.XR.Interaction.Toolkit.Locomotion.Movement.ContinuousMoveProvider>(true)));
+
             var gate = rig.AddComponent<LocomotionGate>();
             var gateSo = new SerializedObject(gate);
-            SetArray(gateSo.FindProperty("debugOnly"), Find(rig.transform, "Move").gameObject, Find(rig.transform, "Gravity").gameObject);
+            SetArray(gateSo.FindProperty("debugOnly"), Find(rig.transform, "Move").gameObject, Find(rig.transform, "Gravity").gameObject, stickTurn);
             var forbidden = new List<GameObject>();
             foreach (string n in new[] { "Teleportation", "Climb", "Jump", "Grab Move", "Turn" })
             {

@@ -72,6 +72,7 @@ namespace Abysses.Level
 
         Scene loadedFloor;
         bool sceneEventDone;
+        bool returning;
 
         public int DepthOf(int floor) => floorDepths[Mathf.Clamp(floor, 0, floorDepths.Length - 1)];
 
@@ -144,11 +145,17 @@ namespace Abysses.Level
             StartCoroutine(DescendTo(1));
         }
 
-        /// <summary>Après la remontée : retour à la surface pour une nouvelle partie, sans relancer la session.</summary>
+        /// <summary>
+        /// Retour à la surface pour une nouvelle partie, sans relancer la session : après la remontée (n'importe quel joueur),
+        /// ou en cours de partie depuis le menu de l'hôte (partie bloquée, test). Jamais pendant une descente (chargement en cours).
+        /// </summary>
         [Rpc(SendTo.Server)]
-        public void RequestRestartRpc()
+        public void RequestRestartRpc(RpcParams rpcParams = default)
         {
-            if (Phase.Value != GamePhase.Finished) return;
+            bool finished = Phase.Value == GamePhase.Finished;
+            bool abandon = (Phase.Value == GamePhase.Playing || Phase.Value == GamePhase.FloorSolved)
+                           && rpcParams.Receive.SenderClientId == NetworkManager.ServerClientId;
+            if (returning || (!finished && !abandon)) return;
             StartCoroutine(ReturnToSurface());
         }
 
@@ -185,7 +192,7 @@ namespace Abysses.Level
         [Rpc(SendTo.Server)]
         public void GmRestartRpc(RpcParams rpcParams = default)
         {
-            if (!FromGameMaster(rpcParams) || Phase.Value == GamePhase.Descending || Phase.Value == GamePhase.Lobby) return;
+            if (returning || !FromGameMaster(rpcParams) || Phase.Value == GamePhase.Descending || Phase.Value == GamePhase.Lobby) return;
             StopAllCoroutines();
             StartCoroutine(ReturnToSurface());
         }
@@ -204,7 +211,7 @@ namespace Abysses.Level
 
         void OnObjectiveSolved(PuzzleObjective objective)
         {
-            if (Phase.Value != GamePhase.Playing || !PuzzleObjective.AllSolved(Floor.Value)) return;
+            if (returning || Phase.Value != GamePhase.Playing || !PuzzleObjective.AllSolved(Floor.Value)) return;
 
             if (Floor.Value >= FloorCount)
             {
@@ -222,7 +229,7 @@ namespace Abysses.Level
 
         void TryStartDescent()
         {
-            if (Phase.Value != GamePhase.FloorSolved) return;
+            if (returning || Phase.Value != GamePhase.FloorSolved) return;
             int occupied = NetworkPlayer.OccupiedQuadrantMask();
             if (occupied == 0 || (ReadyMask.Value & occupied) != occupied) return;
             StartCoroutine(DescendTo(Floor.Value + 1));
@@ -257,6 +264,8 @@ namespace Abysses.Level
 
         IEnumerator ReturnToSurface()
         {
+            // Pendant le déchargement, la phase reste celle de la partie : on bloque toute descente ou fin d'étage.
+            returning = true;
             if (loadedFloor.IsValid() && loadedFloor.isLoaded)
             {
                 sceneEventDone = false;
@@ -269,6 +278,7 @@ namespace Abysses.Level
             StartTime.Value = 0;
             EndTime.Value = 0;
             Phase.Value = GamePhase.Lobby;
+            returning = false;
         }
 
         IEnumerator DescendTo(int floor)
