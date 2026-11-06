@@ -9,7 +9,10 @@ using UnityEngine;
 namespace Abysses.Network
 {
     /// <summary>
-    /// Découverte automatique de l'hôte en réseau local (broadcast UDP), pour jouer sans Internet.
+    /// Découverte automatique de l'hôte en réseau local, pour jouer sans Internet.
+    /// - L'hôte s'annonce en broadcast UDP et répond aux sondes des clients.
+    /// - Le client sonde le broadcast ET chaque adresse de son sous-réseau en unicast : les partages de connexion
+    ///   des téléphones et beaucoup de box ne relaient pas le broadcast entre appareils.
     /// Non bloquant : aucune thread, lecture du socket dans Update uniquement quand des données sont disponibles.
     /// Quest (Android) : le Wi-Fi jette les paquets broadcast tant qu'aucun « verrou multicast » n'est pris
     /// (permission CHANGE_WIFI_MULTICAST_STATE, ajoutée au manifeste par AbyssesAndroidManifest).
@@ -17,11 +20,16 @@ namespace Abysses.Network
     public class LanDiscovery : MonoBehaviour
     {
         const string Signature = "ABYSSES1";
+        const string Probe = Signature + "?";
         const float BroadcastInterval = 1f;
+        /// <summary>Taille maximale d'un sous-réseau sondé en unicast (/22).</summary>
+        const int MaxScannedHosts = 1022;
 
         UdpClient socket;
         readonly List<IPEndPoint> broadcastEndPoints = new List<IPEndPoint>();
+        readonly List<IPEndPoint> scanEndPoints = new List<IPEndPoint>();
         byte[] announcement;
+        byte[] probe;
         float nextBroadcast;
         bool broadcasting;
 #if UNITY_ANDROID && !UNITY_EDITOR
@@ -38,14 +46,10 @@ namespace Abysses.Network
             Stop();
             try
             {
-                socket = new UdpClient { EnableBroadcast = true };
-                announcement = Encoding.ASCII.GetBytes(Signature + ":" + gamePort);
-                // 255.255.255.255 n'est pas toujours relayé par les routeurs Wi-Fi : on vise aussi le broadcast du sous-réseau.
-                broadcastEndPoints.Clear();
-                broadcastEndPoints.Add(new IPEndPoint(IPAddress.Broadcast, discoveryPort));
-                foreach (IPAddress subnet in SubnetBroadcasts())
-                    broadcastEndPoints.Add(new IPEndPoint(subnet, discoveryPort));
                 AcquireMulticastLock();
+                socket = Bind(discoveryPort);
+                announcement = Encoding.ASCII.GetBytes(Signature + ":" + gamePort);
+                FillBroadcastEndPoints(discoveryPort);
                 broadcasting = true;
                 nextBroadcast = 0f;
             }
@@ -62,16 +66,39 @@ namespace Abysses.Network
             try
             {
                 AcquireMulticastLock();
-                socket = new UdpClient();
-                socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-                socket.Client.Bind(new IPEndPoint(IPAddress.Any, discoveryPort));
-                socket.EnableBroadcast = true;
+                socket = Bind(discoveryPort);
+                probe = Encoding.ASCII.GetBytes(Probe);
+                FillBroadcastEndPoints(discoveryPort);
+                scanEndPoints.Clear();
+                foreach (UnicastIPAddressInformation address in LanAddresses())
+                    foreach (IPAddress host in SubnetHosts(address))
+                        scanEndPoints.Add(new IPEndPoint(host, discoveryPort));
+                Debug.Log($"[Abysses] Recherche LAN depuis {LocalAddress() ?? "?"} : {scanEndPoints.Count} adresses sondées.");
+                nextBroadcast = 0f;
             }
             catch (SocketException e)
             {
                 Debug.LogWarning("[Abysses] Écoute LAN impossible : " + e.Message);
                 Stop();
             }
+        }
+
+        static UdpClient Bind(ushort port)
+        {
+            var client = new UdpClient();
+            client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+            client.Client.Bind(new IPEndPoint(IPAddress.Any, port));
+            client.EnableBroadcast = true;
+            return client;
+        }
+
+        void FillBroadcastEndPoints(ushort port)
+        {
+            // 255.255.255.255 n'est pas toujours relayé par les routeurs Wi-Fi : on vise aussi le broadcast du sous-réseau.
+            broadcastEndPoints.Clear();
+            broadcastEndPoints.Add(new IPEndPoint(IPAddress.Broadcast, port));
+            foreach (UnicastIPAddressInformation address in LanAddresses())
+                broadcastEndPoints.Add(new IPEndPoint(SubnetBroadcast(address), port));
         }
 
         public void Stop()
@@ -88,24 +115,28 @@ namespace Abysses.Network
             if (socket == null) return;
             try
             {
-                if (broadcasting)
+                if (Time.unscaledTime >= nextBroadcast)
                 {
-                    if (Time.unscaledTime < nextBroadcast) return;
-                    for (int i = 0; i < broadcastEndPoints.Count; i++)
-                    {
-                        // Un sous-réseau injoignable ne doit pas couper les autres annonces.
-                        try { socket.Send(announcement, announcement.Length, broadcastEndPoints[i]); }
-                        catch (SocketException) { }
-                    }
                     nextBroadcast = Time.unscaledTime + BroadcastInterval;
-                    return;
+                    if (broadcasting) SendAll(announcement, broadcastEndPoints);
+                    else
+                    {
+                        SendAll(probe, broadcastEndPoints);
+                        SendAll(probe, scanEndPoints);
+                    }
                 }
 
                 while (socket != null && socket.Available > 0)
                 {
                     IPEndPoint sender = null;
                     byte[] data = socket.Receive(ref sender);
-                    if (TryParse(data, out ushort gamePort))
+                    string message = Encoding.ASCII.GetString(data);
+                    if (broadcasting)
+                    {
+                        // Sonde d'un client : réponse directe, sans dépendre du broadcast.
+                        if (message == Probe) socket.Send(announcement, announcement.Length, sender);
+                    }
+                    else if (TryParse(message, out ushort gamePort))
                         HostFound?.Invoke(sender.Address.ToString(), gamePort);
                 }
             }
@@ -113,6 +144,16 @@ namespace Abysses.Network
             {
                 Debug.LogWarning("[Abysses] Erreur découverte LAN : " + e.Message);
                 Stop();
+            }
+        }
+
+        void SendAll(byte[] payload, List<IPEndPoint> targets)
+        {
+            for (int i = 0; i < targets.Count; i++)
+            {
+                // Une adresse injoignable ne doit pas couper les autres envois.
+                try { socket.Send(payload, payload.Length, targets[i]); }
+                catch (SocketException) { }
             }
         }
 
@@ -124,19 +165,43 @@ namespace Abysses.Network
             return null;
         }
 
-        static IEnumerable<IPAddress> SubnetBroadcasts()
+        static byte[] Mask(UnicastIPAddressInformation address)
         {
-            foreach (UnicastIPAddressInformation address in LanAddresses())
+            byte[] mask;
+            try { mask = address.IPv4Mask != null ? address.IPv4Mask.GetAddressBytes() : null; }
+            catch (NotImplementedException) { mask = null; }
+            // Masque inconnu (certaines versions Android) : /24, le cas des box et des partages de connexion.
+            if (mask == null || mask.Length != 4 || mask[0] == 0) mask = new byte[] { 255, 255, 255, 0 };
+            return mask;
+        }
+
+        static uint ToUInt(byte[] b) => (uint)(b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3]);
+        static IPAddress FromUInt(uint v) => new IPAddress(new[] { (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v });
+
+        static IPAddress SubnetBroadcast(UnicastIPAddressInformation address)
+        {
+            uint ip = ToUInt(address.Address.GetAddressBytes());
+            uint mask = ToUInt(Mask(address));
+            return FromUInt(ip | ~mask);
+        }
+
+        /// <summary>Toutes les adresses du sous-réseau (sauf la sienne), limitées à un /22 autour du casque.</summary>
+        static IEnumerable<IPAddress> SubnetHosts(UnicastIPAddressInformation address)
+        {
+            uint ip = ToUInt(address.Address.GetAddressBytes());
+            uint mask = ToUInt(Mask(address));
+            uint hostCount = ~mask - 1;
+            if (hostCount > MaxScannedHosts)
             {
-                byte[] ip = address.Address.GetAddressBytes();
-                byte[] mask;
-                try { mask = address.IPv4Mask != null ? address.IPv4Mask.GetAddressBytes() : null; }
-                catch (NotImplementedException) { mask = null; }
-                // Masque inconnu (certaines versions Android) : /24, le cas des box et des partages de connexion.
-                if (mask == null || mask.Length != 4 || mask[0] == 0) mask = new byte[] { 255, 255, 255, 0 };
-                var broadcast = new byte[4];
-                for (int i = 0; i < 4; i++) broadcast[i] = (byte)(ip[i] | ~mask[i]);
-                yield return new IPAddress(broadcast);
+                // Grand réseau (école, entreprise) : on ne sonde que le /22 qui contient le casque.
+                mask = 0xFFFFFC00;
+                hostCount = ~mask - 1;
+            }
+            uint network = ip & mask;
+            for (uint i = 1; i <= hostCount; i++)
+            {
+                uint candidate = network + i;
+                if (candidate != ip) yield return FromUInt(candidate);
             }
         }
 
@@ -189,10 +254,9 @@ namespace Abysses.Network
 #endif
         }
 
-        static bool TryParse(byte[] data, out ushort gamePort)
+        static bool TryParse(string message, out ushort gamePort)
         {
             gamePort = 0;
-            string message = Encoding.ASCII.GetString(data);
             string prefix = Signature + ":";
             return message.StartsWith(prefix, StringComparison.Ordinal)
                 && ushort.TryParse(message.Substring(prefix.Length), out gamePort);

@@ -18,4 +18,4 @@ MonoBehaviour:
   lanPort: 7777
   lanDiscoveryPort: 47777
   networkTickRate: 30
-  lanJoinTimeout: 10
+  lanJoinTimeout: 20

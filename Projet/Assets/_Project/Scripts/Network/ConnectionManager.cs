@@ -168,7 +168,9 @@ namespace Abysses.Network
         {
             if (IsBusy) return;
             Mode = ConnectionMode.LanClient;
-            SetState(ConnectionState.Connecting, "Recherche d'une partie locale…", "Looking for a local game…");
+            string me = LanDiscovery.LocalAddress() ?? "?";
+            SetState(ConnectionState.Connecting, "Recherche d'une partie locale…\n(mon adresse : " + me + ")",
+                "Looking for a local game…\n(my address: " + me + ")");
             lanJoinDeadline = Time.unscaledTime + config.LanJoinTimeout;
             lanDiscovery.StartListening(config.LanDiscoveryPort);
             if (!lanDiscovery.IsActive) Fail("Réseau local indisponible.", "Local network unavailable.");
@@ -372,8 +374,9 @@ namespace Abysses.Network
             if (Time.unscaledTime > lanJoinDeadline)
             {
                 lanDiscovery.Stop();
-                Fail("Aucune partie trouvée sur le réseau local.\nMême Wi-Fi que l'hôte ? Les réseaux d'école (eduroam) bloquent\nles casques entre eux : utilisez un partage de connexion.",
-                    "No game found on the local network.\nSame Wi-Fi as the host? School networks (eduroam) block\nheadsets from each other: use a phone hotspot.");
+                string me = LanDiscovery.LocalAddress() ?? "?";
+                Fail("Aucune partie trouvée (mon adresse : " + me + ").\nL'hôte a-t-il lancé « Héberger » ? Son adresse doit commencer\npareil que la mienne (même Wi-Fi). eduroam bloque les casques entre eux.",
+                    "No game found (my address: " + me + ").\nDid the host press “Host”? Its address must start\nlike mine (same Wi-Fi). eduroam blocks headsets from each other.");
             }
         }
 
