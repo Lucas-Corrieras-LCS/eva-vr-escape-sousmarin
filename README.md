@@ -23,7 +23,19 @@ Projet d'évaluation de fin de module, en binôme.
 
 - Ouvrir `Assets/_Project/Scenes/Station.unity`, Play. Le simulateur XR remplace le casque (clavier + souris).
 - Menu : *Jouer en solo* → entrer dans la cabine → *Lancer la plongée*. En partie, touche **M** (bouton Menu de la manette gauche sur Quest) pour recalibrer ou quitter.
+- **Sans casque, à la manette de jeu** (debug) : stick gauche = avancer, stick droit = tourner (coupé dans l'APK EVA, comme le joystick des manettes).
 - **Multijoueur à 2** : *Abysses → Test multijoueur → Activer le scénario 2 joueurs*, puis Play : l'éditeur héberge, un second éditeur s'ouvre et rejoint tout seul. *Revenir au Play normal* pour repasser en solo.
+
+## Jouer à plusieurs
+
+Même Wi-Fi pour tous (ou partage de connexion d'un téléphone) : **un** casque choisit *Héberger la partie*, les autres *Rejoindre la partie*. Détails, conseils et dépannage : [docs/reseau.md](docs/reseau.md).
+
+## Déroulé d'une partie
+
+1. **Surface** : plateforme offshore au large d'une île (phare, bateau, mouettes). Chaque joueur entre dans sa cabine, suspendue sous une potence.
+2. **Plongée** (22 s) : le treuil lâche (secousse), la mer monte devant les hublots (éclaboussure), l'eau s'assombrit ; l'étage se charge derrière un « puits d'eau ».
+3. **Étages 1 à 3** : énigmes coopératives entre modules **+ une énigme par module, jouable seul** : disjoncteurs (note du chef mécanicien), balise morse vue par le hublot + cadenas, console sonar (mémoire).
+4. **Remontée** : retour à la surface, on émerge par les hublots, puis les portes s'ouvrent.
 
 ## Menus `Abysses`
 
@@ -35,6 +47,17 @@ Projet d'évaluation de fin de module, en binôme.
 | Captures d'écran des étages | Images dans `docs/captures/` |
 | Build → APK debug / APK EVA | APK dans `Projet/Builds/` ; la version EVA coupe le déplacement au joystick (`ABYSSES_PROD`) |
 | Test multijoueur | Active / désactive le scénario Multiplayer Play Mode 2 joueurs |
+| Vérifier l'ergonomie | Hauteur et accessibilité de chaque objet interactif → `docs/ergonomie.md` |
+| Tests → Partie solo automatique | Joue une partie complète en Play Mode et vérifie chaque système → `docs/playtest-solo.md` |
+| Tests → Compiler le client de test Mac, puis Partie à 2 + pupitre | Un client Mac compilé rejoint comme 2e plongeur, un autre comme pupitre ; teste la reconnexion → `docs/playtest-multi.md` |
+
+## Pupitre du maître du jeu (staff EVA)
+
+Sur un PC sans casque (build bureau lancé avec `-pupitre`, ou **F1** en Play Mode dans l'éditeur) :
+héberger la partie en réseau local ou la rejoindre comme spectateur (sans avatar, même en cours de partie),
+suivre la progression, donner un indice, envoyer un message, résoudre une énigme, passer l'étage, relancer la partie.
+Caméras : touches **1–4** (surveillance de chaque module), **5** (derrière un plongeur), **6** (libre, ZQSD + clic droit),
+**F2** = mode vitrine plein écran pour le public qui attend.
 
 ## Règles de travail en binôme
 

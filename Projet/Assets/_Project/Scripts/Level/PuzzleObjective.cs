@@ -18,12 +18,29 @@ namespace Abysses.Level
         [Tooltip("Module où se trouve l'objectif (0..3). -1 = objectif commun, jamais résolu automatiquement.")]
         [SerializeField, Range(-1, 3)] int quadrant;
         [SerializeField] string label = "Objectif";
+        [SerializeField] string labelEnglish;
+        [Tooltip("Indices progressifs (du plus vague au plus précis), donnés par l'IA de la station quand l'équipe bloque.")]
+        [SerializeField, TextArea] string[] hints;
+        [SerializeField, TextArea] string[] hintsEnglish;
 
         public readonly NetworkVariable<bool> Solved = new NetworkVariable<bool>(false);
 
         public int Floor => floor;
         public int Quadrant => quadrant;
-        public string Label => label;
+        public string Label => Loc.T(label, labelEnglish);
+        public int HintCount => hints != null ? hints.Length : 0;
+
+        /// <summary>Indice de niveau donné (borné au dernier, le plus précis), dans la langue du joueur.</summary>
+        public string Hint(int level)
+        {
+            if (HintCount == 0) return string.Empty;
+            level = Mathf.Clamp(level, 0, hints.Length - 1);
+            string english = hintsEnglish != null && level < hintsEnglish.Length ? hintsEnglish[level] : null;
+            return Loc.T(hints[level], english);
+        }
+
+        /// <summary>Objectifs actuellement chargés (pupitre du maître du jeu, indices).</summary>
+        public static IReadOnlyList<PuzzleObjective> Registered => All;
 
         /// <summary>Changement d'état de CET objectif (visuels locaux).</summary>
         public event Action<bool> StateChanged;

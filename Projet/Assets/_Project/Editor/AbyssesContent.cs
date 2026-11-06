@@ -24,9 +24,14 @@ namespace Abysses.EditorTools
         {
             public AudioClip AmbienceStation, AmbienceHabitat, AmbienceLabo, AmbienceCoeur;
             public AudioClip Bubbles, Rumble, ZoneAlarm, Key, Error, Success, FuseInsert, Hatch, LeverFail, ReactorTone, ReactorFail, FloorSolved, Finale;
+            public AudioClip CreakLow, CreakHigh, Drip, SteamHiss, NeonBuzz, PowerUp, Knock, HintChime, RadioStatic;
+            /// <summary>Surface et plongée, nouvelles énigmes.</summary>
+            public AudioClip Waves, Winch, Splash, Gull, MorseTone, SimonTone, Spark, Click;
             public Texture2D[] Caustics;
             public Texture2D[] Glyphs;
             public Texture2D Dot, ShaftGradient;
+            /// <summary>Silhouettes vues par les hublots : poisson (banc) et créature géante.</summary>
+            public Texture2D Fish, Leviathan;
             public Mesh ShaftCone;
         }
 
@@ -53,6 +58,23 @@ namespace Abysses.EditorTools
                 ReactorFail = OneShot("SFX_ReactorFail", 0.9f, ReactorFail),
                 FloorSolved = OneShot("SFX_FloorSolved", 2.5f, FloorSolved),
                 Finale = OneShot("SFX_Finale", 8f, Finale),
+                CreakLow = OneShot("SFX_CreakLow", 2.2f, CreakLow),
+                CreakHigh = OneShot("SFX_CreakHigh", 1.4f, CreakHigh),
+                Drip = OneShot("SFX_Drip", 0.35f, Drip),
+                SteamHiss = Loop("SFX_SteamHiss", 3f, SteamHiss),
+                NeonBuzz = OneShot("SFX_NeonBuzz", 0.5f, NeonBuzz),
+                PowerUp = OneShot("SFX_PowerUp", 2.6f, PowerUp),
+                Knock = OneShot("SFX_Knock", 0.3f, Knock),
+                HintChime = OneShot("SFX_HintChime", 1.4f, HintChime),
+                RadioStatic = Loop("SFX_RadioStatic", 4f, RadioStatic),
+                Waves = Loop("AMB_Surface", 10f, Waves),
+                Winch = OneShot("SFX_Winch", 1.8f, Winch),
+                Splash = OneShot("SFX_Splash", 1.6f, Splash),
+                Gull = OneShot("SFX_Gull", 0.9f, Gull),
+                MorseTone = Loop("SFX_MorseTone", 1f, MorseTone),
+                SimonTone = OneShot("SFX_SimonTone", 0.5f, SimonTone),
+                Spark = OneShot("SFX_Spark", 0.8f, Spark),
+                Click = OneShot("SFX_Click", 0.08f, Click),
             };
 
             c.Caustics = new Texture2D[CausticFrames];
@@ -64,6 +86,9 @@ namespace Abysses.EditorTools
             c.Dot = Png("T_Dot", SoftDot(64), 64, 64, false, true);
             c.ShaftGradient = Png("T_ShaftGradient", ShaftGradient(8, 128), 8, 128, false, true);
             c.ShaftCone = ShaftConeMesh();
+
+            c.Fish = Png("T_Fish", Silhouette(128, 64, FishShape), 128, 64, false, true);
+            c.Leviathan = Png("T_Leviathan", Silhouette(256, 128, LeviathanShape), 256, 128, false, true);
             return c;
         }
 
@@ -358,6 +383,159 @@ namespace Abysses.EditorTools
             return pad * k * 0.5f + BubbleField(t, finaleBubbles, finaleFreqs) * 0.2f;
         }
 
+        // ---------- Ambiance de coque, fuites, électricité, interface
+
+        /// <summary>Grincement de coque : frottement à basse fréquence qui glisse, avec résonance métallique.</summary>
+        static float CreakLow(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = 0f; }
+            float f = 55f + 25f * Mathf.Sin(Tau * 0.35f * t) + 18f * t;
+            float stick = 0.5f + 0.5f * Mathf.Sign(Mathf.Sin(Tau * f * t));
+            float grain = LowPass(ref lp1, White(r) * stick, 0.12f);
+            float ring = Mathf.Sin(Tau * 180f * t) * 0.25f + Mathf.Sin(Tau * 263f * t) * 0.15f;
+            float env = Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / d)) * Env(t, 0.3f, 1.4f);
+            return (grain * 1.8f + ring * grain * 3f) * env;
+        }
+
+        static float CreakHigh(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = 0f; }
+            float f = 240f - 90f * (t / d) + 30f * Mathf.Sin(Tau * 3f * t);
+            float pulse = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(Tau * f * t)), 6f);
+            float body = LowPass(ref lp1, pulse + White(r) * 0.15f, 0.35f);
+            return body * Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / d)) * 2f;
+        }
+
+        /// <summary>Goutte qui tombe dans une flaque : « ploc » dont la hauteur remonte.</summary>
+        static float Drip(float t, float d, System.Random r)
+        {
+            float f = 900f + 1400f * Mathf.Min(t, 0.05f) / 0.05f;
+            return Mathf.Sin(Tau * f * t) * Env(t, 0.001f, 0.035f) + 0.3f * Bubble(t, 0.02f, 700f);
+        }
+
+        /// <summary>Jet de vapeur : bruit blanc filtré passe-haut, qui fluctue.</summary>
+        static float SteamHiss(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = 0f; }
+            float n = White(r);
+            float hp = n - LowPass(ref lp1, n, 0.25f);
+            float flutter = 0.8f + 0.2f * Mathf.Sin(Tau * (7f / d) * t);
+            return LowPass(ref lp2, hp, 0.7f) * flutter;
+        }
+
+        static float NeonBuzz(float t, float d, System.Random r)
+        {
+            float hum = Mathf.Sign(Mathf.Sin(Tau * 100f * t)) * 0.4f + Mathf.Sin(Tau * 200f * t) * 0.3f;
+            float crackle = r.NextDouble() < 0.004 ? White(r) * 2f : 0f;
+            return (hum + crackle) * Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / d));
+        }
+
+        /// <summary>Remise sous tension : gros contacteur, puis transformateur qui monte en régime.</summary>
+        static float PowerUp(float t, float d, System.Random r)
+        {
+            if (t == 0f) lp1 = 0f;
+            float clunk = (Mathf.Sin(Tau * (70f - 30f * t) * t) + LowPass(ref lp1, White(r), 0.4f)) * Env(t, 0.002f, 0.12f);
+            float u = Mathf.Max(0f, t - 0.15f);
+            float ramp = Mathf.Clamp01(u / 1.6f);
+            float f = 25f + 25f * ramp;
+            float whine = Mathf.Sin(Tau * f * 2f * u) * 0.4f + Mathf.Sin(Tau * f * 4f * u) * 0.25f + Mathf.Sin(Tau * (300f + 900f * ramp) * u) * 0.08f;
+            return clunk * 1.2f + whine * Mathf.Min(1f, u * 4f) * (1f - Mathf.Clamp01((t - d + 0.6f) / 0.6f));
+        }
+
+        /// <summary>Coup frappé sur une cloison métallique.</summary>
+        static float Knock(float t, float d, System.Random r)
+        {
+            if (t == 0f) lp1 = 0f;
+            float thud = Mathf.Sin(Tau * 95f * t) * Env(t, 0.001f, 0.05f);
+            float ring = (Mathf.Sin(Tau * 410f * t) * 0.5f + Mathf.Sin(Tau * 623f * t) * 0.3f) * Env(t, 0.001f, 0.08f);
+            float hit = LowPass(ref lp1, White(r), 0.5f) * Env(t, 0.0005f, 0.006f);
+            return thud + ring * 0.5f + hit;
+        }
+
+        static float HintChime(float t, float d, System.Random r) =>
+            Chime(t, 0f, 880f, 0.35f) * 0.7f + Chime(t, 0.14f, 1318.5f, 0.5f) * 0.6f + 0.2f * SonarPing(t, 0f, 1760f);
+
+        /// <summary>Surface : ressac (houle lente), vent léger.</summary>
+        static float Waves(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = lp3 = 0f; }
+            float swell = 0.55f + 0.45f * Mathf.Sin(Tau * t / d * 2f) * Mathf.Sin(Tau * t / d * 3f + 0.7f);
+            float surf = LowPass(ref lp1, White(r), 0.08f) * swell;
+            float hiss = (White(r) - LowPass(ref lp2, White(r), 0.3f)) * 0.08f * swell * swell;
+            float wind = LowPass(ref lp3, White(r), 0.01f) * (0.6f + 0.4f * Mathf.Sin(Tau * t / d));
+            return surf * 1.2f + hiss + wind * 2f;
+        }
+
+        /// <summary>Treuil qui se libère : claquement métallique puis cliquets qui ralentissent.</summary>
+        static float Winch(float t, float d, System.Random r)
+        {
+            if (t == 0f) lp1 = 0f;
+            float clank = (Mathf.Sin(Tau * 180f * t) * 0.6f + Mathf.Sin(Tau * 517f * t) * 0.4f + Mathf.Sin(Tau * 1210f * t) * 0.2f) * Env(t, 0.001f, 0.25f);
+            float ratchet = 0f;
+            for (int i = 1; i < 14; i++)
+            {
+                float start = 0.25f + i * (0.05f + i * 0.008f);
+                ratchet += Mathf.Sin(Tau * 2400f * (t - start)) * Env(Mathf.Max(0f, t - start), 0.0005f, 0.012f) * (t >= start ? 1f : 0f);
+            }
+            float groan = Mathf.Sin(Tau * (70f + 30f * t) * t) * Env(t, 0.05f, 0.8f) * 0.4f;
+            return clank + ratchet * 0.35f + groan + LowPass(ref lp1, White(r), 0.3f) * Env(t, 0.001f, 0.04f);
+        }
+
+        /// <summary>La cabine traverse la surface : gerbe d'eau, puis bulles.</summary>
+        static float Splash(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = 0f; }
+            float crash = LowPass(ref lp1, White(r), 0.35f) * Env(t, 0.01f, 0.35f);
+            float body = LowPass(ref lp2, White(r), 0.05f) * Env(t, 0.02f, 0.6f) * 2f;
+            float bubbles = 0f;
+            for (int i = 0; i < 9; i++) bubbles += Bubble(t, 0.3f + i * 0.11f, 380f + i * 70f);
+            return crash + body + bubbles * 0.25f;
+        }
+
+        /// <summary>Cri de mouette : glissando descendant, un peu rauque.</summary>
+        static float Gull(float t, float d, System.Random r)
+        {
+            float call = 0f;
+            for (int k = 0; k < 2; k++)
+            {
+                float u = t - k * 0.38f;
+                if (u < 0f || u > 0.32f) continue;
+                float f = 1900f - 900f * (u / 0.32f);
+                call += (Mathf.Sin(Tau * f * u) + 0.4f * Mathf.Sin(Tau * f * 2.01f * u)) * Env(u, 0.02f, 0.12f);
+            }
+            return call * (0.85f + 0.15f * White(r));
+        }
+
+        /// <summary>Bip morse (boucle jouée pendant chaque signal de la balise).</summary>
+        static float MorseTone(float t, float d, System.Random r) => Mathf.Sin(Tau * 660f * t) * 0.8f + Mathf.Sin(Tau * 1320f * t) * 0.1f;
+
+        /// <summary>Note de la console sonar (la hauteur change avec le pitch de la source).</summary>
+        static float SimonTone(float t, float d, System.Random r) =>
+            (Mathf.Sin(Tau * 523.25f * t) + 0.3f * Mathf.Sin(Tau * 1046.5f * t)) * Env(t, 0.01f, 0.25f);
+
+        /// <summary>Court-circuit : crépitement d'étincelles.</summary>
+        static float Spark(float t, float d, System.Random r)
+        {
+            float crackle = r.NextDouble() < 0.02 * Env(t, 0.001f, 0.3f) ? White(r) * 3f : 0f;
+            float buzz = Mathf.Sign(Mathf.Sin(Tau * 120f * t)) * 0.25f * Env(t, 0.001f, 0.2f);
+            return crackle + buzz + White(r) * 0.3f * Env(t, 0.001f, 0.05f);
+        }
+
+        /// <summary>Clic mécanique d'un bouton.</summary>
+        static float Click(float t, float d, System.Random r) =>
+            (Mathf.Sin(Tau * 2200f * t) * 0.6f + White(r) * 0.4f) * Env(t, 0.0003f, 0.008f);
+
+        /// <summary>Grésillement radio (lecture du journal de bord).</summary>
+        static float RadioStatic(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = 0f; }
+            float n = White(r);
+            float band = LowPass(ref lp1, n - LowPass(ref lp2, n, 0.05f), 0.4f);
+            float crackle = r.NextDouble() < 0.002 ? White(r) * 1.5f : 0f;
+            float fade = 0.6f + 0.4f * Mathf.Sin(Tau * (3f / d) * t);
+            return band * fade + crackle;
+        }
+
         static AudioClip SaveWav(string name, float[] samples, bool loop)
         {
             string path = AudioDir + "/" + name + ".wav";
@@ -519,7 +697,77 @@ namespace Abysses.EditorTools
             return pixels;
         }
 
-        static Texture2D Png(string name, Color[] pixels, int width, int height, bool linearGray, bool clamp)
+        // ---------- Textures de la coque (motifs pavables)
+
+        /// <summary>Hachage entier → [0, 1[ (bruit reproductible).</summary>
+        static float Hash(int x, int y, int seed)
+        {
+            unchecked
+            {
+                uint h = (uint)(x * 374761393 + y * 668265263 + seed * 2147483647);
+                h = (h ^ (h >> 13)) * 1274126177u;
+                h ^= h >> 16;
+                return (h & 0xFFFFFF) / 16777216f;
+            }
+        }
+
+        /// <summary>Bruit de valeur lissé, pavable sur une période donnée (en cellules).</summary>
+        static float ValueNoise(float x, float y, int period, int seed)
+        {
+            int x0 = Mathf.FloorToInt(x), y0 = Mathf.FloorToInt(y);
+            float fx = x - x0, fy = y - y0;
+            fx = fx * fx * (3f - 2f * fx);
+            fy = fy * fy * (3f - 2f * fy);
+            int Wrap(int v) => ((v % period) + period) % period;
+            float a = Hash(Wrap(x0), Wrap(y0), seed), b = Hash(Wrap(x0 + 1), Wrap(y0), seed);
+            float c = Hash(Wrap(x0), Wrap(y0 + 1), seed), e = Hash(Wrap(x0 + 1), Wrap(y0 + 1), seed);
+            return Mathf.Lerp(Mathf.Lerp(a, b, fx), Mathf.Lerp(c, e, fx), fy);
+        }
+
+        static float Fbm(float u, float v, int baseCells, int seed)
+        {
+            float sum = 0f, amp = 0.5f;
+            for (int o = 0, cells = baseCells; o < 4; o++, cells *= 2, amp *= 0.5f)
+                sum += ValueNoise(u * cells, v * cells, cells, seed + o) * amp;
+            return sum / 0.9375f;
+        }
+
+        delegate float Shape(float u, float v);
+
+        /// <summary>Silhouette sombre à bords doux (alpha), dessinée par une fonction de distance signée approximative.</summary>
+        static Color[] Silhouette(int width, int height, Shape shape)
+        {
+            var pixels = new Color[width * height];
+            for (int y = 0; y < height; y++)
+            for (int x = 0; x < width; x++)
+            {
+                float u = (x + 0.5f) / width * 2f - 1f, v = (y + 0.5f) / height * 2f - 1f;
+                float inside = shape(u, v);
+                pixels[y * width + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(inside));
+            }
+            return pixels;
+        }
+
+        /// <summary>Poisson tourné vers la droite (+u) : corps en fuseau, queue fourchue.</summary>
+        static float FishShape(float u, float v)
+        {
+            float body = 1f - ((u - 0.1f) * (u - 0.1f) / 0.55f + v * v / 0.12f);
+            float tailX = -(u + 0.55f);
+            float tail = tailX > 0f && tailX < 0.4f ? (tailX * 1.3f - Mathf.Abs(v)) * 6f : -1f;
+            return Mathf.Max(body * 6f, tail);
+        }
+
+        /// <summary>Créature géante (raie / léviathan) : grand corps ovale, nageoires, longue queue.</summary>
+        static float LeviathanShape(float u, float v)
+        {
+            float body = 1f - ((u - 0.15f) * (u - 0.15f) / 0.3f + v * v / 0.09f);
+            float fin = 1f - ((u - 0.1f) * (u - 0.1f) / 0.05f + (Mathf.Abs(v) - 0.35f) * (Mathf.Abs(v) - 0.35f) / 0.03f);
+            float tailX = -(u + 0.35f);
+            float tail = tailX > 0f && tailX < 0.65f ? (0.06f * (1f - tailX / 0.65f) - Mathf.Abs(v + 0.08f * Mathf.Sin(tailX * 6f))) * 25f : -1f;
+            return Mathf.Max(Mathf.Max(body * 5f, fin * 4f), tail);
+        }
+
+        internal static Texture2D Png(string name, Color[] pixels, int width, int height, bool linearGray, bool clamp, bool normalMap = false, int maxSize = 256)
         {
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
             texture.SetPixels(pixels);
@@ -530,13 +778,14 @@ namespace Abysses.EditorTools
 
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
-            importer.textureType = TextureImporterType.Default;
+            importer.textureType = normalMap ? TextureImporterType.NormalMap : TextureImporterType.Default;
             importer.sRGBTexture = !linearGray;
-            importer.alphaSource = TextureImporterAlphaSource.FromInput;
-            importer.alphaIsTransparency = !linearGray;
+            importer.alphaSource = normalMap ? TextureImporterAlphaSource.None : TextureImporterAlphaSource.FromInput;
+            importer.alphaIsTransparency = !linearGray && !normalMap;
             importer.wrapMode = clamp ? TextureWrapMode.Clamp : TextureWrapMode.Repeat;
             importer.mipmapEnabled = true;
-            importer.maxTextureSize = 256;
+            importer.anisoLevel = normalMap || maxSize > 256 ? 2 : 1;
+            importer.maxTextureSize = maxSize;
             importer.textureCompression = TextureImporterCompression.Compressed;
             importer.SaveAndReimport();
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);

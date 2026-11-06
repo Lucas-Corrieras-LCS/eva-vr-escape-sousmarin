@@ -65,8 +65,11 @@ namespace Abysses.Player
         public void AssignQuadrant(int quadrant)
         {
             if (!PlayArea.IsValid(quadrant)) return;
+            // Reconnexion après une coupure : le joueur est déjà calibré et peut être n'importe où dans son module,
+            // un recentrage le décalerait par rapport au décor. On ne recentre que sur un nouveau quadrant.
+            bool alreadyCalibrated = Quadrant == quadrant;
             Quadrant = quadrant;
-            Recenter();
+            if (!alreadyCalibrated) Recenter();
             QuadrantAssigned?.Invoke(quadrant);
         }
 
@@ -79,8 +82,8 @@ namespace Abysses.Player
             if (!PlayArea.IsValid(Quadrant)) return;
             Vector3 center = PlayArea.GetCenter(Quadrant);
             origin.MatchOriginUpCameraForward(Vector3.up, PlayArea.CalibrationForward);
-            Vector3 cameraPosition = origin.Camera.transform.position;
-            origin.MoveCameraToWorldLocation(new Vector3(center.x, cameraPosition.y, center.z));
+            // Hauteur : origine ramenée au sol (y = 0), même si le joueur a chuté hors d'un étage déchargé.
+            origin.MoveCameraToWorldLocation(new Vector3(center.x, origin.CameraInOriginSpaceHeight, center.z));
         }
     }
 }

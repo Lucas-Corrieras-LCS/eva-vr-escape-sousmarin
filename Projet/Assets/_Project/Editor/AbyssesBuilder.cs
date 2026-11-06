@@ -31,7 +31,7 @@ namespace Abysses.EditorTools
     /// Relançable à volonté : les assets existants sont mis à jour, les scènes régénérées.
     /// Le blockout sert de base : l'habillage artistique se fait ensuite à la main sur ces scènes.
     /// </summary>
-    public static class AbyssesBuilder
+    public static partial class AbyssesBuilder
     {
         const string Root = "Assets/_Project";
         const string MaterialDir = Root + "/Materials";
@@ -49,7 +49,9 @@ namespace Abysses.EditorTools
         {
             new Color(1f, 0.38f, 0.05f), new Color(0.1f, 0.75f, 1f), new Color(0.25f, 1f, 0.3f), new Color(1f, 0.15f, 0.65f),
         };
+        static readonly string[] QuadrantNamesEn = { "ORANGE", "CYAN", "GREEN", "MAGENTA" };
         static readonly string[] SymbolNames = { "ROUGE", "VERT", "BLEU", "JAUNE", "BLANC", "VIOLET" };
+        static readonly string[] SymbolNamesEn = { "RED", "GREEN", "BLUE", "YELLOW", "WHITE", "PURPLE" };
         static readonly Color[] SymbolColors =
         {
             new Color(0.9f, 0.12f, 0.08f), new Color(0.15f, 0.85f, 0.25f), new Color(0.15f, 0.4f, 1f),
@@ -122,7 +124,10 @@ namespace Abysses.EditorTools
             {
                 Scene scene = EditorSceneManager.OpenScene(SceneDir + "/" + floor + ".unity", OpenSceneMode.Single);
                 var timer = System.Diagnostics.Stopwatch.StartNew();
-                bool ok = Lightmapping.Bake();
+                bool ok = true;
+                // Étage 1 : deux bakes (courant rétabli puis secours), échangés en jeu par PowerRestore.
+                if (floor == FloorScenes[0]) BakePowerVariants(scene);
+                else ok = Lightmapping.Bake();
                 EditorSceneManager.SaveScene(scene);
                 Debug.Log($"[Abysses] Bake {floor} : {(ok ? "OK" : "ÉCHEC")} en {timer.Elapsed.TotalSeconds:F0} s");
             }
@@ -135,6 +140,8 @@ namespace Abysses.EditorTools
         {
             public Material Hull, Panel, Floor, Glass, EmitCyan, EmitWarm, EmitRed, EmitPurple, Visor, SlotEmpty, StatusIdle, StatusOk, StatusError, Warning, Crate;
             public Material Key, ShaftRed, SunShaft, PlanktonHabitat, PlanktonLabo, PlanktonCoeur;
+            /// <summary>Néon éteint (panne), lampe de secours ambre, halo de survol, tuyauterie, eau, créatures des hublots.</summary>
+            public Material NeonOff, EmitAmber, Highlight, Pipe, Water, Fish, Leviathan, GlowBio, GlowAngler, Snow, Drop;
             // Habillage
             public Material HullDark, Ceiling, Frame, Brass, Rubber, PipeYellow, PipeRed, PipeGrey, Hazard, Locker, Liquid, WarmBulb;
             // Étage 2 (laboratoires) : coque peinte claire, faïence, flaques, éclairage de paillasse froid, vapeur.
@@ -192,7 +199,22 @@ namespace Abysses.EditorTools
                 PlanktonHabitat = Additive("M_Plankton_Habitat", "Universal Render Pipeline/Particles/Unlit", new Color(0.6f, 0.95f, 1f, 0.5f), fx.Dot),
                 PlanktonLabo = Additive("M_Plankton_Labo", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 0.6f, 0.35f, 0.35f), fx.Dot),
                 PlanktonCoeur = Additive("M_Plankton_Coeur", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 1f, 1f, 0.8f), fx.Dot),
+                NeonOff = Lit("M_Neon_Off", new Color(0.12f, 0.14f, 0.15f), 0.1f, 0.7f),
+                EmitAmber = Lit("M_Emit_Amber", new Color(0.25f, 0.12f, 0.02f), 0f, 0.5f, new Color(1f, 0.5f, 0.08f) * 2.2f),
+                Highlight = Additive("M_Highlight", "Universal Render Pipeline/Unlit", new Color(0.35f, 0.9f, 1f, 0.28f), null),
+                Pipe = Lit("M_Pipe", new Color(0.3f, 0.32f, 0.33f), 0.6f, 0.55f),
+                Water = Transparent("M_Water", new Color(0.12f, 0.3f, 0.35f, 0.55f), false),
+                Fish = ParticleAlpha("M_Fish", new Color(0.03f, 0.08f, 0.1f, 0.9f), fx.Fish),
+                Leviathan = Transparent("M_Leviathan", new Color(0.01f, 0.02f, 0.03f, 0.85f), true),
+                GlowBio = Additive("M_Glow_Bio", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 1f, 1f, 0.9f), fx.Dot),
+                GlowAngler = Additive("M_Glow_Angler", "Universal Render Pipeline/Particles/Unlit", new Color(1f, 0.8f, 0.4f, 0.9f), fx.Dot),
+                Snow = Additive("M_MarineSnow", "Universal Render Pipeline/Particles/Unlit", new Color(0.85f, 0.95f, 1f, 0.45f), fx.Dot),
+                Drop = Additive("M_Drop", "Universal Render Pipeline/Particles/Unlit", new Color(0.7f, 0.9f, 1f, 0.8f), fx.Dot),
             };
+            m.Leviathan.SetTexture("_BaseMap", fx.Leviathan);
+            // Vue depuis l'intérieur : la silhouette doit rester visible quel que soit le côté.
+            m.Leviathan.SetFloat("_Cull", (float)CullMode.Off);
+            EditorUtility.SetDirty(m.Leviathan);
             m.Screens[0] = Screen("M_Screen_Wave", art.ScreenWave);
             m.Screens[1] = Screen("M_Screen_Bars", art.ScreenBars);
             m.Screens[2] = Screen("M_Screen_Text", art.ScreenText);
@@ -204,6 +226,8 @@ namespace Abysses.EditorTools
                 m.Glyphs[i] = Glyph("M_Glyph_" + i, SymbolColors[i], fx.Glyphs[i]);
             }
             AssetDatabase.SaveAssets();
+            PuzzleMaterials();
+            SurfaceMaterials();
             return m;
         }
 
@@ -325,6 +349,23 @@ namespace Abysses.EditorTools
             return material;
         }
 
+        /// <summary>Particules en alpha classique (silhouettes sombres, vapeur) : visibles sur le fond du brouillard.</summary>
+        static Material ParticleAlpha(string name, Color color, Texture2D texture)
+        {
+            Material material = GetOrCreate(name, "Universal Render Pipeline/Particles/Unlit");
+            material.SetColor("_BaseColor", color);
+            material.SetTexture("_BaseMap", texture);
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue = (int)RenderQueue.Transparent;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
         /// <summary>Additif, double face, sans écriture de profondeur : rayons de lumière et particules qui « brillent » dans le brouillard.</summary>
         static Material Additive(string name, string shader, Color color, Texture2D texture)
         {
@@ -374,13 +415,17 @@ namespace Abysses.EditorTools
             GameObject leftGlove = Prim(PrimitiveType.Sphere, "Glove", left, Vector3.zero, Quaternion.identity, new Vector3(0.09f, 0.06f, 0.12f), m.Avatar[0], false);
             GameObject rightGlove = Prim(PrimitiveType.Sphere, "Glove", right, Vector3.zero, Quaternion.identity, new Vector3(0.09f, 0.06f, 0.12f), m.Avatar[0], false);
 
+            var hidden = new List<GameObject> { helmet, visor, lamp, leftGlove, rightGlove };
+            var tinted = new List<Renderer> { helmet.GetComponent<Renderer>(), leftGlove.GetComponent<Renderer>(), rightGlove.GetComponent<Renderer>() };
+            BuildAvatarBody(m, root, head, left, right, hidden, tinted);
+
             var so = new SerializedObject(player);
             so.FindProperty("head").objectReferenceValue = head;
             so.FindProperty("leftHand").objectReferenceValue = left;
             so.FindProperty("rightHand").objectReferenceValue = right;
-            SetArray(so.FindProperty("tintedRenderers"), helmet.GetComponent<Renderer>(), leftGlove.GetComponent<Renderer>(), rightGlove.GetComponent<Renderer>());
+            SetArray(so.FindProperty("tintedRenderers"), tinted.ToArray());
             SetArray(so.FindProperty("quadrantMaterials"), m.Avatar);
-            SetArray(so.FindProperty("hiddenForOwner"), helmet, visor, lamp, leftGlove, rightGlove);
+            SetArray(so.FindProperty("hiddenForOwner"), hidden.ToArray());
             so.ApplyModifiedPropertiesWithoutUndo();
 
             foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask |= CabinLayer;
@@ -409,7 +454,8 @@ namespace Abysses.EditorTools
             var cabin = root.AddComponent<ElevatorCabin>();
             Transform t = root.transform;
             const float inner = 2.4f, h = 2.6f, w = 0.1f, half = inner / 2f + w / 2f;
-            const float hole = 0.56f, holeY = 1.5f;
+            // Hublots agrandis (76 cm) : on voit la mer monter et la lumière baisser pendant la plongée.
+            const float hole = 0.76f, holeY = 1.5f;
 
             // Socle, plancher et toit
             Static(Prim(PrimitiveType.Cube, "Socle", t, new Vector3(0f, -0.04f, 0f), Quaternion.identity, new Vector3(inner + 0.5f, 0.12f, inner + 0.5f), m.Frame, true));
@@ -432,7 +478,7 @@ namespace Abysses.EditorTools
                 Static(Prim(PrimitiveType.Cube, "Wall_" + n + "_Rear", t, new Vector3(x, holeY, -hole / 2f - jamb / 2f), Quaternion.identity, new Vector3(w, hole, jamb), m.Hull, true));
                 Static(Prim(PrimitiveType.Cube, "Window_" + n, t, new Vector3(x, holeY, 0f), Quaternion.identity, new Vector3(0.02f, hole, hole), m.Glass, false));
                 foreach (float face in new[] { -1f, 1f })
-                    Static(AbyssesArt.MeshObject("Hublot_" + n, t, art.Ring, new Vector3(x + face * (w / 2f + 0.025f), holeY, 0f), Quaternion.Euler(0f, 90f, 0f), new Vector3(0.9f, 0.9f, 0.05f), m.Brass));
+                    Static(AbyssesArt.MeshObject("Hublot_" + n, t, art.Ring, new Vector3(x + face * (w / 2f + 0.025f), holeY, 0f), Quaternion.Euler(0f, 90f, 0f), new Vector3(1.2f, 1.2f, 0.05f), m.Brass));
             }
 
             // Poteaux d'angle arrondis : la cabine perd son air de boîte.
@@ -452,9 +498,11 @@ namespace Abysses.EditorTools
             GameObject rightDoor = Prim(PrimitiveType.Cube, "Door_R", t, new Vector3(0.3f, 1.1f, half - 0.08f), Quaternion.identity, new Vector3(0.62f, 2.2f, 0.05f), m.Locker, true);
 
             // Intérieur : main courante, pupitre avec écran, repère de calibration au sol, plafonnier.
-            Static(Prim(PrimitiveType.Cylinder, "MainCourante", t, new Vector3(0f, 1.0f, -half + 0.12f), Quaternion.Euler(0f, 0f, 90f), new Vector3(0.05f, 1.0f, 0.05f), m.Brass, false));
-            Static(Prim(PrimitiveType.Cube, "Pupitre", t, new Vector3(-half + 0.1f, 1.25f, -0.7f), Quaternion.identity, new Vector3(0.08f, 0.5f, 0.6f), m.Frame, false));
-            Static(Prim(PrimitiveType.Cube, "Ecran", t, new Vector3(-half + 0.145f, 1.27f, -0.7f), Quaternion.identity, new Vector3(0.01f, 0.4f, 0.52f), m.Screens[0], false));
+            // Main courante sous le tutoriel (support du fusible d'entraînement à 0,96 m).
+            Static(Prim(PrimitiveType.Cylinder, "MainCourante", t, new Vector3(0f, 0.85f, -half + 0.12f), Quaternion.Euler(0f, 0f, 90f), new Vector3(0.05f, 1.0f, 0.05f), m.Brass, false));
+            // Pupitre décalé vers l'arrière : il ne mord plus sur l'anneau du hublot agrandi.
+            Static(Prim(PrimitiveType.Cube, "Pupitre", t, new Vector3(-half + 0.1f, 1.25f, -0.93f), Quaternion.identity, new Vector3(0.08f, 0.5f, 0.46f), m.Frame, false));
+            Static(Prim(PrimitiveType.Cube, "Ecran", t, new Vector3(-half + 0.145f, 1.27f, -0.93f), Quaternion.identity, new Vector3(0.01f, 0.4f, 0.4f), m.Screens[0], false));
             Static(AbyssesArt.MeshObject("CalibrationMark", t, art.Ring, new Vector3(0f, 0.025f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.6f, 0.6f, 0.01f), m.EmitCyan));
             Static(AbyssesArt.MeshObject("Plafonnier", t, art.Ring, new Vector3(0f, h - 0.02f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(1.4f, 1.4f, 0.03f), m.EmitCyan));
 
@@ -486,6 +534,10 @@ namespace Abysses.EditorTools
             ParticleSystem bubblesRight = Bubbles(t, new Vector3(half + 0.35f, 0.6f, 0f));
             // Une seule référence dans le script : la seconde suit la première.
             bubblesRight.transform.SetParent(bubblesLeft.transform, true);
+            DescentStreaks(m, bubblesLeft, half);
+            BuildCabinTutorial(m, t, -inner / 2f);
+            CabinDescentParts(t);
+            foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask |= CabinLayer;
 
             var rumble = root.AddComponent<AudioSource>();
             rumble.playOnAwake = false;
@@ -564,7 +616,13 @@ namespace Abysses.EditorTools
         struct Opening
         {
             public float Along, Width, Bottom, Top;
-            public Opening(float along, float width, float bottom, float top) { Along = along; Width = width; Bottom = bottom; Top = top; }
+            /// <summary>Hublot vitré (cadre arrondi, joint) plutôt que sas ouvert. Par défaut : toute ouverture d'au moins 1 m.</summary>
+            public bool Window;
+            public Opening(float along, float width, float bottom, float top, bool? window = null)
+            {
+                Along = along; Width = width; Bottom = bottom; Top = top;
+                Window = window ?? width >= 1f;
+            }
         }
 
         static Scene NewFloorScene(int floor, out Transform root)
@@ -616,7 +674,9 @@ namespace Abysses.EditorTools
         }
 
         // Emplacements occupés sur chaque mur, tous étages confondus (la coque est commune aux 3 étages).
-        static readonly Keepout[] OuterWallItems = { new Keepout(2.5f, 0.4f), new Keepout(-2.5f, 0.35f), new Keepout(0.6f, 0.5f), new Keepout(-3f, 0.4f), new Keepout(-1.5f, 0.4f) };
+        static readonly Keepout[] OuterWallItems = { new Keepout(2.5f, 0.4f), new Keepout(-2.5f, 0.35f), new Keepout(0.6f, 0.5f), new Keepout(-3f, 0.4f), new Keepout(-1.5f, 0.4f),
+            // Hublots sur l'océan (OceanWindowX).
+            new Keepout(-6.4f, 0.55f), new Keepout(6.4f, 0.55f) };
         static readonly Keepout[] NeighborWallItems = { new Keepout(-3f, 1.2f), new Keepout(-5.5f, 0.6f), new Keepout(2f, 0.35f), new Keepout(2.6f, 0.2f) };
 
         static bool IsFree(float x, float halfWidth, Keepout[] items)
@@ -671,7 +731,18 @@ namespace Abysses.EditorTools
                     neighborOpenings.Add(new Opening(mod.Center.x + mod.Sx * 2f - r.xMin, 0.5f, 0.9f, 1.4f));
             }
             Wall(m, t, "Wall_Neighbor", new Vector3(r.xMin, 0f, sharedZ), new Vector3(r.xMax, 0f, sharedZ), neighborOpenings, true, open, hull);
-            Wall(m, t, "Wall_Outer", new Vector3(r.xMin, 0f, outerZ), new Vector3(r.xMax, 0f, outerZ), null, false, false, hull);
+            // Mur extérieur : deux hublots sur l'océan (créatures, neige marine, bioluminescence derrière), aux deux bouts du module.
+            var oceanWindows = new List<Opening>();
+            foreach (float x in OceanWindowX)
+                oceanWindows.Add(new Opening(mod.Center.x + mod.Sx * x - r.xMin, OceanWindowWidth, 1.05f, 1.95f, true));
+            Wall(m, t, "Wall_Outer", new Vector3(r.xMin, 0f, outerZ), new Vector3(r.xMax, 0f, outerZ), oceanWindows, true, false, hull);
+            // Vitres sur l'océan : hors lightmap et sans sondes, sinon l'applique voisine y est bakée en jaune et on ne voit plus le noir du large.
+            foreach (Renderer pane in t.Find("Wall_Outer").GetComponentsInChildren<Renderer>())
+            {
+                if (pane.name != "Glass") continue;
+                GameObjectUtility.SetStaticEditorFlags(pane.gameObject, GameObjectUtility.GetStaticEditorFlags(pane.gameObject) & ~StaticEditorFlags.ContributeGI);
+                pane.lightProbeUsage = LightProbeUsage.Off;
+            }
 
             DressShell(m, t, mod, r, open, floor, hull);
             CeilingFixtures(m, t, mod, strip, lightColor, lightIntensity);
@@ -824,6 +895,13 @@ namespace Abysses.EditorTools
             }
         }
 
+        /// <summary>
+        /// Position (x local du module) et largeur des hublots du mur extérieur : aux deux bouts, entre le poteau d'angle
+        /// et le mobilier (casiers, paillasse, bobines), à l'écart des énigmes. Voir aussi <see cref="OuterWallItems"/>.
+        /// </summary>
+        static readonly float[] OceanWindowX = { -6.4f, 6.4f };
+        const float OceanWindowWidth = 0.8f;
+
         static void Wall(Mats m, Transform parent, string name, Vector3 a, Vector3 b, List<Opening> openings, bool glass, bool fullGlass, Material hull)
         {
             Transform t = new GameObject(name).transform;
@@ -869,11 +947,11 @@ namespace Abysses.EditorTools
                     Piece("Segment", cursor, start, 0f, WallHeight, hull, WallThickness, true);
                     Piece("Below", start, end, 0f, o.Bottom, hull, WallThickness, true);
                     Piece("Above", start, end, o.Top, WallHeight, hull, WallThickness, true);
-                    if (glass && o.Width >= 1f) Piece("Glass", start, end, o.Bottom, o.Top, m.Glass, 0.03f, true);
+                    if (glass && o.Window) Piece("Glass", start, end, o.Bottom, o.Top, m.Glass, 0.03f, true);
 
                     // Encadrement arrondi qui mange les angles vifs de l'ouverture (hublot / sas).
                     Vector3 center = a + dir * o.Along + Vector3.up * ((o.Bottom + o.Top) / 2f);
-                    bool window = o.Width >= 1f;
+                    bool window = o.Window;
                     float margin = window ? 0.3f : 0.2f;
                     Mesh frame = AbyssesArt.FrameMesh(o.Width + margin, o.Top - o.Bottom + margin, window ? 0.28f : 0.14f, window ? 0.2f : 0.12f, WallThickness + 0.08f);
                     Static(AbyssesArt.MeshObject(window ? "Cadre_Hublot" : "Cadre_Sas", t, frame, center, Quaternion.LookRotation(normal, Vector3.up), Vector3.one, window ? m.Frame : m.Hazard));
@@ -1208,6 +1286,8 @@ namespace Abysses.EditorTools
             foreach (Module mod in modules)
                 Plankton(root, mod, m.PlanktonHabitat, new Color(0.55f, 0.95f, 1f), new Color(0.85f, 1f, 0.95f));
             BuildCaustics(root);
+            OceanView(m, root, modules, 1);
+            StationLife(m, root, modules, 1);
 
             var keypads = new CodeKeypad[4];
             var fuses = new NetworkTransform[4];
@@ -1223,10 +1303,12 @@ namespace Abysses.EditorTools
             {
                 Module mod = modules[q];
                 BuildCodeDisplay(m, root, mod.P(-7.16f, 1.6f, 0f), mod.Facing(-1f, 0f), keypads[mod.Partner],
-                    "CODE DU MODULE " + QuadrantNames[mod.Partner], true, false, "CodeDisplay_For_Q" + mod.Partner);
+                    "CODE DU MODULE " + QuadrantNames[mod.Partner], true, false, "CodeDisplay_For_Q" + mod.Partner, "CODE FOR MODULE " + QuadrantNamesEn[mod.Partner]);
                 prerequisites.Add(BuildFuseSocket(m, root, mod));
                 fuses[mod.Partner] = BuildFuse(m, root, mod, mod.Partner);
                 levers[q] = BuildLever(m, root, mod.Q, mod.P(5.4f, 0f, 2.6f), mod.Facing(0f, -1f));
+                // Énigme de module (jouable seul) : le tableau des disjoncteurs, avec la note sur le bureau.
+                prerequisites.Add(BuildBreakerPanel(m, root, mod));
             }
 
             // Repli : module partenaire vide → écran de surveillance avec son propre code, et fusible rapatrié.
@@ -1241,9 +1323,12 @@ namespace Abysses.EditorTools
                 BuildFallback(root, mod, monitor, fuses[q], fuseTarget);
             }
 
-            BuildSyncLevers(root, 1, "Remise sous tension", levers, prerequisites.ToArray());
+            PuzzleObjective powerObjective = BuildSyncLevers(root, 1, "Remise sous tension", "Power restore", "levers", levers, prerequisites.ToArray());
             BuildHatch(m, root, modules[0], PartnerHatchSpot(modules[0]), modules[1], PartnerHatchSpot(modules[1]));
             BuildHatch(m, root, modules[2], PartnerHatchSpot(modules[2]), modules[3], PartnerHatchSpot(modules[3]));
+            BuildKnockWall(m, root, modules[0], modules[1]);
+            BuildKnockWall(m, root, modules[2], modules[3]);
+            BuildPowerOutage(m, root, modules, powerObjective);
 
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[0]);
@@ -1264,6 +1349,8 @@ namespace Abysses.EditorTools
                 // Gyrophare de secours : le faisceau tournant balaie le brouillard (rendu additif, aucune lumière temps réel).
                 Beacon(m, root, mod.P(-7.05f, 2.75f, 2.2f));
             }
+            OceanView(m, root, modules, 2);
+            StationLife(m, root, modules, 2);
 
             var keypads = new CodeKeypad[4];
             var gauges = new PressureGauge[4];
@@ -1281,7 +1368,8 @@ namespace Abysses.EditorTools
                 Module mod = modules[q];
                 // Code du partenaire écrit à l'encre UV sur le mur du fond : il faut la lampe pour le lire.
                 BuildCodeDisplay(m, root, mod.P(-7.16f, 1.6f, -2f), mod.Facing(-1f, 0f), keypads[mod.Partner],
-                    "CODE DU MODULE " + QuadrantNames[mod.Partner] + "  (encre UV)", true, true, "UVCode_For_Q" + mod.Partner);
+                    "CODE DU MODULE " + QuadrantNames[mod.Partner] + "  (encre UV)", true, true, "UVCode_For_Q" + mod.Partner,
+                    "CODE FOR MODULE " + QuadrantNamesEn[mod.Partner] + "  (UV ink)");
                 BuildFallback(root, mod, BuildFallbackMonitor(m, root, mod, keypads[q]), null, null);
             }
 
@@ -1311,6 +1399,13 @@ namespace Abysses.EditorTools
             BuildHatch(m, root, modules[2], PartnerHatchSpot(modules[2]), modules[3], PartnerHatchSpot(modules[3]));
             BuildHatch(m, root, modules[0], NeighborHatchSpot(modules[0]), modules[2], NeighborHatchSpot(modules[2]));
             BuildHatch(m, root, modules[1], NeighborHatchSpot(modules[1]), modules[3], NeighborHatchSpot(modules[3]));
+            BuildKnockWall(m, root, modules[0], modules[1]);
+            BuildKnockWall(m, root, modules[2], modules[3]);
+            for (int q = 0; q < 4; q++)
+                BuildLeaks(m, root, modules[q], gauges[q].GetComponent<PuzzleObjective>());
+            // Énigme de module (jouable seul) : balise morse vue par le hublot, cadenas à molettes.
+            for (int q = 0; q < 4; q++)
+                BuildMorsePuzzle(m, root, modules[q]);
 
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[1]);
@@ -1329,6 +1424,8 @@ namespace Abysses.EditorTools
             // Bioluminescence : plancton cyan / magenta.
             foreach (Module mod in modules)
                 Plankton(root, mod, m.PlanktonCoeur, new Color(0.2f, 0.9f, 1f), new Color(1f, 0.25f, 0.85f));
+            OceanView(m, root, modules, 3);
+            StationLife(m, root, modules, 3);
 
             // Plafond continu au-dessus des allées : la salle commune se lit comme un seul grand volume.
             // (Le sol des allées reste ouvert : le gouffre des abysses, bordé de failles lumineuses.)
@@ -1402,7 +1499,8 @@ namespace Abysses.EditorTools
                 GameObject button = Prim(PrimitiveType.Cube, "Button", console, position + Vector3.up * 1.12f, facingReactor, new Vector3(0.18f, 0.18f, 0.06f), m.Avatar[q], true);
                 button.AddComponent<XRPokeFilter>();
                 consoles[q] = (q, button.AddComponent<XRSimpleInteractable>());
-                Label(console, "APPUIE QUAND TA COULEUR S'ALLUME", position + Vector3.up * 1.32f - toCenter * 0.02f, 0.45f, facingReactor);
+                Halo(m, button, button);
+                Label(console, "APPUIE QUAND TA COULEUR S'ALLUME", position + Vector3.up * 1.32f - toCenter * 0.02f, 0.45f, facingReactor, "PRESS WHEN YOUR COLOUR LIGHTS UP");
                 levers[q] = BuildLever(m, console, q, position + inward * 0.55f, Quaternion.LookRotation(-toCenter));
 
                 // Balisage au sol à la couleur du joueur, de sa cabine à sa console : guide le regard dans un grand volume sombre.
@@ -1418,7 +1516,7 @@ namespace Abysses.EditorTools
             reactorGo.transform.SetParent(root, false);
             reactorGo.transform.position = center + Vector3.up * 1.5f;
             reactorGo.AddComponent<NetworkObject>();
-            PuzzleObjective sequenceObjective = Objective(reactorGo, 3, -1, "Séquence du réacteur");
+            PuzzleObjective sequenceObjective = Objective(reactorGo, 3, -1, "Séquence du réacteur", "Reactor sequence", "reactor");
             var sequence = reactorGo.AddComponent<ReactorSequence>();
             // Le cœur est au centre de la piste : son à moitié spatialisé pour que tous l'entendent bien.
             AudioSource tone = Sfx(reactorGo, fx.ReactorTone, 0.9f, 0.4f);
@@ -1441,7 +1539,11 @@ namespace Abysses.EditorTools
             rso.FindProperty("failSound").objectReferenceValue = reactorFail;
             rso.ApplyModifiedPropertiesWithoutUndo();
 
-            BuildSyncLevers(root, 3, "Remontée d'urgence", levers, new[] { sequenceObjective });
+            // Énigme de module (jouable seul) : console de calibrage du sonar (mémoire), avant la remontée.
+            var ascentPrerequisites = new List<PuzzleObjective> { sequenceObjective };
+            for (int q = 0; q < 4; q++)
+                ascentPrerequisites.Add(BuildSimonConsole(m, root, modules[q]));
+            BuildSyncLevers(root, 3, "Remontée d'urgence", "Emergency ascent", "ascent", levers, ascentPrerequisites.ToArray());
 
             // Fin : faisceau de lumière venu de la surface + bulles dans les colonnes d'eau.
             var beamGo = new GameObject("Sunbeam");
@@ -1509,7 +1611,7 @@ namespace Abysses.EditorTools
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(mod.P(2.5f, 1.3f, mod.Vz * 3.66f), mod.Facing(0f, mod.Vz));
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, floor, mod.Q, "Digicode " + QuadrantNames[mod.Q]);
+            PuzzleObjective objective = Objective(root, floor, mod.Q, "Digicode " + QuadrantNames[mod.Q], "Keypad " + QuadrantNamesEn[mod.Q], floor == 1 ? "keypad" : "keypadUV");
             var keypad = root.AddComponent<CodeKeypad>();
             Transform t = root.transform;
 
@@ -1533,11 +1635,12 @@ namespace Abysses.EditorTools
                 GameObject glyph = Prim(PrimitiveType.Quad, "Glyph" + s, t, new Vector3(x, y, -0.0315f), Quaternion.identity, new Vector3(0.075f, 0.075f, 1f), m.Glyphs[s], false);
                 button.AddComponent<XRSimpleInteractable>();
                 button.AddComponent<XRPokeFilter>();
+                Halo(m, button, button);
                 var key = button.AddComponent<CodeKeypadButton>();
                 SetFields(key, ("keypad", keypad), ("symbol", s), ("symbolRenderer", glyph.GetComponent<Renderer>()));
             }
 
-            Label(t, "DIGICODE", new Vector3(0f, 0.36f, -0.01f), 0.6f);
+            Label(t, "DIGICODE", new Vector3(0f, 0.36f, -0.01f), 0.6f, null, "KEYPAD");
 
             var so = new SerializedObject(keypad);
             so.FindProperty("objective").objectReferenceValue = objective;
@@ -1555,7 +1658,7 @@ namespace Abysses.EditorTools
             return keypad;
         }
 
-        static GameObject BuildCodeDisplay(Mats m, Transform parent, Vector3 position, Quaternion rotation, CodeKeypad keypad, string title, bool large, bool uvInk, string name)
+        static GameObject BuildCodeDisplay(Mats m, Transform parent, Vector3 position, Quaternion rotation, CodeKeypad keypad, string title, bool large, bool uvInk, string name, string englishTitle = null)
         {
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
@@ -1573,7 +1676,7 @@ namespace Abysses.EditorTools
                 Prim(PrimitiveType.Cube, "SymbolBack" + i, t, slotPosition, Quaternion.identity, new Vector3(size, size, 0.01f), m.SlotEmpty, false);
                 slots[i] = Prim(PrimitiveType.Quad, "Symbol" + i, t, slotPosition + new Vector3(0f, 0f, -0.0065f), Quaternion.identity, new Vector3(size * 0.88f, size * 0.88f, 1f), m.SlotEmpty, false).GetComponent<Renderer>();
             }
-            Label(t, title, new Vector3(0f, size / 2f + 0.06f, -0.01f), large ? 0.9f : 0.5f);
+            Label(t, title, new Vector3(0f, size / 2f + 0.06f, -0.01f), large ? 0.9f : 0.5f, null, englishTitle);
 
             var display = root.AddComponent<CodeDisplay>();
             var so = new SerializedObject(display);
@@ -1595,7 +1698,8 @@ namespace Abysses.EditorTools
         static GameObject BuildFallbackMonitor(Mats m, Transform parent, Module mod, CodeKeypad ownKeypad)
         {
             GameObject monitor = BuildCodeDisplay(m, parent, mod.P(0.6f, 1.6f, mod.Vz * 3.66f), mod.Facing(0f, mod.Vz), ownKeypad,
-                "SURVEILLANCE — MODULE " + QuadrantNames[mod.Partner] + " VIDE", false, false, "FallbackMonitor_Q" + mod.Q);
+                "SURVEILLANCE — MODULE " + QuadrantNames[mod.Partner] + " VIDE", false, false, "FallbackMonitor_Q" + mod.Q,
+                "MONITOR — MODULE " + QuadrantNamesEn[mod.Partner] + " EMPTY");
             monitor.SetActive(false);
             return monitor;
         }
@@ -1621,14 +1725,14 @@ namespace Abysses.EditorTools
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(mod.P(-2.5f, 1.2f, mod.Vz * 3.66f), mod.Facing(0f, mod.Vz));
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, 1, mod.Q, "Fusible " + QuadrantNames[mod.Q]);
+            PuzzleObjective objective = Objective(root, 1, mod.Q, "Fusible " + QuadrantNames[mod.Q], "Fuse " + QuadrantNamesEn[mod.Q], "fuse");
             var socketBehaviour = root.AddComponent<FuseSocket>();
             Transform t = root.transform;
 
             Prim(PrimitiveType.Cube, "Panel", t, new Vector3(0f, 0f, 0.02f), Quaternion.identity, new Vector3(0.4f, 0.5f, 0.04f), m.Panel, false);
             DeviceMount(m, t, new Vector2(0.56f, 0.76f), 1.2f);
             Prim(PrimitiveType.Cylinder, "ColorRing", t, new Vector3(0f, 0f, -0.005f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.18f, 0.005f, 0.18f), m.Symbols[mod.Q], false);
-            Label(t, "FUSIBLE " + SymbolNames[mod.Q], new Vector3(0f, 0.3f, -0.01f), 0.55f);
+            Label(t, "FUSIBLE " + SymbolNames[mod.Q], new Vector3(0f, 0.3f, -0.01f), 0.55f, null, SymbolNamesEn[mod.Q] + " FUSE");
 
             var socketGo = new GameObject("Socket");
             socketGo.transform.SetParent(t, false);
@@ -1639,8 +1743,19 @@ namespace Abysses.EditorTools
             var socket = socketGo.AddComponent<FuseSocketInteractor>();
             SetFields(socket, ("requiredFuseId", mod.Q));
 
-            GameObject installed = Prim(PrimitiveType.Cylinder, "InstalledFuse", t, new Vector3(0f, 0f, -0.1f), Quaternion.identity, new Vector3(0.06f, 0.08f, 0.06f), m.Symbols[mod.Q], false);
+            // Porte-fusible : socle en céramique, deux pinces en laiton qui tiennent les embouts, voyant d'état.
+            Prim(PrimitiveType.Cube, "Socle_Ceramique", t, new Vector3(0f, 0f, -0.045f), Quaternion.identity, new Vector3(0.1f, 0.26f, 0.07f), paperMaterial, false);
+            foreach (float y in new[] { -0.068f, 0.068f })
+            {
+                Prim(PrimitiveType.Cube, "Pince_Fond", t, new Vector3(0f, y, -0.083f), Quaternion.identity, new Vector3(0.07f, 0.03f, 0.006f), m.Brass, false);
+                foreach (float x in new[] { -0.032f, 0.032f })
+                    Prim(PrimitiveType.Cube, "Pince", t, new Vector3(x, y, -0.1f), Quaternion.identity, new Vector3(0.006f, 0.03f, 0.04f), m.Brass, false);
+            }
+            Prim(PrimitiveType.Cube, "Bande_Couleur", t, new Vector3(0f, -0.155f, -0.012f), Quaternion.identity, new Vector3(0.3f, 0.03f, 0.01f), m.Symbols[mod.Q], false);
+            Label(t, "230 V", new Vector3(0.14f, -0.18f, -0.012f), 0.28f);
+            GameObject installed = FuseVisual(m, t, "InstalledFuse", new Vector3(0f, 0f, -0.1f), mod.Q);
             installed.SetActive(false);
+            StatusLamp(m, t, new Vector3(0.14f, 0.2f, -0.012f), objective);
 
             var localOnly = root.AddComponent<LocalModuleOnly>();
             var lo = new SerializedObject(localOnly);
@@ -1657,10 +1772,21 @@ namespace Abysses.EditorTools
             // Étagère contre le long mur partagé, le fusible destiné au partenaire posé dessus.
             float z = -mod.Vz * 3.48f;
             Static(Prim(PrimitiveType.Cube, "Shelf_Q" + mod.Q, parent, mod.P(-5.5f, 0.85f, z), Quaternion.identity, new Vector3(1.0f, 0.05f, 0.4f), m.Panel, true));
-            GameObject fuse = Prim(PrimitiveType.Cylinder, "Fuse_" + SymbolNames[fuseId], parent, mod.P(-5.5f, 0.97f, z), Quaternion.identity, new Vector3(0.06f, 0.08f, 0.06f), m.Symbols[fuseId], true);
+            GameObject fuse = FuseVisual(m, parent, "Fuse_" + SymbolNames[fuseId], mod.P(-5.5f, 0.95f, z), fuseId, true);
             NetworkTransform networkTransform = MakeNetworkGrabbable(fuse, 0.3f);
+            Halo(m, fuse, fuse);
             SetFields(fuse.AddComponent<FuseItem>(), ("fuseId", fuseId));
             return networkTransform;
+        }
+
+        /// <summary>Fusible à cartouche : corps à la couleur du module destinataire, embouts en laiton, bague blanche.</summary>
+        static GameObject FuseVisual(Mats m, Transform parent, string name, Vector3 position, int fuseId, bool collider = false)
+        {
+            GameObject body = Prim(PrimitiveType.Cylinder, name, parent, position, Quaternion.identity, new Vector3(0.045f, 0.06f, 0.045f), m.Symbols[fuseId], collider);
+            foreach (float y in new[] { -1f, 1f })
+                Prim(PrimitiveType.Cylinder, "Embout", body.transform, new Vector3(0f, y * 1.12f, 0f), Quaternion.identity, new Vector3(1.12f, 0.18f, 1.12f), m.Brass, false);
+            Prim(PrimitiveType.Cylinder, "Bague", body.transform, Vector3.zero, Quaternion.identity, new Vector3(1.04f, 0.12f, 1.04f), m.Symbols[4], false);
+            return body;
         }
 
         static NetworkTransform MakeNetworkGrabbable(GameObject go, float mass)
@@ -1675,6 +1801,8 @@ namespace Abysses.EditorTools
             networkTransform.SyncScaleX = networkTransform.SyncScaleY = networkTransform.SyncScaleZ = false;
             networkTransform.UseQuaternionCompression = true;
             go.AddComponent<NetworkGrabbable>();
+            // Tombé derrière un mur ou hors zone : revient tout seul (personne ne sort de sa zone pour le ramasser).
+            SetFields(go.AddComponent<LostItemReturn>(), ("returnSound", Sfx(go, fx.Bubbles, 0.7f)));
             return networkTransform;
         }
 
@@ -1686,7 +1814,7 @@ namespace Abysses.EditorTools
             lamp.transform.SetPositionAndRotation(position, Quaternion.identity);
             var collider = lamp.AddComponent<BoxCollider>();
             collider.size = new Vector3(0.07f, 0.07f, 0.28f);
-            Prim(PrimitiveType.Cylinder, "Body", lamp.transform, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.045f, 0.11f, 0.045f), m.Hull, false);
+            GameObject lampBody = Prim(PrimitiveType.Cylinder, "Body", lamp.transform, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.045f, 0.11f, 0.045f), m.Hull, false);
             Prim(PrimitiveType.Cylinder, "Head", lamp.transform, new Vector3(0f, 0f, 0.12f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.07f, 0.03f, 0.07f), m.Panel, false);
             Prim(PrimitiveType.Cylinder, "Lens", lamp.transform, new Vector3(0f, 0f, 0.151f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.06f, 0.003f, 0.06f), m.EmitPurple, false);
 
@@ -1702,6 +1830,7 @@ namespace Abysses.EditorTools
             beam.shadows = LightShadows.None;
 
             MakeNetworkGrabbable(lamp, 0.5f);
+            Halo(m, lamp, lampBody, 1.35f);
             SetFields(lamp.AddComponent<UVLamp>(), ("beam", beam));
         }
 
@@ -1711,7 +1840,7 @@ namespace Abysses.EditorTools
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(mod.P(-3f, 1.5f, mod.Vz * 3.66f), mod.Facing(0f, mod.Vz));
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, floor, mod.Q, "Manomètre " + QuadrantNames[mod.Q]);
+            PuzzleObjective objective = Objective(root, floor, mod.Q, "Manomètre " + QuadrantNames[mod.Q], "Gauge " + QuadrantNamesEn[mod.Q], "gauge");
             var gauge = root.AddComponent<PressureGauge>();
             Transform t = root.transform;
 
@@ -1732,8 +1861,8 @@ namespace Abysses.EditorTools
             Prim(PrimitiveType.Sphere, "Hub", t, new Vector3(0f, 0f, -0.016f), Quaternion.identity, Vector3.one * 0.035f, m.Hull, false);
 
             Renderer status = Prim(PrimitiveType.Sphere, "Status", t, new Vector3(0.3f, 0.2f, -0.01f), Quaternion.identity, Vector3.one * 0.05f, m.StatusIdle, false).GetComponent<Renderer>();
-            Label(t, "MANOMÈTRE " + QuadrantNames[mod.Q], new Vector3(0f, 0.34f, -0.01f), 0.6f);
-            Label(t, "Une autre équipe contrôle ta pression", new Vector3(0f, -0.32f, -0.01f), 0.4f);
+            Label(t, "MANOMÈTRE " + QuadrantNames[mod.Q], new Vector3(0f, 0.34f, -0.01f), 0.6f, null, "GAUGE " + QuadrantNamesEn[mod.Q]);
+            Label(t, "Un autre plongeur contrôle ta pression", new Vector3(0f, -0.32f, -0.01f), 0.4f, null, "Another diver controls your pressure");
 
             SetFields(gauge, ("objective", objective), ("needle", needlePivot), ("targetMarker", targetPivot), ("statusLight", status),
                 ("idleMaterial", m.StatusIdle), ("inBandMaterial", m.EmitCyan), ("solvedMaterial", m.StatusOk));
@@ -1751,7 +1880,7 @@ namespace Abysses.EditorTools
             root.transform.SetPositionAndRotation(mod.P(5.4f, 1.25f, 2.6f), mod.Facing(0f, -1f) * Quaternion.Euler(-35f, 0f, 0f));
             var wheel = new GameObject("Wheel").transform;
             wheel.SetParent(root.transform, false);
-            Prim(PrimitiveType.Cylinder, "Rim", wheel, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.4f, 0.015f, 0.4f), m.EmitRed, false);
+            GameObject rim = Prim(PrimitiveType.Cylinder, "Rim", wheel, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.4f, 0.015f, 0.4f), m.EmitRed, false);
             Prim(PrimitiveType.Cube, "SpokeA", wheel, new Vector3(0f, 0f, 0.02f), Quaternion.identity, new Vector3(0.38f, 0.035f, 0.03f), m.Hull, false);
             Prim(PrimitiveType.Cube, "SpokeB", wheel, new Vector3(0f, 0f, 0.02f), Quaternion.identity, new Vector3(0.035f, 0.38f, 0.03f), m.Hull, false);
             Prim(PrimitiveType.Sphere, "Handle", wheel, new Vector3(0.17f, 0f, 0.04f), Quaternion.identity, Vector3.one * 0.06f, m.Avatar[mod.Q], false);
@@ -1759,9 +1888,10 @@ namespace Abysses.EditorTools
             var collider = root.AddComponent<SphereCollider>();
             collider.radius = 0.22f;
             root.AddComponent<XRSimpleInteractable>();
+            Halo(m, root, rim, 1.12f);
             var valve = root.AddComponent<ValveWheel>();
             SetFields(valve, ("wheel", wheel));
-            Label(parent, "VANNE " + QuadrantNames[mod.Q], mod.P(5.4f, 1.6f, 2.6f), 0.55f, mod.Facing(0f, 1f));
+            Label(parent, "VANNE " + QuadrantNames[mod.Q], mod.P(5.4f, 1.6f, 2.6f), 0.55f, mod.Facing(0f, 1f), "VALVE " + QuadrantNamesEn[mod.Q]);
             return valve;
         }
 
@@ -1782,17 +1912,18 @@ namespace Abysses.EditorTools
             Prim(PrimitiveType.Cylinder, "Arm", pivot, new Vector3(0f, 0.22f, 0f), Quaternion.identity, new Vector3(0.04f, 0.22f, 0.04f), m.Hull, false);
             GameObject knob = Prim(PrimitiveType.Sphere, "Knob", pivot, new Vector3(0f, 0.45f, 0f), Quaternion.identity, Vector3.one * 0.1f, m.EmitRed, true);
             knob.AddComponent<XRSimpleInteractable>();
+            Halo(m, knob, knob);
             var lever = knob.AddComponent<LeverHandle>();
             SetFields(lever, ("pivot", pivot));
             return lever;
         }
 
-        static void BuildSyncLevers(Transform parent, int floor, string label, LeverHandle[] levers, PuzzleObjective[] prerequisites)
+        static PuzzleObjective BuildSyncLevers(Transform parent, int floor, string label, string english, string hintKey, LeverHandle[] levers, PuzzleObjective[] prerequisites)
         {
             var root = new GameObject("SyncLevers");
             root.transform.SetParent(parent, false);
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, floor, -1, label);
+            PuzzleObjective objective = Objective(root, floor, -1, label, english, hintKey);
             var group = root.AddComponent<SyncLeverGroup>();
             AudioSource fail = Sfx(root, fx.LeverFail, 0.9f, 0f);
             var so = new SerializedObject(group);
@@ -1808,6 +1939,7 @@ namespace Abysses.EditorTools
                 entry.FindPropertyRelative("lever").objectReferenceValue = levers[q];
             }
             so.ApplyModifiedPropertiesWithoutUndo();
+            return objective;
         }
 
         // ---------- Sas à objets
@@ -1880,7 +2012,8 @@ namespace Abysses.EditorTools
             Static(AbyssesArt.MeshObject("Cadre_Bouton", parent, AbyssesArt.FrameMesh(0.22f, 0.22f, 0.03f, 0.05f, 0.05f), spot.Button + spot.ButtonFacing * new Vector3(0f, 0f, 0.01f), spot.ButtonFacing, Vector3.one, m.Hazard));
             var interactable = button.AddComponent<XRSimpleInteractable>();
             button.AddComponent<XRPokeFilter>();
-            Label(parent, "ENVOYER", spot.Label, 0.5f, spot.ButtonFacing);
+            Halo(m, button, button);
+            Label(parent, "ENVOYER", spot.Label, 0.5f, spot.ButtonFacing, "SEND");
 
             endpoint.FindPropertyRelative("quadrant").intValue = q;
             endpoint.FindPropertyRelative("zone").objectReferenceValue = zone;
@@ -1919,9 +2052,16 @@ namespace Abysses.EditorTools
             SetFields(connection, ("networkManager", networkManager), ("transport", transport), ("lanDiscovery", discovery));
             SetFields(network.AddComponent<DevAutoConnect>(), ("connection", connection));
 
+            // Filet de sécurité permanent : sol invisible sous toute la piste (et bien au-delà). Au joystick (debug, gravité
+            // active), un joueur qui traverse un mur ou se trouve entre deux étages ne tombe plus dans le vide.
+            var safetyFloor = new GameObject("SolDeSecours").AddComponent<BoxCollider>();
+            safetyFloor.center = new Vector3(PlayArea.ArenaWidth / 2f, -0.2f, PlayArea.ArenaDepth / 2f);
+            safetyFloor.size = new Vector3(PlayArea.ArenaWidth + 60f, 0.3f, PlayArea.ArenaDepth + 60f);
+
             var gameState = new GameObject("GameState");
             gameState.AddComponent<NetworkObject>();
             gameState.AddComponent<GameStateManager>();
+            gameState.AddComponent<HintSystem>();
 
             // Fond sonore permanent (bourdonnement de la station, sonar) ; chaque étage ajoute sa propre ambiance.
             var ambience = new GameObject("Ambience").AddComponent<AudioSource>();
@@ -1947,13 +2087,29 @@ namespace Abysses.EditorTools
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = RenderSettings.fogColor;
             camera.farClipPlane = 40f;
+            // Oreilles qui se bouchent pendant la descente (filtre sur l'auditeur, actif seulement en descente).
+            cameraTransform.gameObject.AddComponent<AudioLowPassFilter>();
+            cameraTransform.gameObject.AddComponent<DescentEars>();
 
+            rig.AddComponent<XRRenderSettings>();
             var localRig = rig.AddComponent<LocalRig>();
             SetFields(localRig, ("leftHand", Find(rig.transform, "Left Controller")), ("rightHand", Find(rig.transform, "Right Controller")));
 
+            // Debug : rotation de la vue par crans au stick droit (coupée en build EVA avec le reste du joystick).
+            var stickTurn = new GameObject("Stick Turn");
+            stickTurn.transform.SetParent(Find(rig.transform, "Locomotion"), false);
+            SetFields(stickTurn.AddComponent<StickTurn>(), ("origin", rig.GetComponent<Unity.XR.CoreUtils.XROrigin>()),
+                ("moveProvider", rig.GetComponentInChildren<UnityEngine.XR.Interaction.Toolkit.Locomotion.Movement.ContinuousMoveProvider>(true)));
+
+            // Debug : manette de jeu branchée sur l'ordinateur (jouer sans casque), coupée en build EVA.
+            var gamepad = new GameObject("Gamepad Locomotion");
+            gamepad.transform.SetParent(Find(rig.transform, "Locomotion"), false);
+            SetFields(gamepad.AddComponent<GamepadLocomotion>(), ("origin", rig.GetComponent<Unity.XR.CoreUtils.XROrigin>()));
+            BuildControllerHints(rig.transform);
+
             var gate = rig.AddComponent<LocomotionGate>();
             var gateSo = new SerializedObject(gate);
-            SetArray(gateSo.FindProperty("debugOnly"), Find(rig.transform, "Move").gameObject, Find(rig.transform, "Gravity").gameObject);
+            SetArray(gateSo.FindProperty("debugOnly"), Find(rig.transform, "Move").gameObject, Find(rig.transform, "Gravity").gameObject, stickTurn, gamepad);
             var forbidden = new List<GameObject>();
             foreach (string n in new[] { "Teleportation", "Climb", "Jump", "Grab Move", "Turn" })
             {
@@ -1978,6 +2134,8 @@ namespace Abysses.EditorTools
             SetFields(guard, ("warningOverlay", overlayRenderer), ("alarm", alarm));
 
             BuildMenu(rig.transform, camera);
+            BuildDiveWatch(m, Find(rig.transform, "Left Controller"));
+            BuildGameMaster();
 
             // Simulateur XR : uniquement dans l'éditeur (tag EditorOnly = retiré des builds).
             var simulatorPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SimulatorPath);
@@ -1989,6 +2147,7 @@ namespace Abysses.EditorTools
 
             // Les 4 cabines, au centre de chaque quadrant.
             var cabins = new GameObject("Cabins").transform;
+            var cabinTransforms = new Transform[4];
             for (int q = 0; q < 4; q++)
             {
                 var cabin = (GameObject)PrefabUtility.InstantiatePrefab(cabinPrefab, cabins);
@@ -1997,7 +2156,11 @@ namespace Abysses.EditorTools
                 var cabinSo = new SerializedObject(cabin.GetComponent<ElevatorCabin>());
                 cabinSo.FindProperty("quadrant").intValue = q;
                 cabinSo.ApplyModifiedPropertiesWithoutUndo();
+                cabinTransforms[q] = cabin.transform;
             }
+
+            // Départ en surface : plateforme offshore au large d'une île, animation de plongée.
+            BuildSurface(m, null, cabinTransforms);
 
             SaveScene(scene, "Station");
         }
@@ -2016,6 +2179,17 @@ namespace Abysses.EditorTools
             return list;
         }
 
+        // Palette du menu : fond abyssal, accent cyan, action principale verte, sortie rouge.
+        static readonly Color MenuAccent = new Color(0.35f, 0.9f, 1f);
+        static readonly Color MenuPrimary = new Color(0.1f, 0.55f, 0.4f);
+        static readonly Color MenuSecondary = new Color(0.07f, 0.22f, 0.29f);
+        static readonly Color MenuDanger = new Color(0.5f, 0.12f, 0.1f);
+
+        /// <summary>
+        /// Menu VR : en-tête, carte d'état (voyant + message), puis les choix.
+        /// Hors ligne : deux grandes cartes « réseau local » (le cas normal chez EVA : un casque héberge, les autres
+        /// rejoignent), puis « en ligne » et « solo » en options secondaires. En partie : lancer la plongée en avant.
+        /// </summary>
         static void BuildMenu(Transform rig, Camera camera)
         {
             var canvasGo = new GameObject("MainMenu", typeof(RectTransform));
@@ -2026,42 +2200,127 @@ namespace Abysses.EditorTools
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = camera;
             canvasGo.AddComponent<TrackedDeviceGraphicRaycaster>();
-            ((RectTransform)canvasGo.transform).sizeDelta = new Vector2(820f, 1000f);
+            ((RectTransform)canvasGo.transform).sizeDelta = new Vector2(860f, 1240f);
 
             RectTransform panel = UIRect("Panel", canvasGo.transform);
             Stretch(panel);
-            panel.gameObject.AddComponent<Image>().color = new Color(0.02f, 0.06f, 0.09f, 0.9f);
+            Image background = panel.gameObject.AddComponent<Image>();
+            background.sprite = RoundedSprite();
+            background.type = Image.Type.Sliced;
+            background.color = new Color(0.015f, 0.05f, 0.075f, 0.94f);
             var layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(48, 48, 40, 40);
-            layout.spacing = 16f;
+            layout.padding = new RectOffset(52, 52, 36, 36);
+            layout.spacing = 14f;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = true;
 
-            UIText(panel, "Title", "ABYSSES", 96f, FontStyles.Bold, 110f, new Color(0.4f, 0.95f, 1f));
-            UIText(panel, "Subtitle", "Station HADAL-4", 34f, FontStyles.Italic, 44f, new Color(0.7f, 0.85f, 0.9f));
-            TextMeshProUGUI status = UIText(panel, "Status", "Hors ligne", 34f, FontStyles.Normal, 96f, Color.white);
-            TextMeshProUGUI players = UIText(panel, "Players", "", 30f, FontStyles.Normal, 40f, new Color(0.7f, 0.9f, 1f));
-            TextMeshProUGUI hint = UIText(panel, "Hint", "", 28f, FontStyles.Italic, 80f, new Color(1f, 0.85f, 0.5f));
+            // En-tête
+            UIText(panel, "Title", "<cspace=0.18em>ABYSSES</cspace>", 92f, FontStyles.Bold, 100f, MenuAccent);
+            UIText(panel, "Subtitle", "Station HADAL-4  ·  -4 000 m", 30f, FontStyles.Italic, 36f, new Color(0.65f, 0.8f, 0.86f));
+            Divider(panel);
 
+            // Carte d'état : voyant + message de connexion, nombre de plongeurs, consigne.
+            RectTransform card = UIRect("StatusCard", panel);
+            Image cardImage = card.gameObject.AddComponent<Image>();
+            cardImage.sprite = RoundedSprite();
+            cardImage.type = Image.Type.Sliced;
+            cardImage.color = new Color(0.04f, 0.12f, 0.16f, 1f);
+            var cardLayout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+            cardLayout.padding = new RectOffset(28, 28, 18, 18);
+            cardLayout.spacing = 6f;
+            cardLayout.childControlHeight = true;
+            cardLayout.childControlWidth = true;
+            cardLayout.childForceExpandHeight = false;
+            RectTransform statusRow = UIRect("StatusRow", card);
+            var rowLayout = statusRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            rowLayout.spacing = 18f;
+            rowLayout.childAlignment = TextAnchor.MiddleCenter;
+            rowLayout.childControlWidth = true;
+            rowLayout.childControlHeight = true;
+            rowLayout.childForceExpandWidth = false;
+            rowLayout.childForceExpandHeight = false;
+            RectTransform dot = UIRect("StatusDot", statusRow);
+            Image dotImage = dot.gameObject.AddComponent<Image>();
+            dotImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            dotImage.color = new Color(0.55f, 0.6f, 0.65f);
+            var dotSize = dot.gameObject.AddComponent<LayoutElement>();
+            dotSize.preferredWidth = dotSize.preferredHeight = 30f;
+            TextMeshProUGUI status = UIText(statusRow, "Status", "Hors ligne", 34f, FontStyles.Bold, 60f, Color.white);
+            status.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            status.alignment = TextAlignmentOptions.Left;
+            TextMeshProUGUI players = UIText(card, "Players", "", 28f, FontStyles.Normal, 36f, new Color(0.7f, 0.9f, 1f));
+            TextMeshProUGUI hint = UIText(card, "Hint", "", 27f, FontStyles.Italic, 66f, new Color(1f, 0.85f, 0.5f));
+
+            TextMeshProUGUI leaderboard = UIText(panel, "Leaderboard", "", 26f, FontStyles.Normal, 190f, new Color(0.75f, 0.95f, 1f));
+
+            // Hors ligne
             RectTransform offline = Group(panel, "Offline");
-            Button joinOnline = UIButton(offline, "Rejoindre l'équipe (en ligne)");
-            Button hostLan = UIButton(offline, "Héberger (réseau local)");
-            Button joinLan = UIButton(offline, "Rejoindre (réseau local)");
-            Button solo = UIButton(offline, "Jouer en solo");
+            Localize(UIText(offline, "Section_Local", "JOUER ENSEMBLE  ·  MÊME WI-FI", 26f, FontStyles.Bold, 34f, MenuAccent), "JOUER ENSEMBLE  ·  MÊME WI-FI", "PLAY TOGETHER  ·  SAME WI-FI");
+            Button hostLan = UICard(offline, "Héberger la partie", "Ce casque crée la partie. Les autres la rejoignent.",
+                "Host the game", "This headset creates the game. The others join it.", MenuPrimary);
+            Button joinLan = UICard(offline, "Rejoindre la partie", "Trouve tout seul le casque hôte sur le même Wi-Fi.",
+                "Join the game", "Finds the host headset on the same Wi-Fi by itself.", MenuSecondary);
+            Localize(UIText(offline, "Section_Other", "AUTRES MODES", 24f, FontStyles.Bold, 34f, new Color(0.55f, 0.7f, 0.78f)), "AUTRES MODES", "OTHER MODES");
+            RectTransform row = UIRect("Row", offline);
+            var rowGroup = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            rowGroup.spacing = 14f;
+            rowGroup.childControlWidth = true;
+            rowGroup.childControlHeight = true;
+            rowGroup.childForceExpandWidth = true;
+            Button joinOnline = UIButton(row, "En ligne (Internet)", "Online (Internet)", MenuSecondary);
+            Button solo = UIButton(row, "Jouer en solo", "Play solo", MenuSecondary);
 
+            // En partie
             RectTransform online = Group(panel, "Online");
-            Button start = UIButton(online, "Lancer la plongée");
-            Button recenter = UIButton(online, "Recalibrer ma position");
-            Button leave = UIButton(online, "Quitter la partie");
+            Button start = UIButton(online, "Lancer la plongée", null, MenuPrimary, 100f, 42f);
+            Button easy = UIButton(online, "Mode facile : non", null, MenuSecondary);
+            Button recenter = UIButton(online, "Recalibrer ma position", "Recalibrate my position", MenuSecondary);
+            Button leave = UIButton(online, "Quitter la partie", "Leave the game", MenuDanger);
+
+            Divider(panel);
+            Button language = UIButton(panel, "English", null, new Color(0.05f, 0.14f, 0.18f), 62f, 28f);
 
             var menu = canvasGo.AddComponent<MainMenu>();
             SetFields(menu,
-                ("panel", panel.gameObject), ("statusText", status), ("playersText", players),
+                ("panel", panel.gameObject), ("statusText", status), ("playersText", players), ("statusDot", dotImage),
                 ("offlineGroup", offline.gameObject), ("joinOnlineButton", joinOnline), ("hostLanButton", hostLan),
                 ("joinLanButton", joinLan), ("soloButton", solo), ("onlineGroup", online.gameObject),
-                ("startButton", start), ("recenterButton", recenter), ("leaveButton", leave), ("hintText", hint));
+                ("startButton", start), ("recenterButton", recenter), ("leaveButton", leave), ("hintText", hint),
+                ("languageButton", language), ("easyButton", easy), ("leaderboardText", leaderboard));
+        }
+
+        static void Localize(Component text, string french, string english) =>
+            SetFields(text.gameObject.AddComponent<LocalizedText>(), ("french", french), ("english", english));
+
+        static Sprite RoundedSprite() => AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+
+        static void Divider(Transform parent)
+        {
+            RectTransform line = UIRect("Divider", parent);
+            line.gameObject.AddComponent<Image>().color = new Color(MenuAccent.r, MenuAccent.g, MenuAccent.b, 0.35f);
+            line.gameObject.AddComponent<LayoutElement>().preferredHeight = 3f;
+        }
+
+        /// <summary>Grande carte de choix : titre + une phrase d'explication, liseré d'accent à gauche.</summary>
+        static Button UICard(Transform parent, string title, string description, string titleEn, string descriptionEn, Color color)
+        {
+            string fr = "<size=40><b>" + title + "</b></size>\n<size=26><color=#B8D8E0>" + description + "</color></size>";
+            string en = "<size=40><b>" + titleEn + "</b></size>\n<size=26><color=#B8D8E0>" + descriptionEn + "</color></size>";
+            Button button = UIButton(parent, fr, en, color, 132f, 40f);
+            TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
+            label.alignment = TextAlignmentOptions.Left;
+            RectTransform labelRect = label.rectTransform;
+            labelRect.offsetMin = new Vector2(44f, 8f);
+            labelRect.offsetMax = new Vector2(-20f, -8f);
+            RectTransform accent = UIRect("Accent", button.transform);
+            accent.anchorMin = new Vector2(0f, 0.12f);
+            accent.anchorMax = new Vector2(0f, 0.88f);
+            accent.sizeDelta = new Vector2(8f, 0f);
+            accent.anchoredPosition = new Vector2(20f, 0f);
+            accent.gameObject.AddComponent<Image>().color = MenuAccent;
+            return button;
         }
 
         static RectTransform Group(Transform parent, string name)
@@ -2105,27 +2364,34 @@ namespace Abysses.EditorTools
             return label;
         }
 
-        static Button UIButton(Transform parent, string text)
+        static Button UIButton(Transform parent, string text, string english = null, Color? color = null, float height = 84f, float fontSize = 34f)
         {
+            Color baseColor = color ?? MenuSecondary;
             RectTransform rect = UIRect("Button - " + text, parent);
             var image = rect.gameObject.AddComponent<Image>();
+            image.sprite = RoundedSprite();
+            image.type = Image.Type.Sliced;
             image.color = Color.white;
             var button = rect.gameObject.AddComponent<Button>();
             ColorBlock colors = button.colors;
-            colors.normalColor = new Color(0.06f, 0.3f, 0.38f, 1f);
-            colors.highlightedColor = new Color(0.1f, 0.5f, 0.6f, 1f);
-            colors.pressedColor = new Color(0.2f, 0.75f, 0.85f, 1f);
-            colors.disabledColor = new Color(0.15f, 0.18f, 0.2f, 0.6f);
+            colors.normalColor = baseColor;
+            colors.highlightedColor = Color.Lerp(baseColor, MenuAccent, 0.35f);
+            colors.selectedColor = baseColor;
+            colors.pressedColor = Color.Lerp(baseColor, MenuAccent, 0.7f);
+            colors.disabledColor = new Color(0.12f, 0.15f, 0.17f, 0.7f);
+            colors.fadeDuration = 0.08f;
             button.colors = colors;
-            rect.gameObject.AddComponent<LayoutElement>().preferredHeight = 84f;
+            rect.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
 
             RectTransform labelRect = UIRect("Label", rect);
             Stretch(labelRect);
             var label = labelRect.gameObject.AddComponent<TextMeshProUGUI>();
             label.text = text;
-            label.fontSize = 36f;
+            label.fontSize = fontSize;
             label.alignment = TextAlignmentOptions.Center;
             label.color = Color.white;
+            label.textWrappingMode = TextWrappingModes.Normal;
+            if (english != null) SetFields(labelRect.gameObject.AddComponent<LocalizedText>(), ("french", text), ("english", english));
             return button;
         }
 
@@ -2328,11 +2594,41 @@ namespace Abysses.EditorTools
 
         // ------------------------------------------------------------------ Utilitaires
 
-        static PuzzleObjective Objective(GameObject go, int floor, int quadrant, string label)
+        static PuzzleObjective Objective(GameObject go, int floor, int quadrant, string label, string english = null, string hintKey = null)
         {
             var objective = go.AddComponent<PuzzleObjective>();
-            SetFields(objective, ("floor", floor), ("quadrant", quadrant), ("label", label));
+            SetFields(objective, ("floor", floor), ("quadrant", quadrant), ("label", label), ("labelEnglish", english ?? label));
+            if (hintKey != null && AbyssesHints.Table.TryGetValue(hintKey, out (string[] fr, string[] en) hints))
+            {
+                var so = new SerializedObject(objective);
+                SetStrings(so.FindProperty("hints"), hints.fr);
+                SetStrings(so.FindProperty("hintsEnglish"), hints.en);
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
             return objective;
+        }
+
+        static void SetStrings(SerializedProperty property, string[] values)
+        {
+            property.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) property.GetArrayElementAtIndex(i).stringValue = values[i];
+        }
+
+        /// <summary>Halo de survol (copie additive légèrement agrandie du visuel) piloté par <see cref="HoverHighlight"/>.</summary>
+        static void Halo(Mats m, GameObject interactable, GameObject visual, float scale = 1.18f)
+        {
+            var filter = visual.GetComponent<MeshFilter>();
+            if (filter == null) return;
+            var halo = new GameObject("Halo");
+            halo.transform.SetParent(visual.transform, false);
+            halo.transform.localScale = Vector3.one * scale;
+            halo.AddComponent<MeshFilter>().sharedMesh = filter.sharedMesh;
+            var renderer = halo.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = m.Highlight;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.enabled = false;
+            SetFields(interactable.AddComponent<HoverHighlight>(), ("halo", renderer));
         }
 
         static GameObject Prim(PrimitiveType type, string name, Transform parent, Vector3 position, Quaternion rotation, Vector3 scale, Material material, bool keepCollider)
@@ -2357,7 +2653,7 @@ namespace Abysses.EditorTools
                 StaticEditorFlags.OccludeeStatic | StaticEditorFlags.ReflectionProbeStatic);
         }
 
-        static void Label(Transform parent, string text, Vector3 localPosition, float size, Quaternion? rotation = null)
+        static void Label(Transform parent, string text, Vector3 localPosition, float size, Quaternion? rotation = null, string english = null)
         {
             var go = new GameObject("Label", typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -2370,6 +2666,7 @@ namespace Abysses.EditorTools
             tmp.color = new Color(0.75f, 0.92f, 1f);
             tmp.textWrappingMode = TextWrappingModes.NoWrap;
             ((RectTransform)go.transform).sizeDelta = new Vector2(2f, 0.3f);
+            if (english != null) SetFields(go.AddComponent<LocalizedText>(), ("french", text), ("english", english));
         }
 
         static Transform Find(Transform root, string name)
@@ -2402,6 +2699,8 @@ namespace Abysses.EditorTools
                     case bool b: p.boolValue = b; break;
                     case string s: p.stringValue = s; break;
                     case Color c: p.colorValue = c; break;
+                    case Vector3 v3: p.vector3Value = v3; break;
+                    case Vector2 v2: p.vector2Value = v2; break;
                 }
             }
             so.ApplyModifiedPropertiesWithoutUndo();

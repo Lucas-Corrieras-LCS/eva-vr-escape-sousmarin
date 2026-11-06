@@ -7,6 +7,38 @@
 
 Les **3 étages se jouent de bout en bout**, de la surface jusqu'à la remontée finale, **en solo et à 2 joueurs** dans l'éditeur. Console sans erreur ; seul avertissement : les manettes *simulées* de l'éditeur ne savent pas vibrer (sans conséquence sur le Quest).
 
+## Mise à jour du 2026-11-06 — branche `feat/surface-et-plongee`
+
+### Audit des branches
+
+| Branche | État |
+|---------|------|
+| `main` | Passe artistique de Lucas (e4598ab). Ne contient pas encore les améliorations (pas de PR fusionnée). |
+| `feat/ameliorations-jeu` | `main` + améliorations + fusion de la passe artistique (b8f153a, local). |
+| `feat/test-casque` (Lucas) | Premier test Quest 2 : 57 FPS au lieu de 72, GPU à 98 % → rendu fovéal, résolution 0,9, rotation au stick, « Recommencer ». Fusionnée ici. |
+| `feat/surface-et-plongee` | Tout ce qui précède + cette session. **C'est la branche à jour.** |
+
+### Ajouté
+
+| Domaine | Ajout |
+|---------|-------|
+| Surface (C8) | Plateforme offshore au large d'une île : pont percé d'un puits autour de chaque cabine, garde-corps le long de chaque zone de jeu, potence + câble au-dessus de chaque cabine, mer, 3 îles low poly avec palmiers, phare à faisceau tournant, bateau qui tangue, nuages, mouettes, soleil, ressac |
+| Plongée | Première plongée de 22 s vue par les hublots (agrandis à 76 cm) : treuil qui lâche (secousse, vibration), la mer monte et passe les hublots (éclaboussure), l'eau s'assombrit, les piliers défilent ; un puits d'eau masque le chargement de l'étage ; remontée inverse en fin de partie (portes fermées jusqu'à l'émersion). La caméra n'est jamais bougée (confort). |
+| Difficulté | Une énigme **par module et par étage**, jamais résolue automatiquement : en solo il y a vraiment de quoi chercher. Disjoncteurs (étage 1, note à lire, court-circuit si on se trompe), morse (étage 2, balise derrière le hublot, table au mur, cadenas), console sonar (étage 3, mémoire 6 notes). Tirages aléatoires à chaque partie. |
+| Lisibilité | Vrai porte-fusible (socle céramique, pinces, voyant) et fusible à cartouche ; boutons physiques qui s'enfoncent avec un clic ; textes contrastés ; aide-mémoire des boutons collé aux manettes (surface + 2 premières minutes) |
+| Tests sans casque | Déplacement à la manette de jeu (debug, coupé dans l'APK EVA) |
+
+### Vérifié
+
+- Partie solo automatique : 58/58, aucune erreur (les nouvelles énigmes sont résolues par de vrais appuis, erreurs comprises).
+- Ergonomie et partie à 2 + pupitre : voir `docs/ergonomie.md` et `docs/playtest-multi.md`.
+- Captures : `docs/captures/surface_*.png`, `etage1_disjoncteurs`, `etage1_fusible`, `etage2_morse`, `etage2_balise`, `etage3_sonar`.
+
+### Reste à faire
+
+- **Tester au casque** : FPS avec la surface (une lumière temps réel, maillages fusionnés), confort de la plongée, lisibilité de la note et de la table morse.
+- Faire valider par Lucas les ajouts hors consignes (WORKFLOW), puis PR vers `main`.
+
 ## Passe artistique (2026-11-05)
 
 Le décor n'est plus en blockout. Tout reste généré par *Abysses → Tout construire + baker l'éclairage* (nouveau fichier `AbyssesArt.cs`), sans aucun asset externe. Captures : [`docs/captures/`](captures/).
@@ -84,3 +116,43 @@ Le décor n'est plus en blockout. Tout reste généré par *Abysses → Tout con
 2. **Mesurer la perf sur le casque** après la passe artistique (jusqu'à 303 batches à l'étage 2 dans l'éditeur) ; si besoin : occlusion culling, puis fusion des pièces de décor.
 3. **Activer Relay** sur cloud.unity.com (projet *eva-vr-escape-sousmarin* → Multiplayer → Relay) pour jouer en ligne en plus du réseau local.
 4. **Playtests** avec de vraies personnes : durée, compréhension des énigmes.
+
+## Mise à jour du 2026-11-04 — branche `feat/ameliorations-jeu`
+
+### Ajouté
+
+| Domaine | Ajout |
+|---------|-------|
+| Lumière (C6) | Étage 1 en éclairage de secours ; à la remise sous tension, les néons se rallument un par un et l'éclairage complet revient (2 bakes échangés, aucune lumière temps réel en plus) |
+| DA (C7) | Passe artistique de `main` (textures PBR, habillage, mobilier) ; hublots sur l'océan (neige marine, poissons, bioluminescence, silhouette géante) |
+| Ambiance | Réverbération métallique, coque qui grince, gouttes, vapeur qui siffle, néon défaillant, eau qui monte (étage 2), oreilles qui se bouchent pendant la descente |
+| Ressenti | Vibrations sur chaque interaction, surbrillance des objets à portée de main, avatars avec buste et bras |
+| Prise en main | Tutoriel dans la cabine, montre de plongée (profondeur, O2, chrono), indices progressifs de l'IA de la station, mode facile, FR / EN |
+| Exploitation EVA | Pupitre du maître du jeu sur PC (suivi, indice, message, résoudre, passer l'étage, relancer, caméras de surveillance, mode vitrine), classement des équipes, reconnexion automatique d'un casque |
+| Récit / coop | Journaux de bord de l'équipage (FR / EN), plaques de coque à frapper (on s'entend à travers la cloison) |
+| Fiabilité | Objets perdus qui reviennent ; étages déchargés quand on quitte une partie (bug existant corrigé : un étage restait affiché) |
+
+### Vérifié automatiquement (*Abysses → Tests*, rapports `docs/playtest-*.md`)
+
+- **Partie solo complète** ([`playtest-solo.md`](playtest-solo.md)) : 36 vérifications, 0 erreur de console — panne puis courant rétabli, indice, objet perdu, 3 étages, fin, classement, nouvelle plongée, relance par le pupitre, sortie propre.
+- **Partie à 2 + pupitre** ([`playtest-multi.md`](playtest-multi.md)) : l'éditeur héberge, un client Mac compilé joue le 2e plongeur, un autre le pupitre spectateur. 28 vérifications, 0 erreur : pupitre sans avatar avec les droits du maître du jeu, indices envoyés par le pupitre, coupure du 2e plongeur en pleine partie puis **reconnexion automatique dans son module**, partie jusqu'à la fin.
+
+### Bugs trouvés par la relecture et les tests, corrigés
+
+| Bug | Correction |
+|-----|------------|
+| *(existant)* Après avoir quitté une partie, l'étage restait chargé (brouillard compris) ; la partie suivante en chargeait un second par-dessus | Les étages sont déchargés dès que la session s'arrête |
+| Un casque reconnecté aurait été recalibré au centre de son module (décor décalé) | Pas de recentrage quand on retrouve le même quadrant |
+| Reconnexion refusée après le délai de grâce | Acceptée tant que le quadrant est libre |
+| Reconnexion jamais tentée : Netcode donne un motif même pour une simple coupure | Seuls nos refus d'admission (« Partie complète », « Plongée déjà commencée ») arrêtent les essais |
+| Son et vibration du fusible rejoués à l'arrivée d'un joueur en cours de partie | Uniquement quand le fusible est posé |
+| La montre gardait l'ancienne profondeur jusqu'à 1 s après l'arrivée | Rafraîchie à chaque changement de phase |
+
+Tests relançables : *Abysses → Tests → Partie solo automatique*, *Compiler le client de test Mac*, puis *Partie à 2 + pupitre*.
+- **Ergonomie** : 101 objets interactifs entre 0,8 et 1,6 m, aucun n'oblige à entrer dans la marge de 50 cm (`docs/ergonomie.md`).
+
+### Reste à faire
+
+- Tester au casque : confort, volumes, lisibilité de la montre, vibrations, surbrillance.
+- Hors de portée pour l'instant : spatialiseur Meta XR Audio, vrais bruitages, énigmes morse / sonar / grue, Application SpaceWarp, modèles 3D importés.
+- Les scènes d'étage pèsent 4 à 7 Mo (maillages de coque enregistrés dans la scène).

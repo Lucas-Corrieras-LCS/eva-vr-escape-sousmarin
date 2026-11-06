@@ -107,7 +107,9 @@ namespace Abysses.Interaction
 
         IEnumerator ResetAfterWindow()
         {
-            yield return new WaitForSeconds(syncWindow);
+            // Mode facile : fenêtre de synchronisation doublée.
+            bool easy = GameStateManager.Instance != null && GameStateManager.Instance.EasyMode.Value;
+            yield return new WaitForSeconds(easy ? syncWindow * 2f : syncWindow);
             resetRoutine = null;
             if (objective.Solved.Value) yield break;
             PulledMask.Value = 0;

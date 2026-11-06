@@ -117,6 +117,8 @@ namespace Abysses.Level
             }
             else if (!descending && wasDescending)
             {
+                // Arrivée au palier : le bathyscaphe se pose.
+                if (LocalRig.Instance != null && LocalRig.Instance.Quadrant == quadrant) LocalRig.Pulse(0.7f, 0.25f);
                 if (bubbles != null) bubbles.Stop();
                 if (rumble != null) rumble.Stop();
             }
@@ -148,8 +150,10 @@ namespace Abysses.Level
 
         void AnimateDoors()
         {
-            if (Mathf.Approximately(doorOpen, doorTarget)) return;
-            doorOpen = Mathf.MoveTowards(doorOpen, doorTarget, doorSpeed * Time.deltaTime);
+            // Remontée vers la surface : portes fermées jusqu'à l'émersion.
+            float target = SurfaceWorld.HoldDoors ? 0f : doorTarget;
+            if (Mathf.Approximately(doorOpen, target)) return;
+            doorOpen = Mathf.MoveTowards(doorOpen, target, doorSpeed * Time.deltaTime);
             float offset = doorOpen * doorOpenOffset;
             if (leftDoor != null) leftDoor.localPosition = leftClosed + Vector3.left * offset;
             if (rightDoor != null) rightDoor.localPosition = rightClosed + Vector3.right * offset;
@@ -158,7 +162,7 @@ namespace Abysses.Level
         void AnimateDepth()
         {
             GameStateManager state = GameStateManager.Instance;
-            float duration = state != null ? state.DescentDuration : 8f;
+            float duration = state != null ? state.DescentDurationFor(state.Floor.Value + 1) : 8f;
             float t = Mathf.SmoothStep(0f, 1f, (Time.unscaledTime - descentStart) / duration);
             SetDepth(Mathf.RoundToInt(Mathf.Lerp(depthFrom, depthTo, t) / 10f) * 10);
         }

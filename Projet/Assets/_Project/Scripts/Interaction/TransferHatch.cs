@@ -60,6 +60,7 @@ namespace Abysses.Interaction
                 if (body == null || !body.TryGetComponent(out NetworkGrabbable item)) continue;
                 if (item.TryGetComponent(out XRGrabInteractable grab) && grab.isSelected) continue;
                 SendRpc(item.NetworkObject, side);
+                LocalRig.Pulse(0.3f, 0.1f);
                 return;
             }
         }
@@ -101,6 +102,8 @@ namespace Abysses.Interaction
 
         static void Play(Endpoint endpoint)
         {
+            // Souffle du sas ressenti des deux côtés.
+            if (LocalRig.Instance != null && LocalRig.Instance.Quadrant == endpoint.quadrant) LocalRig.Pulse(0.25f, 0.2f);
             if (endpoint.bubbles != null) endpoint.bubbles.Play();
             if (endpoint.sound != null) endpoint.sound.Play();
         }

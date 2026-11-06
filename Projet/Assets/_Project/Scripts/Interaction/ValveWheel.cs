@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using Abysses.Player;
 
 namespace Abysses.Interaction
 {
@@ -19,6 +20,8 @@ namespace Abysses.Interaction
         [Tooltip("Nombre de tours pour passer de fermé (0) à grand ouvert (1).")]
         [SerializeField, Min(0.25f)] float turnsForFullRange = 1.5f;
         [SerializeField, Min(0.02f)] float sendInterval = 0.1f;
+        [Tooltip("Un cran de vibration tous les N degrés de rotation du volant.")]
+        [SerializeField, Min(5f)] float detentDegrees = 20f;
 
         /// <summary>Nouvelle position de la vanne (0..1), limitée en fréquence.</summary>
         public event Action<float> ValueChanged;
@@ -31,6 +34,8 @@ namespace Abysses.Interaction
         float lastSent = -1f;
         float nextSend;
         bool locked;
+        int lastDetent;
+        bool atStop;
 
         void Awake() => interactable = GetComponent<XRSimpleInteractable>();
 
@@ -59,6 +64,8 @@ namespace Abysses.Interaction
             if (locked) return;
             hand = args.interactorObject;
             previousAngle = HandAngle();
+            lastDetent = Detent();
+            atStop = false;
         }
 
         void OnSelectExited(SelectExitEventArgs args)
@@ -84,8 +91,21 @@ namespace Abysses.Interaction
             Value = Mathf.Clamp01(Value + delta / (360f * turnsForFullRange));
             wheel.localRotation = Quaternion.Euler(0f, 0f, Value * 360f * turnsForFullRange);
 
+            // Retour haptique : un petit cran régulier, un choc franc en butée (grand ouvert / fermé).
+            int detent = Detent();
+            if (detent != lastDetent)
+            {
+                lastDetent = detent;
+                LocalRig.Pulse(0.12f, 0.02f);
+            }
+            bool stop = Value <= 0f || Value >= 1f;
+            if (stop && !atStop && Mathf.Abs(delta) > 0.01f) LocalRig.Pulse(0.55f, 0.06f);
+            atStop = stop;
+
             if (Time.unscaledTime >= nextSend && Mathf.Abs(Value - lastSent) > 0.005f) Send();
         }
+
+        int Detent() => Mathf.FloorToInt(Value * 360f * turnsForFullRange / detentDegrees);
 
         void Send()
         {
