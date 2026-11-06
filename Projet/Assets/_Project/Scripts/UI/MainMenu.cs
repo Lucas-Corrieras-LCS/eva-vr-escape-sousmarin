@@ -25,6 +25,8 @@ namespace Abysses.UI
         [SerializeField] TMP_Text playersText;
         [Tooltip("Consigne contextuelle (calibration, attente des autres…).")]
         [SerializeField] TMP_Text hintText;
+        [Tooltip("Voyant d'état de la connexion (gris, ambre, vert, rouge).")]
+        [SerializeField] Image statusDot;
 
         [Header("Hors ligne")]
         [SerializeField] GameObject offlineGroup;
@@ -192,6 +194,14 @@ namespace Abysses.UI
 
             offlineGroup.SetActive(!connection.IsBusy);
             onlineGroup.SetActive(Online);
+            if (statusDot != null)
+                statusDot.color = connection.State switch
+                {
+                    ConnectionState.Online => new Color(0.3f, 1f, 0.5f),
+                    ConnectionState.Connecting => new Color(1f, 0.75f, 0.2f),
+                    ConnectionState.Failed => new Color(1f, 0.3f, 0.25f),
+                    _ => new Color(0.55f, 0.6f, 0.65f),
+                };
 
             bool finished = phase == GamePhase.Finished;
             bool everyoneReady = state != null && state.EveryoneReady;

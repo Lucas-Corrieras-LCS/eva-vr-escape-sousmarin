@@ -41,7 +41,7 @@ namespace Abysses.Level
         [Tooltip("Pendant la première plongée, l'étage 1 n'est chargé qu'une fois la surface masquée par le puits d'eau (SurfaceWorld).")]
         [SerializeField, Min(0f)] float surfaceHideTime = 9.5f;
         [Tooltip("Délai laissé à un joueur déconnecté pour revenir avant que son module ne soit résolu automatiquement (s).")]
-        [SerializeField, Min(0f)] float reconnectGrace = 20f;
+        [SerializeField, Min(0f)] float reconnectGrace = 30f;
 
         public static GameStateManager Instance { get; private set; }
 

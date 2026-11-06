@@ -492,7 +492,7 @@ namespace Abysses.EditorTools
             if (exe == null) return null;
             string log = Path.GetFullPath("Builds/TestClient/" + name + ".log");
             clientLogs.Add(log);
-            var info = new ProcessStartInfo(exe, $"-batchmode -nographics -logFile \"{log}\" -abysses-join 127.0.0.1 {extraArgs}") { UseShellExecute = false };
+            var info = new ProcessStartInfo(exe, $"-batchmode -nographics -logFile \"{log}\" {extraArgs}") { UseShellExecute = false };
             Process process = Process.Start(info);
             processes.Add(process);
             return process;
@@ -507,11 +507,11 @@ namespace Abysses.EditorTools
             connection.HostLan();
             yield return Until(() => connection.State == ConnectionState.Online, 15f, "Hôte réseau local lancé (plongeur ORANGE)");
 
-            Check(StartClient("client_plongeur", "-abysses-player") != null, "Client Mac lancé (2e plongeur)");
+            Check(StartClient("client_plongeur", "-abysses-join-lan -abysses-player") != null, "Client Mac lancé (2e plongeur, trouve l'hôte par la découverte réseau local)");
             yield return Until(() => NetworkPlayer.All.Count == 2 && PlayerIn(1) != null, 90f, "2e plongeur connecté, quadrant CYAN");
             yield return Until(() => (State.ReadyMask.Value & 3) == 3, 20f, "Les 2 plongeurs détectés dans leur cabine");
 
-            Check(StartClient("client_pupitre", "-abysses-spectator -abysses-gm-hint") != null, "Pupitre spectateur lancé");
+            Check(StartClient("client_pupitre", "-abysses-join 127.0.0.1 -abysses-spectator -abysses-gm-hint") != null, "Pupitre spectateur lancé");
             yield return Until(() => NetworkManager.Singleton.ConnectedClientsIds.Count == 3, 90f, "Pupitre connecté");
             ulong spectator = NetworkManager.Singleton.ConnectedClientsIds.First(id => NetworkPlayer.All.All(p => p.OwnerClientId != id));
             Check(NetworkPlayer.All.Count == 2, "Le pupitre n'a ni avatar ni quadrant");

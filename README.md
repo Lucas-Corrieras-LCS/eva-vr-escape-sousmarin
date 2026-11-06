@@ -26,6 +26,10 @@ Projet d'évaluation de fin de module, en binôme.
 - **Sans casque, à la manette de jeu** (debug) : stick gauche = avancer, stick droit = tourner (coupé dans l'APK EVA, comme le joystick des manettes).
 - **Multijoueur à 2** : *Abysses → Test multijoueur → Activer le scénario 2 joueurs*, puis Play : l'éditeur héberge, un second éditeur s'ouvre et rejoint tout seul. *Revenir au Play normal* pour repasser en solo.
 
+## Jouer à plusieurs
+
+Même Wi-Fi pour tous (ou partage de connexion d'un téléphone) : **un** casque choisit *Héberger la partie*, les autres *Rejoindre la partie*. Détails, conseils et dépannage : [docs/reseau.md](docs/reseau.md).
+
 ## Déroulé d'une partie
 
 1. **Surface** : plateforme offshore au large d'une île (phare, bateau, mouettes). Chaque joueur entre dans sa cabine, suspendue sous une potence.

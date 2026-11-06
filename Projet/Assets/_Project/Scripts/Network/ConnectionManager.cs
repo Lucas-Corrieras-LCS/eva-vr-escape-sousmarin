@@ -33,8 +33,13 @@ namespace Abysses.Network
 
         public static ConnectionManager Instance { get; private set; }
 
-        const int ReconnectAttempts = 5;
+        // 10 essais espacés de 3 s : un partage de connexion qui décroche une vingtaine de secondes ne fait pas perdre la partie
+        // (l'hôte garde le quadrant libre pendant 30 s, voir GameStateManager.reconnectGrace).
+        const int ReconnectAttempts = 10;
         const float ReconnectDelay = 3f;
+        /// <summary>En ligne : nombre d'essais pour obtenir la session, et délai maximal pour que Netcode se connecte au relais.</summary>
+        const int OnlineAttempts = 3;
+        const float OnlineConnectTimeout = 25f;
         const byte NoQuadrant = 255;
         /// <summary>Refus volontaires de l'hôte : seuls motifs pour lesquels un casque ne retente pas sa connexion.</summary>
         const string ReasonFull = "Partie complète / Game full";
@@ -56,8 +61,8 @@ namespace Abysses.Network
         public ConnectionState State { get; private set; } = ConnectionState.Offline;
         public ConnectionMode Mode { get; private set; } = ConnectionMode.None;
         public string Status => Loc.T(statusFrench, statusEnglish);
-        string statusFrench = "Hors ligne";
-        string statusEnglish = "Offline";
+        string statusFrench = "Hors ligne — choisis un mode";
+        string statusEnglish = "Offline — pick a mode";
 
         /// <summary>Déclenché à chaque changement d'état (pour l'UI, pas de polling).</summary>
         public event Action StateChanged;
@@ -71,6 +76,7 @@ namespace Abysses.Network
         int lastQuadrant = -1;
         int reconnectsLeft;
         bool reconnecting;
+        float onlineDeadline;
 
         void Awake()
         {
@@ -114,40 +120,72 @@ namespace Abysses.Network
 
         // ---------- Actions du menu ----------
 
-        /// <summary>Partie en ligne via Relay : le premier casque crée la session, les suivants la rejoignent.</summary>
+        /// <summary>
+        /// Partie en ligne via Relay : le premier casque crée la session, les suivants la rejoignent.
+        /// Plusieurs essais (deux casques qui appuient en même temps, réseau mobile lent) ; une session ratée est
+        /// toujours quittée, sinon elle garderait un « membre fantôme » qui finit par remplir ou bloquer la session commune.
+        /// </summary>
         public async void JoinOnline()
         {
             if (IsBusy) return;
             Mode = ConnectionMode.Online;
             SetState(ConnectionState.Connecting, "Connexion aux services Unity…", "Connecting to Unity services…");
-            try
+            Exception last = null;
+            for (int attempt = 1; attempt <= OnlineAttempts; attempt++)
             {
-                if (UnityServices.State != ServicesInitializationState.Initialized)
-                    await UnityServices.InitializeAsync();
-                if (!AuthenticationService.Instance.IsSignedIn)
-                    await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                try
+                {
+                    if (UnityServices.State != ServicesInitializationState.Initialized)
+                        await UnityServices.InitializeAsync();
+                    if (!AuthenticationService.Instance.IsSignedIn)
+                        await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
-                SetState(ConnectionState.Connecting, "Recherche de l'équipe…", "Looking for the team…");
-                PreparePayload();
-                if (reconnecting && !string.IsNullOrEmpty(lastSessionId))
-                {
-                    session = await MultiplayerService.Instance.JoinSessionByIdAsync(lastSessionId);
+                    SetState(ConnectionState.Connecting, attempt == 1 ? "Recherche de l'équipe…" : "Recherche de l'équipe… (essai " + attempt + ")",
+                        attempt == 1 ? "Looking for the team…" : "Looking for the team… (attempt " + attempt + ")");
+                    PreparePayload();
+                    if (reconnecting && !string.IsNullOrEmpty(lastSessionId))
+                    {
+                        session = await MultiplayerService.Instance.JoinSessionByIdAsync(lastSessionId);
+                    }
+                    else
+                    {
+                        // Les pupitres spectateurs ne comptent pas comme plongeurs : une place de plus dans la session.
+                        var options = new SessionOptions { MaxPlayers = config.MaxPlayers + 1, IsPrivate = false }.WithRelayNetwork();
+                        session = await MultiplayerService.Instance.CreateOrJoinSessionAsync(config.SessionName, options);
+                    }
+                    if (Mode != ConnectionMode.Online)
+                    {
+                        // Annulé pendant l'attente (bouton Quitter).
+                        LeaveSessionQuietly();
+                        return;
+                    }
+                    lastSessionId = session.Id;
+                    // L'état passe à Online dans OnClientConnected, une fois Netcode réellement connecté au relais.
+                    onlineDeadline = Time.unscaledTime + OnlineConnectTimeout;
+                    SetState(ConnectionState.Connecting, "Connexion au relais…", "Connecting to the relay…");
+                    return;
                 }
-                else
+                catch (Exception e)
                 {
-                    // Les pupitres spectateurs ne comptent pas comme plongeurs : une place de plus dans la session.
-                    var options = new SessionOptions { MaxPlayers = config.MaxPlayers + 1, IsPrivate = false }.WithRelayNetwork();
-                    session = await MultiplayerService.Instance.CreateOrJoinSessionAsync(config.SessionName, options);
+                    last = e;
+                    Debug.LogWarning($"[Abysses] En ligne, essai {attempt}/{OnlineAttempts} : {e.GetType().Name} — {e.Message}");
+                    LeaveSessionQuietly();
+                    if (Mode != ConnectionMode.Online) return;
+                    if (attempt < OnlineAttempts) await System.Threading.Tasks.Task.Delay(2000);
                 }
-                lastSessionId = session.Id;
-                // L'état passe à Online dans OnClientConnected, une fois Netcode réellement connecté.
             }
-            catch (Exception e)
-            {
-                Debug.LogException(e);
-                session = null;
-                Fail("Connexion en ligne impossible.\nEssayez le réseau local.", "Online connection failed.\nTry the local network.");
-            }
+            if (last != null) Debug.LogException(last);
+            Fail("Connexion en ligne impossible (Internet ?).\nEssayez le réseau local.", "Online connection failed (Internet?).\nTry the local network.");
+        }
+
+        /// <summary>Quitte la session des services en ligne sans attendre (ni planter si elle n'existe plus).</summary>
+        async void LeaveSessionQuietly()
+        {
+            if (session == null) return;
+            ISession leaving = session;
+            session = null;
+            try { await leaving.LeaveAsync(); }
+            catch (Exception e) { Debug.LogWarning("[Abysses] Sortie de session : " + e.Message); }
         }
 
         /// <summary>Héberge une partie sur le réseau local et l'annonce aux autres casques.</summary>
@@ -201,17 +239,12 @@ namespace Abysses.Network
         {
             StopReconnecting();
             Mode = ConnectionMode.None;
-            SetState(ConnectionState.Offline, "Hors ligne", "Offline");
+            SetState(ConnectionState.Offline, "Hors ligne — choisis un mode", "Offline — pick a mode");
             lanDiscovery.Stop();
 
-            if (session != null)
-            {
-                ISession leaving = session;
-                session = null;
-                try { await leaving.LeaveAsync(); }
-                catch (Exception e) { Debug.LogException(e); }
-            }
+            LeaveSessionQuietly();
             if (networkManager.IsListening) networkManager.Shutdown();
+            await System.Threading.Tasks.Task.Yield();
         }
 
         public bool IsBusy => State == ConnectionState.Connecting || State == ConnectionState.Online;
@@ -267,10 +300,17 @@ namespace Abysses.Network
         void OnClientConnected(ulong clientId)
         {
             if (clientId != networkManager.LocalClientId) return;
+            onlineDeadline = 0f;
             StopReconnecting();
             lastMode = Mode;
             if (Spectator) SetState(ConnectionState.Online, "Pupitre connecté", "Console connected");
             else if (Mode == ConnectionMode.Solo) SetState(ConnectionState.Online, "Partie solo", "Solo game");
+            else if (networkManager.IsHost && Mode == ConnectionMode.LanHost)
+            {
+                // L'adresse permet de rejoindre à la main (pupitre « Rejoindre l'IP ») si la découverte automatique est bloquée.
+                string ip = string.Join(" / ", LanDiscovery.LocalAddresses());
+                SetState(ConnectionState.Online, "Partie créée — en attente de l'équipe\nAdresse : " + ip, "Game created — waiting for the team\nAddress: " + ip);
+            }
             else if (networkManager.IsHost) SetState(ConnectionState.Online, "Partie créée — en attente de l'équipe", "Game created — waiting for the team");
             else SetState(ConnectionState.Online, "Équipe rejointe", "Team joined");
         }
@@ -287,7 +327,8 @@ namespace Abysses.Network
             // Arrêt volontaire (Leave) : l'état est déjà Offline.
             if (State == ConnectionState.Offline) return;
             bool wasOnline = State == ConnectionState.Online;
-            session = null;
+            // On sort proprement de la session en ligne (la reconnexion la rejoindra par son identifiant).
+            LeaveSessionQuietly();
             Mode = ConnectionMode.None;
             // Motif envoyé par l'hôte en cas de refus (partie complète, plongée commencée…).
             string reason = networkManager.DisconnectReason;
@@ -359,12 +400,21 @@ namespace Abysses.Network
 
         void Update()
         {
-            // Seul cas temporisé : l'attente d'un hôte LAN.
+            // En ligne : session obtenue mais le relais ne répond pas (hôte parti sans fermer la session, réseau coupé).
+            if (Mode == ConnectionMode.Online && State == ConnectionState.Connecting && onlineDeadline > 0f && Time.unscaledTime > onlineDeadline)
+            {
+                onlineDeadline = 0f;
+                LeaveSessionQuietly();
+                if (networkManager.IsListening) networkManager.Shutdown();
+                Fail("L'hôte en ligne ne répond pas.\nRéessayez, ou passez en réseau local.", "The online host is not responding.\nTry again, or use the local network.");
+                return;
+            }
+            // Attente d'un hôte LAN.
             if (Mode != ConnectionMode.LanClient || State != ConnectionState.Connecting || networkManager.IsClient) return;
             if (Time.unscaledTime > lanJoinDeadline)
             {
                 lanDiscovery.Stop();
-                Fail("Aucune partie trouvée sur le réseau local.", "No game found on the local network.");
+                Fail("Aucune partie trouvée sur le réseau local.\nL'hôte a-t-il cliqué « Héberger » ? Même Wi-Fi ?", "No game found on the local network.\nDid the host press “Host”? Same Wi-Fi?");
             }
         }
 

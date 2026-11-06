@@ -2173,6 +2173,17 @@ namespace Abysses.EditorTools
             return list;
         }
 
+        // Palette du menu : fond abyssal, accent cyan, action principale verte, sortie rouge.
+        static readonly Color MenuAccent = new Color(0.35f, 0.9f, 1f);
+        static readonly Color MenuPrimary = new Color(0.1f, 0.55f, 0.4f);
+        static readonly Color MenuSecondary = new Color(0.07f, 0.22f, 0.29f);
+        static readonly Color MenuDanger = new Color(0.5f, 0.12f, 0.1f);
+
+        /// <summary>
+        /// Menu VR : en-tête, carte d'état (voyant + message), puis les choix.
+        /// Hors ligne : deux grandes cartes « réseau local » (le cas normal chez EVA : un casque héberge, les autres
+        /// rejoignent), puis « en ligne » et « solo » en options secondaires. En partie : lancer la plongée en avant.
+        /// </summary>
         static void BuildMenu(Transform rig, Camera camera)
         {
             var canvasGo = new GameObject("MainMenu", typeof(RectTransform));
@@ -2183,48 +2194,127 @@ namespace Abysses.EditorTools
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = camera;
             canvasGo.AddComponent<TrackedDeviceGraphicRaycaster>();
-            ((RectTransform)canvasGo.transform).sizeDelta = new Vector2(820f, 1200f);
+            ((RectTransform)canvasGo.transform).sizeDelta = new Vector2(860f, 1240f);
 
             RectTransform panel = UIRect("Panel", canvasGo.transform);
             Stretch(panel);
-            panel.gameObject.AddComponent<Image>().color = new Color(0.02f, 0.06f, 0.09f, 0.9f);
+            Image background = panel.gameObject.AddComponent<Image>();
+            background.sprite = RoundedSprite();
+            background.type = Image.Type.Sliced;
+            background.color = new Color(0.015f, 0.05f, 0.075f, 0.94f);
             var layout = panel.gameObject.AddComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(48, 48, 40, 40);
-            layout.spacing = 16f;
+            layout.padding = new RectOffset(52, 52, 36, 36);
+            layout.spacing = 14f;
             layout.childControlHeight = true;
             layout.childControlWidth = true;
             layout.childForceExpandHeight = false;
             layout.childForceExpandWidth = true;
 
-            UIText(panel, "Title", "ABYSSES", 96f, FontStyles.Bold, 110f, new Color(0.4f, 0.95f, 1f));
-            UIText(panel, "Subtitle", "Station HADAL-4", 34f, FontStyles.Italic, 44f, new Color(0.7f, 0.85f, 0.9f));
-            TextMeshProUGUI status = UIText(panel, "Status", "Hors ligne", 34f, FontStyles.Normal, 96f, Color.white);
-            TextMeshProUGUI players = UIText(panel, "Players", "", 30f, FontStyles.Normal, 40f, new Color(0.7f, 0.9f, 1f));
-            TextMeshProUGUI hint = UIText(panel, "Hint", "", 28f, FontStyles.Italic, 80f, new Color(1f, 0.85f, 0.5f));
+            // En-tête
+            UIText(panel, "Title", "<cspace=0.18em>ABYSSES</cspace>", 92f, FontStyles.Bold, 100f, MenuAccent);
+            UIText(panel, "Subtitle", "Station HADAL-4  ·  -4 000 m", 30f, FontStyles.Italic, 36f, new Color(0.65f, 0.8f, 0.86f));
+            Divider(panel);
+
+            // Carte d'état : voyant + message de connexion, nombre de plongeurs, consigne.
+            RectTransform card = UIRect("StatusCard", panel);
+            Image cardImage = card.gameObject.AddComponent<Image>();
+            cardImage.sprite = RoundedSprite();
+            cardImage.type = Image.Type.Sliced;
+            cardImage.color = new Color(0.04f, 0.12f, 0.16f, 1f);
+            var cardLayout = card.gameObject.AddComponent<VerticalLayoutGroup>();
+            cardLayout.padding = new RectOffset(28, 28, 18, 18);
+            cardLayout.spacing = 6f;
+            cardLayout.childControlHeight = true;
+            cardLayout.childControlWidth = true;
+            cardLayout.childForceExpandHeight = false;
+            RectTransform statusRow = UIRect("StatusRow", card);
+            var rowLayout = statusRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+            rowLayout.spacing = 18f;
+            rowLayout.childAlignment = TextAnchor.MiddleCenter;
+            rowLayout.childControlWidth = true;
+            rowLayout.childControlHeight = true;
+            rowLayout.childForceExpandWidth = false;
+            rowLayout.childForceExpandHeight = false;
+            RectTransform dot = UIRect("StatusDot", statusRow);
+            Image dotImage = dot.gameObject.AddComponent<Image>();
+            dotImage.sprite = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/Knob.psd");
+            dotImage.color = new Color(0.55f, 0.6f, 0.65f);
+            var dotSize = dot.gameObject.AddComponent<LayoutElement>();
+            dotSize.preferredWidth = dotSize.preferredHeight = 30f;
+            TextMeshProUGUI status = UIText(statusRow, "Status", "Hors ligne", 34f, FontStyles.Bold, 60f, Color.white);
+            status.GetComponent<LayoutElement>().flexibleWidth = 1f;
+            status.alignment = TextAlignmentOptions.Left;
+            TextMeshProUGUI players = UIText(card, "Players", "", 28f, FontStyles.Normal, 36f, new Color(0.7f, 0.9f, 1f));
+            TextMeshProUGUI hint = UIText(card, "Hint", "", 27f, FontStyles.Italic, 66f, new Color(1f, 0.85f, 0.5f));
 
             TextMeshProUGUI leaderboard = UIText(panel, "Leaderboard", "", 26f, FontStyles.Normal, 190f, new Color(0.75f, 0.95f, 1f));
 
+            // Hors ligne
             RectTransform offline = Group(panel, "Offline");
-            Button joinOnline = UIButton(offline, "Rejoindre l'équipe (en ligne)", "Join the team (online)");
-            Button hostLan = UIButton(offline, "Héberger (réseau local)", "Host (local network)");
-            Button joinLan = UIButton(offline, "Rejoindre (réseau local)", "Join (local network)");
-            Button solo = UIButton(offline, "Jouer en solo", "Play solo");
+            Localize(UIText(offline, "Section_Local", "JOUER ENSEMBLE  ·  MÊME WI-FI", 26f, FontStyles.Bold, 34f, MenuAccent), "JOUER ENSEMBLE  ·  MÊME WI-FI", "PLAY TOGETHER  ·  SAME WI-FI");
+            Button hostLan = UICard(offline, "Héberger la partie", "Ce casque crée la partie. Les autres la rejoignent.",
+                "Host the game", "This headset creates the game. The others join it.", MenuPrimary);
+            Button joinLan = UICard(offline, "Rejoindre la partie", "Trouve tout seul le casque hôte sur le même Wi-Fi.",
+                "Join the game", "Finds the host headset on the same Wi-Fi by itself.", MenuSecondary);
+            Localize(UIText(offline, "Section_Other", "AUTRES MODES", 24f, FontStyles.Bold, 34f, new Color(0.55f, 0.7f, 0.78f)), "AUTRES MODES", "OTHER MODES");
+            RectTransform row = UIRect("Row", offline);
+            var rowGroup = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            rowGroup.spacing = 14f;
+            rowGroup.childControlWidth = true;
+            rowGroup.childControlHeight = true;
+            rowGroup.childForceExpandWidth = true;
+            Button joinOnline = UIButton(row, "En ligne (Internet)", "Online (Internet)", MenuSecondary);
+            Button solo = UIButton(row, "Jouer en solo", "Play solo", MenuSecondary);
 
+            // En partie
             RectTransform online = Group(panel, "Online");
-            Button start = UIButton(online, "Lancer la plongée");
-            Button easy = UIButton(online, "Mode facile : non");
-            Button recenter = UIButton(online, "Recalibrer ma position", "Recalibrate my position");
-            Button leave = UIButton(online, "Quitter la partie", "Leave the game");
+            Button start = UIButton(online, "Lancer la plongée", null, MenuPrimary, 100f, 42f);
+            Button easy = UIButton(online, "Mode facile : non", null, MenuSecondary);
+            Button recenter = UIButton(online, "Recalibrer ma position", "Recalibrate my position", MenuSecondary);
+            Button leave = UIButton(online, "Quitter la partie", "Leave the game", MenuDanger);
 
-            Button language = UIButton(panel, "English");
+            Divider(panel);
+            Button language = UIButton(panel, "English", null, new Color(0.05f, 0.14f, 0.18f), 62f, 28f);
 
             var menu = canvasGo.AddComponent<MainMenu>();
             SetFields(menu,
-                ("panel", panel.gameObject), ("statusText", status), ("playersText", players),
+                ("panel", panel.gameObject), ("statusText", status), ("playersText", players), ("statusDot", dotImage),
                 ("offlineGroup", offline.gameObject), ("joinOnlineButton", joinOnline), ("hostLanButton", hostLan),
                 ("joinLanButton", joinLan), ("soloButton", solo), ("onlineGroup", online.gameObject),
                 ("startButton", start), ("recenterButton", recenter), ("leaveButton", leave), ("hintText", hint),
                 ("languageButton", language), ("easyButton", easy), ("leaderboardText", leaderboard));
+        }
+
+        static void Localize(Component text, string french, string english) =>
+            SetFields(text.gameObject.AddComponent<LocalizedText>(), ("french", french), ("english", english));
+
+        static Sprite RoundedSprite() => AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
+
+        static void Divider(Transform parent)
+        {
+            RectTransform line = UIRect("Divider", parent);
+            line.gameObject.AddComponent<Image>().color = new Color(MenuAccent.r, MenuAccent.g, MenuAccent.b, 0.35f);
+            line.gameObject.AddComponent<LayoutElement>().preferredHeight = 3f;
+        }
+
+        /// <summary>Grande carte de choix : titre + une phrase d'explication, liseré d'accent à gauche.</summary>
+        static Button UICard(Transform parent, string title, string description, string titleEn, string descriptionEn, Color color)
+        {
+            string fr = "<size=40><b>" + title + "</b></size>\n<size=26><color=#B8D8E0>" + description + "</color></size>";
+            string en = "<size=40><b>" + titleEn + "</b></size>\n<size=26><color=#B8D8E0>" + descriptionEn + "</color></size>";
+            Button button = UIButton(parent, fr, en, color, 132f, 40f);
+            TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
+            label.alignment = TextAlignmentOptions.Left;
+            RectTransform labelRect = label.rectTransform;
+            labelRect.offsetMin = new Vector2(44f, 8f);
+            labelRect.offsetMax = new Vector2(-20f, -8f);
+            RectTransform accent = UIRect("Accent", button.transform);
+            accent.anchorMin = new Vector2(0f, 0.12f);
+            accent.anchorMax = new Vector2(0f, 0.88f);
+            accent.sizeDelta = new Vector2(8f, 0f);
+            accent.anchoredPosition = new Vector2(20f, 0f);
+            accent.gameObject.AddComponent<Image>().color = MenuAccent;
+            return button;
         }
 
         static RectTransform Group(Transform parent, string name)
@@ -2268,27 +2358,33 @@ namespace Abysses.EditorTools
             return label;
         }
 
-        static Button UIButton(Transform parent, string text, string english = null)
+        static Button UIButton(Transform parent, string text, string english = null, Color? color = null, float height = 84f, float fontSize = 34f)
         {
+            Color baseColor = color ?? MenuSecondary;
             RectTransform rect = UIRect("Button - " + text, parent);
             var image = rect.gameObject.AddComponent<Image>();
+            image.sprite = RoundedSprite();
+            image.type = Image.Type.Sliced;
             image.color = Color.white;
             var button = rect.gameObject.AddComponent<Button>();
             ColorBlock colors = button.colors;
-            colors.normalColor = new Color(0.06f, 0.3f, 0.38f, 1f);
-            colors.highlightedColor = new Color(0.1f, 0.5f, 0.6f, 1f);
-            colors.pressedColor = new Color(0.2f, 0.75f, 0.85f, 1f);
-            colors.disabledColor = new Color(0.15f, 0.18f, 0.2f, 0.6f);
+            colors.normalColor = baseColor;
+            colors.highlightedColor = Color.Lerp(baseColor, MenuAccent, 0.35f);
+            colors.selectedColor = baseColor;
+            colors.pressedColor = Color.Lerp(baseColor, MenuAccent, 0.7f);
+            colors.disabledColor = new Color(0.12f, 0.15f, 0.17f, 0.7f);
+            colors.fadeDuration = 0.08f;
             button.colors = colors;
-            rect.gameObject.AddComponent<LayoutElement>().preferredHeight = 84f;
+            rect.gameObject.AddComponent<LayoutElement>().preferredHeight = height;
 
             RectTransform labelRect = UIRect("Label", rect);
             Stretch(labelRect);
             var label = labelRect.gameObject.AddComponent<TextMeshProUGUI>();
             label.text = text;
-            label.fontSize = 36f;
+            label.fontSize = fontSize;
             label.alignment = TextAlignmentOptions.Center;
             label.color = Color.white;
+            label.textWrappingMode = TextWrappingModes.Normal;
             if (english != null) SetFields(labelRect.gameObject.AddComponent<LocalizedText>(), ("french", text), ("english", english));
             return button;
         }

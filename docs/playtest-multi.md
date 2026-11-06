@@ -1,10 +1,10 @@
 # Partie de test automatique — 2 plongeurs + pupitre
 
-> 2026-11-06 10:28 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-06 14:26 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Hôte réseau local lancé (plongeur ORANGE)
-- ✅ Client Mac lancé (2e plongeur)
+- ✅ Client Mac lancé (2e plongeur, trouve l'hôte par la découverte réseau local)
 - ✅ 2e plongeur connecté, quadrant CYAN
 - ✅ Les 2 plongeurs détectés dans leur cabine
 - ✅ Pupitre spectateur lancé
@@ -25,7 +25,7 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (134)
+- ✅ Balise morse : code à 3 chiffres tiré (429)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
 - ✅ Étage 2 : « passer l'étage » (pupitre) → étage résolu
@@ -43,9 +43,11 @@
 **Console : aucune erreur.**
 
 **Journal client_plongeur.log** : 
-  - `[Abysses] Connexion : Connecting — Connexion à 127.0.0.1…`
+  - `[Abysses] Connexion : Connecting — Recherche d'une partie locale…`
+  - `[Abysses] Connexion : Connecting — Partie trouvée, connexion…`
   - `[Abysses] Connexion : Online — Équipe rejointe`
   - `[Abysses] Connexion : Failed — Connexion perdue — reconnexion…`
+  - `[Abysses] Connexion : Connecting — Connexion à 10.136.10.25…`
 
 **Journal client_pupitre.log** : 
   - `[Abysses] Connexion : Connecting — Connexion à 127.0.0.1…`

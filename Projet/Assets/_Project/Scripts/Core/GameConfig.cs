@@ -20,7 +20,7 @@ namespace Abysses.Core
         [SerializeField] ushort lanDiscoveryPort = 47777;
         [Tooltip("Fréquence de synchronisation réseau (Hz). 30 suffit pour des avatars VR interpolés.")]
         [SerializeField, Range(10, 60)] int networkTickRate = 30;
-        [SerializeField, Min(1f)] float lanJoinTimeout = 10f;
+        [SerializeField, Min(1f)] float lanJoinTimeout = 15f;
 
         static GameConfig instance;
 

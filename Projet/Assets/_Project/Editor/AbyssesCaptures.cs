@@ -126,6 +126,29 @@ namespace Abysses.EditorTools
             Render(new View("surface_plateforme", new Vector3(3.2f, 1.7f, 1.2f), new Vector3(9f, 2.2f, 4.5f)), sky, Path.Combine(dir, "surface_plateforme.png"), 600f);
             Render(new View("surface_large", new Vector3(14f, 1.7f, 8f), new Vector3(-60f, 6f, 20f)), sky, Path.Combine(dir, "surface_large.png"), 600f);
             Render(new View("surface_hublot", new Vector3(7.5f, 1.55f, 4f), new Vector3(5f, 1.4f, 4f)), sky, Path.Combine(dir, "surface_hublot.png"), 600f);
+
+            // Menu principal (état hors ligne), devant la plateforme.
+            foreach (GameObject root in station.GetRootGameObjects())
+            {
+                var menu = root.GetComponentInChildren<Abysses.UI.MainMenu>(true);
+                if (menu == null) continue;
+                root.SetActive(true);
+                // Seul le menu : pas de voile d'alerte, de montre ni de mains dans l'image.
+                foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true))
+                    if (!r.transform.IsChildOf(menu.transform)) r.enabled = false;
+                Transform online = menu.transform.Find("Panel/Online");
+                Transform board = menu.transform.Find("Panel/Leaderboard");
+                if (online != null) online.gameObject.SetActive(false);
+                if (board != null) board.gameObject.SetActive(false);
+                Canvas.ForceUpdateCanvases();
+                Vector3 center = menu.transform.position;
+                Render(new View("menu_principal", center - menu.transform.forward * 1.05f, center), sky, Path.Combine(dir, "menu_principal.png"), 600f);
+                if (online != null) online.gameObject.SetActive(true);
+                Transform offline = menu.transform.Find("Panel/Offline");
+                if (offline != null) offline.gameObject.SetActive(false);
+                Canvas.ForceUpdateCanvases();
+                Render(new View("menu_en_partie", center - menu.transform.forward * 1.05f, center), sky, Path.Combine(dir, "menu_en_partie.png"), 600f);
+            }
         }
 
         /// <summary>Applique brouillard et lumière ambiante de l'étage (FloorAmbience ne tourne qu'en jeu).</summary>
