@@ -36,6 +36,9 @@ namespace Abysses.EditorTools
                     new View("etage1_digicode", new Vector3(9.4f, 1.55f, 1.5f), new Vector3(10f, 1.3f, 0.34f)),
                     // Hublots sur l'océan, aux deux bouts du mur extérieur du module Q0 (x = 1,1 et 13,9).
                     new View("etage1_ocean_bureau", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
+                    new View("etage1_disjoncteurs", new Vector3(1.7f, 1.45f, 2.4f), new Vector3(0.34f, 1.3f, 2.4f)),
+                    new View("etage1_note", new Vector3(2.5f, 1.45f, 1.45f), new Vector3(2.1f, 0.79f, 0.62f)),
+                    new View("etage1_fusible", new Vector3(5.0f, 1.35f, 1.05f), new Vector3(5.0f, 1.2f, 0.34f)),
                     new View("etage1_ocean_casiers", new Vector3(13.2f, 1.55f, 2.9f), new Vector3(13.9f, 1.45f, 0.3f)),
                 }
             },
@@ -44,6 +47,8 @@ namespace Abysses.EditorTools
                 {
                     new View("etage2_module", new Vector3(13.5f, 2f, 1.2f), new Vector3(2f, 1.4f, 6f)),
                     new View("etage2_manometre", new Vector3(5f, 1.6f, 2.3f), new Vector3(4.5f, 1.4f, 0.34f)),
+                    new View("etage2_morse", new Vector3(1.75f, 1.45f, 3.7f), new Vector3(0.34f, 1.35f, 3.7f)),
+                    new View("etage2_balise", new Vector3(13.9f, 1.5f, 1.5f), new Vector3(13.9f, 1.45f, -2.8f)),
                     new View("etage2_ocean", new Vector3(13.2f, 1.55f, 2.9f), new Vector3(13.9f, 1.45f, 0.3f)),
                     new View("etage2_fuite", new Vector3(4f, 1.7f, 4.2f), new Vector3(0.45f, 2.1f, 1.7f)),
                 }
@@ -53,6 +58,7 @@ namespace Abysses.EditorTools
                 {
                     new View("etage3_reacteur", new Vector3(9f, 1.7f, 2f), new Vector3(15.5f, 1.4f, 8.25f)),
                     new View("etage3_salle", new Vector3(1.5f, 2.2f, 1.2f), new Vector3(20f, 0.8f, 12f)),
+                    new View("etage3_sonar", new Vector3(1.7f, 1.4f, 3.35f), new Vector3(0.34f, 1.25f, 3.35f)),
                     new View("etage3_ocean", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
                 }
             },
@@ -96,8 +102,30 @@ namespace Abysses.EditorTools
                     Render(new View("etage3_final", new Vector3(9f, 1.6f, 2.5f), new Vector3(15.5f, 2.2f, 8.25f)), RenderSettings.fogColor, Path.Combine(dir, "etage3_final.png"));
                 }
             }
+            CaptureSurface(dir);
             EditorSceneManager.OpenScene(SceneDir + "/Station.unity", OpenSceneMode.Single);
             Debug.Log("[Abysses] Captures enregistrées dans " + dir);
+        }
+
+        /// <summary>Surface : plateforme vue du pont, cabine et potence, et vue par le hublot gauche d'une cabine.</summary>
+        static void CaptureSurface(string dir)
+        {
+            Scene station = EditorSceneManager.OpenScene(SceneDir + "/Station.unity", OpenSceneMode.Single);
+            foreach (GameObject root in station.GetRootGameObjects())
+                if (root.name != "Cabins" && root.name != "Surface") root.SetActive(false);
+            var surface = Object.FindFirstObjectByType<SurfaceWorld>();
+            var so = new SerializedObject(surface);
+            Color sky = so.FindProperty("sky").colorValue;
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogStartDistance = 80f;
+            RenderSettings.fogEndDistance = 520f;
+            RenderSettings.fogColor = so.FindProperty("horizon").colorValue;
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = so.FindProperty("surfaceAmbient").colorValue;
+            Render(new View("surface_plateforme", new Vector3(3.2f, 1.7f, 1.2f), new Vector3(9f, 2.2f, 4.5f)), sky, Path.Combine(dir, "surface_plateforme.png"), 600f);
+            Render(new View("surface_large", new Vector3(14f, 1.7f, 8f), new Vector3(-60f, 6f, 20f)), sky, Path.Combine(dir, "surface_large.png"), 600f);
+            Render(new View("surface_hublot", new Vector3(7.5f, 1.55f, 4f), new Vector3(5f, 1.4f, 4f)), sky, Path.Combine(dir, "surface_hublot.png"), 600f);
         }
 
         /// <summary>Applique brouillard et lumière ambiante de l'étage (FloorAmbience ne tourne qu'en jeu).</summary>
@@ -138,14 +166,14 @@ namespace Abysses.EditorTools
             }
         }
 
-        static void Render(View view, Color background, string path)
+        static void Render(View view, Color background, string path, float farClip = 40f)
         {
             var go = new GameObject("CaptureCamera");
             var camera = go.AddComponent<Camera>();
             camera.transform.SetPositionAndRotation(view.Eye, Quaternion.LookRotation(view.Target - view.Eye));
             camera.fieldOfView = 80f;
             camera.nearClipPlane = 0.03f;
-            camera.farClipPlane = 40f;
+            camera.farClipPlane = farClip;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = background;
 

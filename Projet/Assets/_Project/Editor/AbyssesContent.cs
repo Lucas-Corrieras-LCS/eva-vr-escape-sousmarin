@@ -25,6 +25,8 @@ namespace Abysses.EditorTools
             public AudioClip AmbienceStation, AmbienceHabitat, AmbienceLabo, AmbienceCoeur;
             public AudioClip Bubbles, Rumble, ZoneAlarm, Key, Error, Success, FuseInsert, Hatch, LeverFail, ReactorTone, ReactorFail, FloorSolved, Finale;
             public AudioClip CreakLow, CreakHigh, Drip, SteamHiss, NeonBuzz, PowerUp, Knock, HintChime, RadioStatic;
+            /// <summary>Surface et plongée, nouvelles énigmes.</summary>
+            public AudioClip Waves, Winch, Splash, Gull, MorseTone, SimonTone, Spark, Click;
             public Texture2D[] Caustics;
             public Texture2D[] Glyphs;
             public Texture2D Dot, ShaftGradient;
@@ -65,6 +67,14 @@ namespace Abysses.EditorTools
                 Knock = OneShot("SFX_Knock", 0.3f, Knock),
                 HintChime = OneShot("SFX_HintChime", 1.4f, HintChime),
                 RadioStatic = Loop("SFX_RadioStatic", 4f, RadioStatic),
+                Waves = Loop("AMB_Surface", 10f, Waves),
+                Winch = OneShot("SFX_Winch", 1.8f, Winch),
+                Splash = OneShot("SFX_Splash", 1.6f, Splash),
+                Gull = OneShot("SFX_Gull", 0.9f, Gull),
+                MorseTone = Loop("SFX_MorseTone", 1f, MorseTone),
+                SimonTone = OneShot("SFX_SimonTone", 0.5f, SimonTone),
+                Spark = OneShot("SFX_Spark", 0.8f, Spark),
+                Click = OneShot("SFX_Click", 0.08f, Click),
             };
 
             c.Caustics = new Texture2D[CausticFrames];
@@ -445,6 +455,76 @@ namespace Abysses.EditorTools
         static float HintChime(float t, float d, System.Random r) =>
             Chime(t, 0f, 880f, 0.35f) * 0.7f + Chime(t, 0.14f, 1318.5f, 0.5f) * 0.6f + 0.2f * SonarPing(t, 0f, 1760f);
 
+        /// <summary>Surface : ressac (houle lente), vent léger.</summary>
+        static float Waves(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = lp3 = 0f; }
+            float swell = 0.55f + 0.45f * Mathf.Sin(Tau * t / d * 2f) * Mathf.Sin(Tau * t / d * 3f + 0.7f);
+            float surf = LowPass(ref lp1, White(r), 0.08f) * swell;
+            float hiss = (White(r) - LowPass(ref lp2, White(r), 0.3f)) * 0.08f * swell * swell;
+            float wind = LowPass(ref lp3, White(r), 0.01f) * (0.6f + 0.4f * Mathf.Sin(Tau * t / d));
+            return surf * 1.2f + hiss + wind * 2f;
+        }
+
+        /// <summary>Treuil qui se libère : claquement métallique puis cliquets qui ralentissent.</summary>
+        static float Winch(float t, float d, System.Random r)
+        {
+            if (t == 0f) lp1 = 0f;
+            float clank = (Mathf.Sin(Tau * 180f * t) * 0.6f + Mathf.Sin(Tau * 517f * t) * 0.4f + Mathf.Sin(Tau * 1210f * t) * 0.2f) * Env(t, 0.001f, 0.25f);
+            float ratchet = 0f;
+            for (int i = 1; i < 14; i++)
+            {
+                float start = 0.25f + i * (0.05f + i * 0.008f);
+                ratchet += Mathf.Sin(Tau * 2400f * (t - start)) * Env(Mathf.Max(0f, t - start), 0.0005f, 0.012f) * (t >= start ? 1f : 0f);
+            }
+            float groan = Mathf.Sin(Tau * (70f + 30f * t) * t) * Env(t, 0.05f, 0.8f) * 0.4f;
+            return clank + ratchet * 0.35f + groan + LowPass(ref lp1, White(r), 0.3f) * Env(t, 0.001f, 0.04f);
+        }
+
+        /// <summary>La cabine traverse la surface : gerbe d'eau, puis bulles.</summary>
+        static float Splash(float t, float d, System.Random r)
+        {
+            if (t == 0f) { lp1 = lp2 = 0f; }
+            float crash = LowPass(ref lp1, White(r), 0.35f) * Env(t, 0.01f, 0.35f);
+            float body = LowPass(ref lp2, White(r), 0.05f) * Env(t, 0.02f, 0.6f) * 2f;
+            float bubbles = 0f;
+            for (int i = 0; i < 9; i++) bubbles += Bubble(t, 0.3f + i * 0.11f, 380f + i * 70f);
+            return crash + body + bubbles * 0.25f;
+        }
+
+        /// <summary>Cri de mouette : glissando descendant, un peu rauque.</summary>
+        static float Gull(float t, float d, System.Random r)
+        {
+            float call = 0f;
+            for (int k = 0; k < 2; k++)
+            {
+                float u = t - k * 0.38f;
+                if (u < 0f || u > 0.32f) continue;
+                float f = 1900f - 900f * (u / 0.32f);
+                call += (Mathf.Sin(Tau * f * u) + 0.4f * Mathf.Sin(Tau * f * 2.01f * u)) * Env(u, 0.02f, 0.12f);
+            }
+            return call * (0.85f + 0.15f * White(r));
+        }
+
+        /// <summary>Bip morse (boucle jouée pendant chaque signal de la balise).</summary>
+        static float MorseTone(float t, float d, System.Random r) => Mathf.Sin(Tau * 660f * t) * 0.8f + Mathf.Sin(Tau * 1320f * t) * 0.1f;
+
+        /// <summary>Note de la console sonar (la hauteur change avec le pitch de la source).</summary>
+        static float SimonTone(float t, float d, System.Random r) =>
+            (Mathf.Sin(Tau * 523.25f * t) + 0.3f * Mathf.Sin(Tau * 1046.5f * t)) * Env(t, 0.01f, 0.25f);
+
+        /// <summary>Court-circuit : crépitement d'étincelles.</summary>
+        static float Spark(float t, float d, System.Random r)
+        {
+            float crackle = r.NextDouble() < 0.02 * Env(t, 0.001f, 0.3f) ? White(r) * 3f : 0f;
+            float buzz = Mathf.Sign(Mathf.Sin(Tau * 120f * t)) * 0.25f * Env(t, 0.001f, 0.2f);
+            return crackle + buzz + White(r) * 0.3f * Env(t, 0.001f, 0.05f);
+        }
+
+        /// <summary>Clic mécanique d'un bouton.</summary>
+        static float Click(float t, float d, System.Random r) =>
+            (Mathf.Sin(Tau * 2200f * t) * 0.6f + White(r) * 0.4f) * Env(t, 0.0003f, 0.008f);
+
         /// <summary>Grésillement radio (lecture du journal de bord).</summary>
         static float RadioStatic(float t, float d, System.Random r)
         {
@@ -687,7 +767,7 @@ namespace Abysses.EditorTools
             return Mathf.Max(Mathf.Max(body * 5f, fin * 4f), tail);
         }
 
-        static Texture2D Png(string name, Color[] pixels, int width, int height, bool linearGray, bool clamp, bool normalMap = false, int maxSize = 256)
+        internal static Texture2D Png(string name, Color[] pixels, int width, int height, bool linearGray, bool clamp, bool normalMap = false, int maxSize = 256)
         {
             var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
             texture.SetPixels(pixels);

@@ -36,6 +36,10 @@ namespace Abysses.Level
         [SerializeField] int[] floorDepths = { 0, 200, 1500, 4000 };
         [Tooltip("Durée minimale d'une descente en ascenseur (s).")]
         [SerializeField, Min(2f)] float descentDuration = 8f;
+        [Tooltip("Première plongée (surface → étage 1) : plus longue, on voit la mer monter devant les hublots.")]
+        [SerializeField, Min(2f)] float firstDescentDuration = 22f;
+        [Tooltip("Pendant la première plongée, l'étage 1 n'est chargé qu'une fois la surface masquée par le puits d'eau (SurfaceWorld).")]
+        [SerializeField, Min(0f)] float surfaceHideTime = 9.5f;
         [Tooltip("Délai laissé à un joueur déconnecté pour revenir avant que son module ne soit résolu automatiquement (s).")]
         [SerializeField, Min(0f)] float reconnectGrace = 20f;
 
@@ -69,6 +73,9 @@ namespace Abysses.Level
 
         public int FloorCount => floorScenes.Length;
         public float DescentDuration => descentDuration;
+
+        /// <summary>Durée de la descente vers <paramref name="toFloor"/> (la première, depuis la surface, est plus longue).</summary>
+        public float DescentDurationFor(int toFloor) => toFloor == 1 ? firstDescentDuration : descentDuration;
 
         Scene loadedFloor;
         bool sceneEventDone;
@@ -285,7 +292,8 @@ namespace Abysses.Level
         {
             Phase.Value = GamePhase.Descending;
             ReadyMask.Value = 0;
-            float earliestArrival = Time.unscaledTime + descentDuration;
+            float started = Time.unscaledTime;
+            float earliestArrival = started + DescentDurationFor(floor);
 
             if (loadedFloor.IsValid() && loadedFloor.isLoaded)
             {
@@ -293,6 +301,10 @@ namespace Abysses.Level
                 if (NetworkManager.SceneManager.UnloadScene(loadedFloor) == SceneEventProgressStatus.Started)
                     yield return new WaitUntil(() => sceneEventDone);
             }
+
+            // Depuis la surface : on attend que les cabines soient sous l'eau (surface masquée) avant de charger l'étage.
+            if (floor == 1)
+                while (Time.unscaledTime < started + surfaceHideTime) yield return null;
 
             string sceneName = floorScenes[floor - 1];
             sceneEventDone = false;

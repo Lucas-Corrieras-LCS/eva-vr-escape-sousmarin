@@ -7,6 +7,38 @@
 
 Les **3 étages se jouent de bout en bout**, de la surface jusqu'à la remontée finale, **en solo et à 2 joueurs** dans l'éditeur. Console sans erreur ; seul avertissement : les manettes *simulées* de l'éditeur ne savent pas vibrer (sans conséquence sur le Quest).
 
+## Mise à jour du 2026-11-06 — branche `feat/surface-et-plongee`
+
+### Audit des branches
+
+| Branche | État |
+|---------|------|
+| `main` | Passe artistique de Lucas (e4598ab). Ne contient pas encore les améliorations (pas de PR fusionnée). |
+| `feat/ameliorations-jeu` | `main` + améliorations + fusion de la passe artistique (b8f153a, local). |
+| `feat/test-casque` (Lucas) | Premier test Quest 2 : 57 FPS au lieu de 72, GPU à 98 % → rendu fovéal, résolution 0,9, rotation au stick, « Recommencer ». Fusionnée ici. |
+| `feat/surface-et-plongee` | Tout ce qui précède + cette session. **C'est la branche à jour.** |
+
+### Ajouté
+
+| Domaine | Ajout |
+|---------|-------|
+| Surface (C8) | Plateforme offshore au large d'une île : pont percé d'un puits autour de chaque cabine, garde-corps le long de chaque zone de jeu, potence + câble au-dessus de chaque cabine, mer, 3 îles low poly avec palmiers, phare à faisceau tournant, bateau qui tangue, nuages, mouettes, soleil, ressac |
+| Plongée | Première plongée de 22 s vue par les hublots (agrandis à 76 cm) : treuil qui lâche (secousse, vibration), la mer monte et passe les hublots (éclaboussure), l'eau s'assombrit, les piliers défilent ; un puits d'eau masque le chargement de l'étage ; remontée inverse en fin de partie (portes fermées jusqu'à l'émersion). La caméra n'est jamais bougée (confort). |
+| Difficulté | Une énigme **par module et par étage**, jamais résolue automatiquement : en solo il y a vraiment de quoi chercher. Disjoncteurs (étage 1, note à lire, court-circuit si on se trompe), morse (étage 2, balise derrière le hublot, table au mur, cadenas), console sonar (étage 3, mémoire 6 notes). Tirages aléatoires à chaque partie. |
+| Lisibilité | Vrai porte-fusible (socle céramique, pinces, voyant) et fusible à cartouche ; boutons physiques qui s'enfoncent avec un clic ; textes contrastés ; aide-mémoire des boutons collé aux manettes (surface + 2 premières minutes) |
+| Tests sans casque | Déplacement à la manette de jeu (debug, coupé dans l'APK EVA) |
+
+### Vérifié
+
+- Partie solo automatique : 58/58, aucune erreur (les nouvelles énigmes sont résolues par de vrais appuis, erreurs comprises).
+- Ergonomie et partie à 2 + pupitre : voir `docs/ergonomie.md` et `docs/playtest-multi.md`.
+- Captures : `docs/captures/surface_*.png`, `etage1_disjoncteurs`, `etage1_fusible`, `etage2_morse`, `etage2_balise`, `etage3_sonar`.
+
+### Reste à faire
+
+- **Tester au casque** : FPS avec la surface (une lumière temps réel, maillages fusionnés), confort de la plongée, lisibilité de la note et de la table morse.
+- Faire valider par Lucas les ajouts hors consignes (WORKFLOW), puis PR vers `main`.
+
 ## Passe artistique (2026-11-05)
 
 Le décor n'est plus en blockout. Tout reste généré par *Abysses → Tout construire + baker l'éclairage* (nouveau fichier `AbyssesArt.cs`), sans aucun asset externe. Captures : [`docs/captures/`](captures/).

@@ -23,7 +23,15 @@ Projet d'évaluation de fin de module, en binôme.
 
 - Ouvrir `Assets/_Project/Scenes/Station.unity`, Play. Le simulateur XR remplace le casque (clavier + souris).
 - Menu : *Jouer en solo* → entrer dans la cabine → *Lancer la plongée*. En partie, touche **M** (bouton Menu de la manette gauche sur Quest) pour recalibrer ou quitter.
+- **Sans casque, à la manette de jeu** (debug) : stick gauche = avancer, stick droit = tourner (coupé dans l'APK EVA, comme le joystick des manettes).
 - **Multijoueur à 2** : *Abysses → Test multijoueur → Activer le scénario 2 joueurs*, puis Play : l'éditeur héberge, un second éditeur s'ouvre et rejoint tout seul. *Revenir au Play normal* pour repasser en solo.
+
+## Déroulé d'une partie
+
+1. **Surface** : plateforme offshore au large d'une île (phare, bateau, mouettes). Chaque joueur entre dans sa cabine, suspendue sous une potence.
+2. **Plongée** (22 s) : le treuil lâche (secousse), la mer monte devant les hublots (éclaboussure), l'eau s'assombrit ; l'étage se charge derrière un « puits d'eau ».
+3. **Étages 1 à 3** : énigmes coopératives entre modules **+ une énigme par module, jouable seul** : disjoncteurs (note du chef mécanicien), balise morse vue par le hublot + cadenas, console sonar (mémoire).
+4. **Remontée** : retour à la surface, on émerge par les hublots, puis les portes s'ouvrent.
 
 ## Menus `Abysses`
 

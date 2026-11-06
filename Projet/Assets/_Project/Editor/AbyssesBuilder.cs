@@ -226,6 +226,8 @@ namespace Abysses.EditorTools
                 m.Glyphs[i] = Glyph("M_Glyph_" + i, SymbolColors[i], fx.Glyphs[i]);
             }
             AssetDatabase.SaveAssets();
+            PuzzleMaterials();
+            SurfaceMaterials();
             return m;
         }
 
@@ -452,7 +454,8 @@ namespace Abysses.EditorTools
             var cabin = root.AddComponent<ElevatorCabin>();
             Transform t = root.transform;
             const float inner = 2.4f, h = 2.6f, w = 0.1f, half = inner / 2f + w / 2f;
-            const float hole = 0.56f, holeY = 1.5f;
+            // Hublots agrandis (76 cm) : on voit la mer monter et la lumière baisser pendant la plongée.
+            const float hole = 0.76f, holeY = 1.5f;
 
             // Socle, plancher et toit
             Static(Prim(PrimitiveType.Cube, "Socle", t, new Vector3(0f, -0.04f, 0f), Quaternion.identity, new Vector3(inner + 0.5f, 0.12f, inner + 0.5f), m.Frame, true));
@@ -475,7 +478,7 @@ namespace Abysses.EditorTools
                 Static(Prim(PrimitiveType.Cube, "Wall_" + n + "_Rear", t, new Vector3(x, holeY, -hole / 2f - jamb / 2f), Quaternion.identity, new Vector3(w, hole, jamb), m.Hull, true));
                 Static(Prim(PrimitiveType.Cube, "Window_" + n, t, new Vector3(x, holeY, 0f), Quaternion.identity, new Vector3(0.02f, hole, hole), m.Glass, false));
                 foreach (float face in new[] { -1f, 1f })
-                    Static(AbyssesArt.MeshObject("Hublot_" + n, t, art.Ring, new Vector3(x + face * (w / 2f + 0.025f), holeY, 0f), Quaternion.Euler(0f, 90f, 0f), new Vector3(0.9f, 0.9f, 0.05f), m.Brass));
+                    Static(AbyssesArt.MeshObject("Hublot_" + n, t, art.Ring, new Vector3(x + face * (w / 2f + 0.025f), holeY, 0f), Quaternion.Euler(0f, 90f, 0f), new Vector3(1.2f, 1.2f, 0.05f), m.Brass));
             }
 
             // Poteaux d'angle arrondis : la cabine perd son air de boîte.
@@ -497,8 +500,9 @@ namespace Abysses.EditorTools
             // Intérieur : main courante, pupitre avec écran, repère de calibration au sol, plafonnier.
             // Main courante sous le tutoriel (support du fusible d'entraînement à 0,96 m).
             Static(Prim(PrimitiveType.Cylinder, "MainCourante", t, new Vector3(0f, 0.85f, -half + 0.12f), Quaternion.Euler(0f, 0f, 90f), new Vector3(0.05f, 1.0f, 0.05f), m.Brass, false));
-            Static(Prim(PrimitiveType.Cube, "Pupitre", t, new Vector3(-half + 0.1f, 1.25f, -0.7f), Quaternion.identity, new Vector3(0.08f, 0.5f, 0.6f), m.Frame, false));
-            Static(Prim(PrimitiveType.Cube, "Ecran", t, new Vector3(-half + 0.145f, 1.27f, -0.7f), Quaternion.identity, new Vector3(0.01f, 0.4f, 0.52f), m.Screens[0], false));
+            // Pupitre décalé vers l'arrière : il ne mord plus sur l'anneau du hublot agrandi.
+            Static(Prim(PrimitiveType.Cube, "Pupitre", t, new Vector3(-half + 0.1f, 1.25f, -0.93f), Quaternion.identity, new Vector3(0.08f, 0.5f, 0.46f), m.Frame, false));
+            Static(Prim(PrimitiveType.Cube, "Ecran", t, new Vector3(-half + 0.145f, 1.27f, -0.93f), Quaternion.identity, new Vector3(0.01f, 0.4f, 0.4f), m.Screens[0], false));
             Static(AbyssesArt.MeshObject("CalibrationMark", t, art.Ring, new Vector3(0f, 0.025f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.6f, 0.6f, 0.01f), m.EmitCyan));
             Static(AbyssesArt.MeshObject("Plafonnier", t, art.Ring, new Vector3(0f, h - 0.02f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(1.4f, 1.4f, 0.03f), m.EmitCyan));
 
@@ -532,6 +536,7 @@ namespace Abysses.EditorTools
             bubblesRight.transform.SetParent(bubblesLeft.transform, true);
             DescentStreaks(m, bubblesLeft, half);
             BuildCabinTutorial(m, t, -inner / 2f);
+            CabinDescentParts(t);
             foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask |= CabinLayer;
 
             var rumble = root.AddComponent<AudioSource>();
@@ -1302,6 +1307,8 @@ namespace Abysses.EditorTools
                 prerequisites.Add(BuildFuseSocket(m, root, mod));
                 fuses[mod.Partner] = BuildFuse(m, root, mod, mod.Partner);
                 levers[q] = BuildLever(m, root, mod.Q, mod.P(5.4f, 0f, 2.6f), mod.Facing(0f, -1f));
+                // Énigme de module (jouable seul) : le tableau des disjoncteurs, avec la note sur le bureau.
+                prerequisites.Add(BuildBreakerPanel(m, root, mod));
             }
 
             // Repli : module partenaire vide → écran de surveillance avec son propre code, et fusible rapatrié.
@@ -1396,6 +1403,9 @@ namespace Abysses.EditorTools
             BuildKnockWall(m, root, modules[2], modules[3]);
             for (int q = 0; q < 4; q++)
                 BuildLeaks(m, root, modules[q], gauges[q].GetComponent<PuzzleObjective>());
+            // Énigme de module (jouable seul) : balise morse vue par le hublot, cadenas à molettes.
+            for (int q = 0; q < 4; q++)
+                BuildMorsePuzzle(m, root, modules[q]);
 
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[1]);
@@ -1529,7 +1539,11 @@ namespace Abysses.EditorTools
             rso.FindProperty("failSound").objectReferenceValue = reactorFail;
             rso.ApplyModifiedPropertiesWithoutUndo();
 
-            BuildSyncLevers(root, 3, "Remontée d'urgence", "Emergency ascent", "ascent", levers, new[] { sequenceObjective });
+            // Énigme de module (jouable seul) : console de calibrage du sonar (mémoire), avant la remontée.
+            var ascentPrerequisites = new List<PuzzleObjective> { sequenceObjective };
+            for (int q = 0; q < 4; q++)
+                ascentPrerequisites.Add(BuildSimonConsole(m, root, modules[q]));
+            BuildSyncLevers(root, 3, "Remontée d'urgence", "Emergency ascent", "ascent", levers, ascentPrerequisites.ToArray());
 
             // Fin : faisceau de lumière venu de la surface + bulles dans les colonnes d'eau.
             var beamGo = new GameObject("Sunbeam");
@@ -1729,8 +1743,19 @@ namespace Abysses.EditorTools
             var socket = socketGo.AddComponent<FuseSocketInteractor>();
             SetFields(socket, ("requiredFuseId", mod.Q));
 
-            GameObject installed = Prim(PrimitiveType.Cylinder, "InstalledFuse", t, new Vector3(0f, 0f, -0.1f), Quaternion.identity, new Vector3(0.06f, 0.08f, 0.06f), m.Symbols[mod.Q], false);
+            // Porte-fusible : socle en céramique, deux pinces en laiton qui tiennent les embouts, voyant d'état.
+            Prim(PrimitiveType.Cube, "Socle_Ceramique", t, new Vector3(0f, 0f, -0.045f), Quaternion.identity, new Vector3(0.1f, 0.26f, 0.07f), paperMaterial, false);
+            foreach (float y in new[] { -0.068f, 0.068f })
+            {
+                Prim(PrimitiveType.Cube, "Pince_Fond", t, new Vector3(0f, y, -0.083f), Quaternion.identity, new Vector3(0.07f, 0.03f, 0.006f), m.Brass, false);
+                foreach (float x in new[] { -0.032f, 0.032f })
+                    Prim(PrimitiveType.Cube, "Pince", t, new Vector3(x, y, -0.1f), Quaternion.identity, new Vector3(0.006f, 0.03f, 0.04f), m.Brass, false);
+            }
+            Prim(PrimitiveType.Cube, "Bande_Couleur", t, new Vector3(0f, -0.155f, -0.012f), Quaternion.identity, new Vector3(0.3f, 0.03f, 0.01f), m.Symbols[mod.Q], false);
+            Label(t, "230 V", new Vector3(0.14f, -0.18f, -0.012f), 0.28f);
+            GameObject installed = FuseVisual(m, t, "InstalledFuse", new Vector3(0f, 0f, -0.1f), mod.Q);
             installed.SetActive(false);
+            StatusLamp(m, t, new Vector3(0.14f, 0.2f, -0.012f), objective);
 
             var localOnly = root.AddComponent<LocalModuleOnly>();
             var lo = new SerializedObject(localOnly);
@@ -1747,11 +1772,21 @@ namespace Abysses.EditorTools
             // Étagère contre le long mur partagé, le fusible destiné au partenaire posé dessus.
             float z = -mod.Vz * 3.48f;
             Static(Prim(PrimitiveType.Cube, "Shelf_Q" + mod.Q, parent, mod.P(-5.5f, 0.85f, z), Quaternion.identity, new Vector3(1.0f, 0.05f, 0.4f), m.Panel, true));
-            GameObject fuse = Prim(PrimitiveType.Cylinder, "Fuse_" + SymbolNames[fuseId], parent, mod.P(-5.5f, 0.97f, z), Quaternion.identity, new Vector3(0.06f, 0.08f, 0.06f), m.Symbols[fuseId], true);
+            GameObject fuse = FuseVisual(m, parent, "Fuse_" + SymbolNames[fuseId], mod.P(-5.5f, 0.95f, z), fuseId, true);
             NetworkTransform networkTransform = MakeNetworkGrabbable(fuse, 0.3f);
             Halo(m, fuse, fuse);
             SetFields(fuse.AddComponent<FuseItem>(), ("fuseId", fuseId));
             return networkTransform;
+        }
+
+        /// <summary>Fusible à cartouche : corps à la couleur du module destinataire, embouts en laiton, bague blanche.</summary>
+        static GameObject FuseVisual(Mats m, Transform parent, string name, Vector3 position, int fuseId, bool collider = false)
+        {
+            GameObject body = Prim(PrimitiveType.Cylinder, name, parent, position, Quaternion.identity, new Vector3(0.045f, 0.06f, 0.045f), m.Symbols[fuseId], collider);
+            foreach (float y in new[] { -1f, 1f })
+                Prim(PrimitiveType.Cylinder, "Embout", body.transform, new Vector3(0f, y * 1.12f, 0f), Quaternion.identity, new Vector3(1.12f, 0.18f, 1.12f), m.Brass, false);
+            Prim(PrimitiveType.Cylinder, "Bague", body.transform, Vector3.zero, Quaternion.identity, new Vector3(1.04f, 0.12f, 1.04f), m.Symbols[4], false);
+            return body;
         }
 
         static NetworkTransform MakeNetworkGrabbable(GameObject go, float mass)
@@ -2060,9 +2095,15 @@ namespace Abysses.EditorTools
             SetFields(stickTurn.AddComponent<StickTurn>(), ("origin", rig.GetComponent<Unity.XR.CoreUtils.XROrigin>()),
                 ("moveProvider", rig.GetComponentInChildren<UnityEngine.XR.Interaction.Toolkit.Locomotion.Movement.ContinuousMoveProvider>(true)));
 
+            // Debug : manette de jeu branchée sur l'ordinateur (jouer sans casque), coupée en build EVA.
+            var gamepad = new GameObject("Gamepad Locomotion");
+            gamepad.transform.SetParent(Find(rig.transform, "Locomotion"), false);
+            SetFields(gamepad.AddComponent<GamepadLocomotion>(), ("origin", rig.GetComponent<Unity.XR.CoreUtils.XROrigin>()));
+            BuildControllerHints(rig.transform);
+
             var gate = rig.AddComponent<LocomotionGate>();
             var gateSo = new SerializedObject(gate);
-            SetArray(gateSo.FindProperty("debugOnly"), Find(rig.transform, "Move").gameObject, Find(rig.transform, "Gravity").gameObject, stickTurn);
+            SetArray(gateSo.FindProperty("debugOnly"), Find(rig.transform, "Move").gameObject, Find(rig.transform, "Gravity").gameObject, stickTurn, gamepad);
             var forbidden = new List<GameObject>();
             foreach (string n in new[] { "Teleportation", "Climb", "Jump", "Grab Move", "Turn" })
             {
@@ -2100,6 +2141,7 @@ namespace Abysses.EditorTools
 
             // Les 4 cabines, au centre de chaque quadrant.
             var cabins = new GameObject("Cabins").transform;
+            var cabinTransforms = new Transform[4];
             for (int q = 0; q < 4; q++)
             {
                 var cabin = (GameObject)PrefabUtility.InstantiatePrefab(cabinPrefab, cabins);
@@ -2108,7 +2150,11 @@ namespace Abysses.EditorTools
                 var cabinSo = new SerializedObject(cabin.GetComponent<ElevatorCabin>());
                 cabinSo.FindProperty("quadrant").intValue = q;
                 cabinSo.ApplyModifiedPropertiesWithoutUndo();
+                cabinTransforms[q] = cabin.transform;
             }
+
+            // Départ en surface : plateforme offshore au large d'une île, animation de plongée.
+            BuildSurface(m, null, cabinTransforms);
 
             SaveScene(scene, "Station");
         }

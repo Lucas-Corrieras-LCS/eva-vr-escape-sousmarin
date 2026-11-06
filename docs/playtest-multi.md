@@ -1,7 +1,7 @@
 # Partie de test automatique — 2 plongeurs + pupitre
 
-> 2026-11-04 14:22 · Unity 6000.3.23f1 · *Abysses → Tests*. 
-> Les énigmes sont résolues par les commandes du maître du jeu : on vérifie l'enchaînement et les systèmes, pas les gestes au casque.
+> 2026-11-06 10:28 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Hôte réseau local lancé (plongeur ORANGE)
 - ✅ Client Mac lancé (2e plongeur)
@@ -24,13 +24,21 @@
 - ✅ Étage 2 : 4 fuites de vapeur
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
+- ✅ Étage 2 : 4 cadenas morse
+- ✅ Balise morse : code à 3 chiffres tiré (134)
+- ✅ Cadenas : un mauvais code est refusé
+- ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
 - ✅ Étage 2 : « passer l'étage » (pupitre) → étage résolu
 - ✅ Étage 2 quitté (phase : FloorSolved, étage 2)
 - ✅ Descente vers l'étage 3 (salle commune)
 - ✅ Montre : -4 000 m
+- ✅ Étage 3 : 4 consoles sonar
+- ✅ Console sonar : la première note est jouée
+- ✅ Console sonar : une erreur relance la séquence
+- ✅ Console sonar : séquence de 6 couleurs reproduite → calibrée
 - ✅ Séquence du réacteur + remontée → fin de partie
 - ✅ Chrono de fin cohérent
-- ✅ Temps enregistré au classement : 1.  0:26  ·  1 plongeur
+- ✅ Temps enregistré au classement : 1.  1:25  ·  2 plongeurs
 
 **Console : aucune erreur.**
 

@@ -36,6 +36,28 @@ namespace Abysses.EditorTools
         }
 
         /// <summary>Entraînement contre le mur du fond de la cabine : bouton, fusible d'entraînement, prise.</summary>
+        /// <summary>Aide-mémoire des boutons, collé au-dessus de chaque manette (voir <see cref="Abysses.Player.ControllerHints"/>).</summary>
+        static void BuildControllerHints(Transform rig)
+        {
+            TMP_Text Hint(string hand)
+            {
+                Transform controller = Find(rig, hand);
+                var go = new GameObject("Aide_Boutons", typeof(RectTransform));
+                go.transform.SetParent(controller, false);
+                go.transform.localPosition = new Vector3(0f, 0.07f, 0.02f);
+                go.transform.localRotation = Quaternion.Euler(50f, 0f, 0f);
+                var text = go.AddComponent<TextMeshPro>();
+                text.fontSize = 0.2f;
+                text.alignment = TextAlignmentOptions.Center;
+                text.color = new Color(0.8f, 0.95f, 1f);
+                text.textWrappingMode = TextWrappingModes.NoWrap;
+                ((RectTransform)go.transform).sizeDelta = new Vector2(0.2f, 0.08f);
+                return text;
+            }
+            var hints = rig.gameObject.AddComponent<Abysses.Player.ControllerHints>();
+            SetFields(hints, ("left", Hint("Left Controller")), ("right", Hint("Right Controller")));
+        }
+
         static void BuildCabinTutorial(Mats m, Transform cabin, float backZ)
         {
             Transform t = new GameObject("Tutorial").transform;
@@ -132,7 +154,8 @@ namespace Abysses.EditorTools
                 emission.rateOverTime = 90f;
                 var shape = ps.shape;
                 shape.shapeType = ParticleSystemShapeType.Box;
-                shape.scale = new Vector3(1.4f, 0.2f, 2.4f);
+                // Reste dans le puits d'eau (rayon 2,95 m) qui entoure la cabine pendant la descente.
+                shape.scale = new Vector3(1.0f, 0.2f, 2.4f);
                 var velocity = ps.velocityOverLifetime;
                 velocity.enabled = true;
                 velocity.space = ParticleSystemSimulationSpace.Local;

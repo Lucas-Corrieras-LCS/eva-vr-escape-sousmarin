@@ -30,7 +30,8 @@ namespace Abysses.EditorTools
     /// - multi : l'éditeur héberge, un client Mac compilé rejoint comme 2e plongeur, un second comme pupitre spectateur ;
     ///   reconnexion d'un plongeur en pleine partie, indices demandés par le pupitre, partie jusqu'à la fin.
     /// Rapport dans docs/playtest-*.md ; erreurs de console comptées comme des échecs.
-    /// Les énigmes sont résolues par les commandes du maître du jeu : le test vérifie l'enchaînement, pas les gestes.
+    /// Les énigmes coopératives sont résolues par les commandes du maître du jeu ; les énigmes de module (disjoncteurs, morse,
+    /// sonar) le sont par de vrais appuis, erreurs comprises. Le test vérifie l'enchaînement, pas les gestes au casque.
     /// </summary>
     public static class AbyssesPlaytest
     {
@@ -157,7 +158,8 @@ namespace Abysses.EditorTools
                     Finish();
                     return;
                 }
-                Pass(conditionLabel);
+                // Attente intermédiaire sans libellé : pas de ligne au rapport (seul un dépassement est signalé).
+                if (conditionLabel != null) Pass(conditionLabel);
                 condition = null;
             }
 
@@ -223,7 +225,7 @@ namespace Abysses.EditorTools
             report.AppendLine("# Partie de test automatique — " + (mode == "multi" ? "2 plongeurs + pupitre" : "solo"));
             report.AppendLine();
             report.AppendLine($"> {DateTime.Now:yyyy-MM-dd HH:mm} · Unity {Application.unityVersion} · *Abysses → Tests*. ");
-            report.AppendLine("> Les énigmes sont résolues par les commandes du maître du jeu : on vérifie l'enchaînement et les systèmes, pas les gestes au casque.");
+            report.AppendLine("> Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.");
             report.AppendLine();
             foreach (string line in results) report.AppendLine("- " + line);
             report.AppendLine();
@@ -283,6 +285,93 @@ namespace Abysses.EditorTools
             Check(State.Phase.Value != GamePhase.Playing, $"Étage {floor} quitté (phase : {State.Phase.Value}, étage {State.Floor.Value})");
         }
 
+        static T Mine<T>() where T : MonoBehaviour =>
+            Object.FindObjectsByType<T>(FindObjectsSortMode.None).FirstOrDefault(c => Field<PuzzleObjective>(c, "objective").Quadrant == 0);
+
+        static int Bits(int value)
+        {
+            int count = 0;
+            for (; value != 0; value &= value - 1) count++;
+            return count;
+        }
+
+        /// <summary>Étage 1 : tableau des disjoncteurs résolu en suivant la note (et court-circuit si on arme un interdit).</summary>
+        static IEnumerator Breakers()
+        {
+            Check(Object.FindObjectsByType<BreakerPanel>(FindObjectsSortMode.None).Length == 4, "Étage 1 : 4 tableaux de disjoncteurs");
+            BreakerPanel panel = Mine<BreakerPanel>();
+            if (panel == null) yield break;
+            int forbidden = panel.Forbidden.Value;
+            Check(Bits(forbidden) == 2, "Disjoncteurs : 2 interdits tirés au hasard");
+            string note = Field<TMP_Text>(panel, "note").text;
+            bool named = true;
+            for (int i = 0; i < BreakerPanel.Count; i++)
+                if ((forbidden & (1 << i)) != 0) named &= note.Contains(BreakerPanel.NameOf(i));
+            Check(named, "Note du chef mécanicien : nomme les 2 disjoncteurs à laisser coupés");
+            int allowed = 0, bad = 0;
+            for (int i = 0; i < BreakerPanel.Count; i++)
+            {
+                if ((forbidden & (1 << i)) == 0) { allowed = i; break; }
+            }
+            for (int i = 0; i < BreakerPanel.Count; i++)
+                if ((forbidden & (1 << i)) != 0) { bad = i; break; }
+            panel.Pressed(allowed);
+            yield return Until(() => panel.Armed.Value == 1 << allowed, 3f, "Disjoncteur armé (appui sur la manette)");
+            panel.Pressed(bad);
+            yield return Until(() => panel.Armed.Value == 0, 3f, "Armer un disjoncteur interdit : court-circuit, tout disjoncte");
+            var objective = Field<PuzzleObjective>(panel, "objective");
+            for (int i = 0; i < BreakerPanel.Count; i++)
+            {
+                if ((forbidden & (1 << i)) != 0) continue;
+                panel.Pressed(i);
+                yield return Wait(0.2f);
+            }
+            yield return Until(() => objective.Solved.Value, 3f, "Disjoncteurs : réarmés en suivant la note → énigme résolue");
+        }
+
+        /// <summary>Étage 2 : la balise clignote, le cadenas refuse un mauvais code et s'ouvre avec le bon.</summary>
+        static IEnumerator MorseLock()
+        {
+            Check(Object.FindObjectsByType<CombinationLock>(FindObjectsSortMode.None).Length == 4, "Étage 2 : 4 cadenas morse");
+            CombinationLock combination = Mine<CombinationLock>();
+            if (combination == null) yield break;
+            MorseBeacon beacon = Field<MorseBeacon>(combination, "beacon");
+            int code = beacon.Code.Value;
+            Check(code >= 0 && code < 1000, "Balise morse : code à 3 chiffres tiré (" + code.ToString("000") + ")");
+            var objective = Field<PuzzleObjective>(combination, "objective");
+            // Mauvais code (molettes à 000, ou 001 si le code est 000).
+            if (code == 0) combination.Pressed(2);
+            combination.Pressed(CombinationLock.ValidateIndex);
+            yield return Wait(1f);
+            Check(!objective.Solved.Value, "Cadenas : un mauvais code est refusé");
+            if (code == 0) combination.Pressed(MorseBeacon.Digits + 2);
+            for (int w = 0; w < MorseBeacon.Digits; w++)
+                for (int k = 0; k < MorseBeacon.DigitAt(code, w); k++) combination.Pressed(w);
+            combination.Pressed(CombinationLock.ValidateIndex);
+            yield return Until(() => objective.Solved.Value, 3f, "Cadenas : le code de la balise ouvre la vanne d'urgence");
+        }
+
+        /// <summary>Étage 3 : séquence de mémoire jouée manche par manche (avec une erreur au début).</summary>
+        static IEnumerator Sonar()
+        {
+            Check(Object.FindObjectsByType<SimonConsole>(FindObjectsSortMode.None).Length == 4, "Étage 3 : 4 consoles sonar");
+            SimonConsole console = Mine<SimonConsole>();
+            if (console == null) yield break;
+            int sequence = console.Sequence.Value;
+            var objective = Field<PuzzleObjective>(console, "objective");
+            console.Pressed(SimonConsole.ListenIndex);
+            yield return Until(() => !Field<bool>(console, "playing"), 5f, "Console sonar : la première note est jouée");
+            console.Pressed((SimonConsole.PadAt(sequence, 0) + 1) % SimonConsole.Pads);
+            yield return Until(() => !Field<bool>(console, "playing") && Field<int>(console, "round") == 1, 5f, "Console sonar : une erreur relance la séquence");
+            for (int round = 1; round <= SimonConsole.MaxLength; round++)
+            {
+                yield return Until(() => !Field<bool>(console, "playing"), 8f, null);  // fin de la démonstration de la manche
+                for (int i = 0; i < round; i++) console.Pressed(SimonConsole.PadAt(sequence, i));
+                yield return Wait(0.2f);
+            }
+            yield return Until(() => objective.Solved.Value, 4f, "Console sonar : séquence de 6 couleurs reproduite → calibrée");
+        }
+
         static IEnumerator FloorOne(bool checkLostItem)
         {
             PowerRestore power = Object.FindFirstObjectByType<PowerRestore>();
@@ -312,6 +401,8 @@ namespace Abysses.EditorTools
                 }
             }
 
+            if (checkLostItem) yield return Breakers();
+
             // Comme en vrai, le plongeur est aux leviers (hors de sa cabine) quand le courant revient.
             Transform rig = LocalRig.Instance.transform;
             rig.position += new Vector3(3f, 0f, 0f);
@@ -333,9 +424,11 @@ namespace Abysses.EditorTools
             Check(Object.FindObjectsByType<SteamVent>(FindObjectsSortMode.None).Length == 4, "Étage 2 : 4 fuites de vapeur");
             Check(Object.FindObjectsByType<RisingWater>(FindObjectsSortMode.None).Length == 4, "Étage 2 : eau qui monte dans les 4 modules");
             Check(Object.FindObjectsByType<NeonFlicker>(FindObjectsSortMode.None).Length == 4, "Étage 2 : néons défaillants");
+            yield return MorseLock();
             yield return SkipFloorAndDescend(2);
             yield return Until(() => Phase(GamePhase.Playing, 3), 45f, "Descente vers l'étage 3 (salle commune)");
             Check(WatchText().Contains("-4000"), "Montre : -4 000 m");
+            yield return Sonar();
             State.GmSkipFloorRpc();
             yield return Until(() => State.Phase.Value == GamePhase.Finished, 6f, "Séquence du réacteur + remontée → fin de partie");
             Check(State.EndTime.Value > State.StartTime.Value, "Chrono de fin cohérent");
@@ -360,13 +453,23 @@ namespace Abysses.EditorTools
             State.SetEasyModeRpc(false);
             yield return Until(() => !State.EasyMode.Value, 3f, "Mode facile désactivé");
 
+            SurfaceWorld surface = Object.FindFirstObjectByType<SurfaceWorld>();
+            Transform world = Field<Transform>(surface, "world");
+            Renderer[] shrouds = Field<Renderer[]>(surface, "shrouds");
+            Check(world.gameObject.activeSelf && Field<Light>(surface, "sun").enabled && !shrouds[0].enabled, "Surface : plateforme, mer et soleil visibles à l'embarquement");
             State.RequestStartRpc();
+            yield return Until(() => world.position.y > 2.7f, 8f, "Plongée : la cabine s'enfonce, la mer passe les hublots");
+            yield return Until(() => shrouds[0].enabled && !world.gameObject.activeSelf, 12f, "Plongée : sous l'eau, le puits d'eau remplace la surface");
+            Check(OnlyStationLoaded(), "L'étage 1 n'est chargé qu'une fois la surface masquée");
             yield return Until(() => Phase(GamePhase.Playing, 1), 40f, "Plongée → arrivée à l'étage 1 (-200 m)");
+            Check(!shrouds[0].enabled && !world.gameObject.activeSelf, "Arrivée : puits d'eau retiré, portes sur l'étage");
             yield return FloorOne(true);
             yield return FloorsTwoAndThree();
 
             State.RequestRestartRpc();
             yield return Until(() => State.Phase.Value == GamePhase.Lobby && OnlyStationLoaded(), 10f, "« Nouvelle plongée » : retour surface, étages déchargés");
+            Check(SurfaceWorld.HoldDoors, "Remontée : portes fermées pendant l'émersion");
+            yield return Until(() => !SurfaceWorld.HoldDoors && world.gameObject.activeSelf && world.position.y < 0.01f, 12f, "Remontée : on émerge à la surface, portes rouvertes");
             yield return Until(() => (State.ReadyMask.Value & 1) != 0, 10f, "Joueur de nouveau prêt en cabine");
             State.RequestStartRpc();
             yield return Until(() => Phase(GamePhase.Playing, 1), 40f, "Seconde plongée → étage 1");

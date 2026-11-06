@@ -10,6 +10,39 @@ namespace Abysses.EditorTools
     {
         public static readonly Dictionary<string, (string[] fr, string[] en)> Table = new Dictionary<string, (string[] fr, string[] en)>
         {
+            ["breakers"] = (new[]
+            {
+                "Le tableau des disjoncteurs du mur du fond doit être réarmé… mais pas en entier.",
+                "Le chef mécanicien a laissé une note sur le bureau du module : elle dit quels disjoncteurs laisser coupés.",
+                "Lève toutes les manettes sauf les deux nommés sur la note. Si tout disjoncte, recommence sans toucher à ces deux-là.",
+            }, new[]
+            {
+                "The breaker panel on the back wall must be reset… but not all of it.",
+                "The chief engineer left a note on the module's desk: it says which breakers to leave off.",
+                "Raise every switch except the two named on the note. If everything trips, start again without touching those two.",
+            }),
+            ["morse"] = (new[]
+            {
+                "Une balise clignote dehors, de l'autre côté d'un hublot. Le haut-parleur près du cadenas bipe en même temps.",
+                "C'est du morse : chaque chiffre fait 5 signaux courts (·) ou longs (—). La table est fixée au mur, à côté du cadenas.",
+                "Le message fait 3 chiffres et se répète après un long silence. Règle les 3 molettes dans l'ordre, puis VALIDER.",
+            }, new[]
+            {
+                "A beacon is flashing outside, beyond one of the windows. The speaker next to the lock beeps along.",
+                "It is Morse code: each digit is 5 short (·) or long (—) signals. The table is on the wall, next to the lock.",
+                "The message has 3 digits and repeats after a long silence. Set the 3 wheels in order, then press CONFIRM.",
+            }),
+            ["simon"] = (new[]
+            {
+                "La console du sonar, sur le mur du fond, doit être recalibrée : appuie sur ÉCOUTER.",
+                "Elle joue une séquence de couleurs qui s'allonge à chaque manche : répète-la touche par touche.",
+                "Une erreur et tout recommence : retiens les couleurs et les notes, l'écran indique où tu en es.",
+            }, new[]
+            {
+                "The sonar console on the back wall needs recalibrating: press LISTEN.",
+                "It plays a colour sequence that grows every round: repeat it key by key.",
+                "One mistake and it starts over: remember colours and notes, the screen shows your progress.",
+            }),
             ["keypad"] = (new[]
             {
                 "Le code de ton digicode n'est pas chez toi : il est affiché dans le module voisin.",
