@@ -1,6 +1,6 @@
 # Partie de test automatique — 2 plongeurs + pupitre
 
-> 2026-11-06 10:28 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-06 16:39 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Hôte réseau local lancé (plongeur ORANGE)
@@ -25,7 +25,7 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (134)
+- ✅ Balise morse : code à 3 chiffres tiré (562)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
 - ✅ Étage 2 : « passer l'étage » (pupitre) → étage résolu
@@ -36,16 +36,23 @@
 - ✅ Console sonar : la première note est jouée
 - ✅ Console sonar : une erreur relance la séquence
 - ✅ Console sonar : séquence de 6 couleurs reproduite → calibrée
+- ✅ Étage 3 : relais d'appels en place
+- ✅ Relais : DÉMARRER lance le premier appel
+- ✅ Relais à plusieurs : le symbole s'affiche chez un autre que la cible
+- ✅ Relais : un mauvais symbole est refusé, la manche recommence
+- ✅ Relais : 4 manches réussies → énigme résolue
 - ✅ Séquence du réacteur + remontée → fin de partie
 - ✅ Chrono de fin cohérent
-- ✅ Temps enregistré au classement : 1.  1:25  ·  2 plongeurs
+- ✅ Temps enregistré au classement : 1.  1:12  ·  1 plongeur
 
 **Console : aucune erreur.**
 
 **Journal client_plongeur.log** : 
   - `[Abysses] Connexion : Connecting — Connexion à 127.0.0.1…`
   - `[Abysses] Connexion : Online — Équipe rejointe`
+  - `[Abysses] Cabine Q1 : plongeur à bord (Lobby)`
   - `[Abysses] Connexion : Failed — Connexion perdue — reconnexion…`
+  - `[Abysses] Cabine Q1 : plongeur à bord (FloorSolved)`
 
 **Journal client_pupitre.log** : 
   - `[Abysses] Connexion : Connecting — Connexion à 127.0.0.1…`

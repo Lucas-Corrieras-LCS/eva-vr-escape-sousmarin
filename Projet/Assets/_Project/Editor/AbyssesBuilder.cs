@@ -676,7 +676,11 @@ namespace Abysses.EditorTools
         // Emplacements occupés sur chaque mur, tous étages confondus (la coque est commune aux 3 étages).
         static readonly Keepout[] OuterWallItems = { new Keepout(2.5f, 0.4f), new Keepout(-2.5f, 0.35f), new Keepout(0.6f, 0.5f), new Keepout(-3f, 0.4f), new Keepout(-1.5f, 0.4f),
             // Hublots sur l'océan (OceanWindowX).
-            new Keepout(-6.4f, 0.55f), new Keepout(6.4f, 0.55f) };
+            new Keepout(-6.4f, 0.55f), new Keepout(6.4f, 0.55f),
+            // Panneaux du relais d'appels (étages 1-2, étage 3) et radio de la balise morse.
+            new Keepout(RelayWallX, 0.45f), new Keepout(RelayWallXCore, 0.45f), new Keepout(-0.5f, 0.15f) };
+        const float RelayWallX = 1.55f;
+        const float RelayWallXCore = 3.0f;
         static readonly Keepout[] NeighborWallItems = { new Keepout(-3f, 1.2f), new Keepout(-5.5f, 0.6f), new Keepout(2f, 0.35f), new Keepout(2.6f, 0.2f) };
 
         static bool IsFree(float x, float halfWidth, Keepout[] items)
@@ -1303,7 +1307,7 @@ namespace Abysses.EditorTools
             {
                 Module mod = modules[q];
                 BuildCodeDisplay(m, root, mod.P(-7.16f, 1.6f, 0f), mod.Facing(-1f, 0f), keypads[mod.Partner],
-                    "CODE DU MODULE " + QuadrantNames[mod.Partner], true, false, "CodeDisplay_For_Q" + mod.Partner, "CODE FOR MODULE " + QuadrantNamesEn[mod.Partner]);
+                    "CODE DU MODULE " + QuadrantNames[mod.Partner], true, false, "CodeDisplay_For_Q" + mod.Partner, "CODE FOR MODULE " + QuadrantNamesEn[mod.Partner], mod.Q);
                 prerequisites.Add(BuildFuseSocket(m, root, mod));
                 fuses[mod.Partner] = BuildFuse(m, root, mod, mod.Partner);
                 levers[q] = BuildLever(m, root, mod.Q, mod.P(5.4f, 0f, 2.6f), mod.Facing(0f, -1f));
@@ -1329,6 +1333,7 @@ namespace Abysses.EditorTools
             BuildKnockWall(m, root, modules[0], modules[1]);
             BuildKnockWall(m, root, modules[2], modules[3]);
             BuildPowerOutage(m, root, modules, powerObjective);
+            BuildCallOutRelay(m, root, modules, 1, RelayWallX, 3, "Surtension", "Power surge", "SURTENSION · RÉARMEMENT", "POWER SURGE · RESET");
 
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[0]);
@@ -1406,6 +1411,7 @@ namespace Abysses.EditorTools
             // Énigme de module (jouable seul) : balise morse vue par le hublot, cadenas à molettes.
             for (int q = 0; q < 4; q++)
                 BuildMorsePuzzle(m, root, modules[q]);
+            BuildCallOutRelay(m, root, modules, 2, RelayWallX, 3, "Fuites", "Leaks", "FUITES · VANNES DE DÉRIVATION", "LEAKS · BYPASS VALVES");
 
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[1]);
@@ -1539,10 +1545,13 @@ namespace Abysses.EditorTools
             rso.FindProperty("failSound").objectReferenceValue = reactorFail;
             rso.ApplyModifiedPropertiesWithoutUndo();
 
-            // Énigme de module (jouable seul) : console de calibrage du sonar (mémoire), avant la remontée.
+            // Énigme croisée : console de calibrage du sonar (séquence dictée par le partenaire), avant la remontée.
             var ascentPrerequisites = new List<PuzzleObjective> { sequenceObjective };
             for (int q = 0; q < 4; q++)
                 ascentPrerequisites.Add(BuildSimonConsole(m, root, modules[q]));
+            // Boucle finale, plus longue (4 manches) : barres de contrôle du réacteur à abaisser sur appel.
+            ascentPrerequisites.Add(BuildCallOutRelay(m, root, modules, 3, RelayWallXCore, 4, "Barres de contrôle", "Control rods",
+                "BARRES DE CONTRÔLE · RÉACTEUR", "CONTROL RODS · REACTOR"));
             BuildSyncLevers(root, 3, "Remontée d'urgence", "Emergency ascent", "ascent", levers, ascentPrerequisites.ToArray());
 
             // Fin : faisceau de lumière venu de la surface + bulles dans les colonnes d'eau.
@@ -1658,7 +1667,7 @@ namespace Abysses.EditorTools
             return keypad;
         }
 
-        static GameObject BuildCodeDisplay(Mats m, Transform parent, Vector3 position, Quaternion rotation, CodeKeypad keypad, string title, bool large, bool uvInk, string name, string englishTitle = null)
+        static GameObject BuildCodeDisplay(Mats m, Transform parent, Vector3 position, Quaternion rotation, CodeKeypad keypad, string title, bool large, bool uvInk, string name, string englishTitle = null, int privateQuadrant = -1)
         {
             var root = new GameObject(name);
             root.transform.SetParent(parent, false);
@@ -1685,6 +1694,8 @@ namespace Abysses.EditorTools
             so.FindProperty("hiddenMaterial").objectReferenceValue = m.SlotEmpty;
             so.ApplyModifiedPropertiesWithoutUndo();
 
+            // Code privé : seul le joueur du module le voit (pas de lecture par le hublot), il doit le dicter.
+            if (privateQuadrant >= 0 && !uvInk) Private(root, privateQuadrant, slots);
             if (uvInk)
             {
                 var reveal = root.AddComponent<UVReveal>();

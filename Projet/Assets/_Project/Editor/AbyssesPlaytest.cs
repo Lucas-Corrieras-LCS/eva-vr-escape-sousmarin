@@ -303,7 +303,7 @@ namespace Abysses.EditorTools
             if (panel == null) yield break;
             int forbidden = panel.Forbidden.Value;
             Check(Bits(forbidden) == 2, "Disjoncteurs : 2 interdits tirés au hasard");
-            string note = Field<TMP_Text>(panel, "note").text;
+            string note = Field<TMP_Text[]>(panel, "notes")[0].text;
             bool named = true;
             for (int i = 0; i < BreakerPanel.Count; i++)
                 if ((forbidden & (1 << i)) != 0) named &= note.Contains(BreakerPanel.NameOf(i));
@@ -372,6 +372,41 @@ namespace Abysses.EditorTools
             yield return Until(() => objective.Solved.Value, 4f, "Console sonar : séquence de 6 couleurs reproduite → calibrée");
         }
 
+        /// <summary>
+        /// Relais d'appels joué par de vrais appuis sur les panneaux. Seul, le joueur est appelant et cible ;
+        /// à plusieurs, l'appelant n'est jamais la cible (le test répond pour chaque plongeur sur son panneau).
+        /// </summary>
+        static IEnumerator Relay(int floor)
+        {
+            CallOutRelay relay = Object.FindObjectsByType<CallOutRelay>(FindObjectsSortMode.None).FirstOrDefault(r => r.Objective.Floor == floor);
+            Check(relay != null, $"Étage {floor} : relais d'appels en place");
+            if (relay == null) yield break;
+            var panels = new CallOutPanel[PlayArea.QuadrantCount];
+            foreach (CallOutPanel p in Object.FindObjectsByType<CallOutPanel>(FindObjectsSortMode.None))
+                panels[Field<int>(p, "quadrant")] = p;
+            int mine = LocalRig.Instance.Quadrant;
+            bool alone = NetworkPlayer.All.Count == 1;
+
+            panels[mine].Pressed(CallOutPanel.StartIndex);
+            yield return Until(() => relay.HasCall, 3f, "Relais : DÉMARRER lance le premier appel");
+            Check(alone ? relay.Caller == relay.Target : relay.Caller != relay.Target,
+                alone ? "Relais en solo : le joueur est appelant et cible" : "Relais à plusieurs : le symbole s'affiche chez un autre que la cible");
+            panels[relay.Target].Pressed((relay.Symbol + 1) % CallOutRelay.Symbols);
+            yield return Until(() => !relay.HasCall && relay.LastKind == CallOutRelay.Result.Wrong, 3f, "Relais : un mauvais symbole est refusé, la manche recommence");
+            float end = Time.realtimeSinceStartup + 120f;
+            bool rolesOk = true;
+            while (!relay.Finished && Time.realtimeSinceStartup < end)
+            {
+                if (relay.HasCall)
+                {
+                    rolesOk &= alone || relay.Caller != relay.Target;
+                    panels[relay.Target].Pressed(relay.Symbol);
+                }
+                yield return Wait(0.25f);
+            }
+            Check(relay.Finished && rolesOk, $"Relais : {relay.Rounds} manches réussies → énigme résolue");
+        }
+
         static IEnumerator FloorOne(bool checkLostItem)
         {
             PowerRestore power = Object.FindFirstObjectByType<PowerRestore>();
@@ -405,8 +440,12 @@ namespace Abysses.EditorTools
 
             // Comme en vrai, le plongeur est aux leviers (hors de sa cabine) quand le courant revient.
             Transform rig = LocalRig.Instance.transform;
+            // Point de départ connu (centre de la cabine) : les étapes précédentes ont pu déplacer le plongeur.
+            LocalRig.Instance.Recenter();
+            yield return Wait(0.3f);
             rig.position += new Vector3(3f, 0f, 0f);
             yield return Wait(1f);
+            Debug.Log($"[Abysses] Test : plongeur aux leviers, origine {rig.position}, tête {LocalRig.Instance.Head.position}");
             State.GmSkipFloorRpc();
             yield return Until(() => Phase(GamePhase.FloorSolved, 1), 6f, "Étage 1 : « passer l'étage » (pupitre) → étage résolu");
             // 16 diffuseurs rallumés un par un (~7 s) avant l'échange des lightmaps.
@@ -415,6 +454,8 @@ namespace Abysses.EditorTools
                 "Étage 1 : courant rétabli (néons rallumés un par un, lightmaps échangées)");
             Check(State.Phase.Value == GamePhase.FloorSolved, "Pas de descente tant que le plongeur n'est pas revenu dans sa cabine");
             rig.position -= new Vector3(3f, 0f, 0f);
+            yield return Wait(1f);
+            Debug.Log($"[Abysses] Test : retour en cabine, origine {rig.position}, tête {LocalRig.Instance.Head.position}, prêts {State.ReadyMask.Value}");
         }
 
         static IEnumerator FloorsTwoAndThree()
@@ -429,6 +470,7 @@ namespace Abysses.EditorTools
             yield return Until(() => Phase(GamePhase.Playing, 3), 45f, "Descente vers l'étage 3 (salle commune)");
             Check(WatchText().Contains("-4000"), "Montre : -4 000 m");
             yield return Sonar();
+            yield return Relay(3);
             State.GmSkipFloorRpc();
             yield return Until(() => State.Phase.Value == GamePhase.Finished, 6f, "Séquence du réacteur + remontée → fin de partie");
             Check(State.EndTime.Value > State.StartTime.Value, "Chrono de fin cohérent");
@@ -440,6 +482,9 @@ namespace Abysses.EditorTools
         static IEnumerator Solo()
         {
             yield return Wait(2f);
+            // Une manette de jeu branchée sur le Mac (stick qui dérive) déplacerait le plongeur pendant le test.
+            foreach (GamepadLocomotion pad in Object.FindObjectsByType<GamepadLocomotion>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                pad.enabled = false;
             ConnectionManager connection = ConnectionManager.Instance;
             connection.PlaySolo();
             yield return Until(() => connection.State == ConnectionState.Online && LocalRig.Instance.Quadrant == 0, 15f, "Partie solo lancée, quadrant ORANGE attribué");

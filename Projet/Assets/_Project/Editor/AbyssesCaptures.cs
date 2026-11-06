@@ -40,6 +40,8 @@ namespace Abysses.EditorTools
                     new View("etage1_note", new Vector3(2.5f, 1.45f, 1.45f), new Vector3(2.1f, 0.79f, 0.62f)),
                     new View("etage1_fusible", new Vector3(5.0f, 1.35f, 1.05f), new Vector3(5.0f, 1.2f, 0.34f)),
                     new View("etage1_ocean_casiers", new Vector3(13.2f, 1.55f, 2.9f), new Vector3(13.9f, 1.45f, 0.3f)),
+                    // Relais d'appels du module Q0, sur le mur extérieur (x local 1,55).
+                    new View("etage1_relais", new Vector3(9.05f, 1.55f, 1.75f), new Vector3(9.05f, 1.3f, 0.38f)),
                 }
             },
             {
@@ -51,6 +53,9 @@ namespace Abysses.EditorTools
                     new View("etage2_balise", new Vector3(13.9f, 1.5f, 1.5f), new Vector3(13.9f, 1.45f, -2.8f)),
                     new View("etage2_ocean", new Vector3(13.2f, 1.55f, 2.9f), new Vector3(13.9f, 1.45f, 0.3f)),
                     new View("etage2_fuite", new Vector3(4f, 1.7f, 4.2f), new Vector3(0.45f, 2.1f, 1.7f)),
+                    new View("etage2_relais", new Vector3(9.05f, 1.55f, 1.75f), new Vector3(9.05f, 1.3f, 0.38f)),
+                    // Radio de la balise du module CYAN, chez ORANGE (au-dessus du hublot du fond).
+                    new View("etage2_radio_balise", new Vector3(7.0f, 1.6f, 1.9f), new Vector3(7.0f, 1.85f, 0.38f)),
                 }
             },
             {
@@ -60,6 +65,9 @@ namespace Abysses.EditorTools
                     new View("etage3_salle", new Vector3(1.5f, 2.2f, 1.2f), new Vector3(20f, 0.8f, 12f)),
                     new View("etage3_sonar", new Vector3(1.7f, 1.4f, 3.35f), new Vector3(0.34f, 1.25f, 3.35f)),
                     new View("etage3_ocean", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
+                    new View("etage3_relais", new Vector3(10.5f, 1.55f, 1.75f), new Vector3(10.5f, 1.3f, 0.38f)),
+                    // Récepteur sonar du module CYAN, chez ORANGE, à côté de sa console.
+                    new View("etage3_recepteur", new Vector3(2.2f, 1.45f, 2.6f), new Vector3(0.34f, 1.3f, 2.4f)),
                 }
             },
         };

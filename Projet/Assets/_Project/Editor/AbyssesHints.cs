@@ -13,45 +13,56 @@ namespace Abysses.EditorTools
             ["breakers"] = (new[]
             {
                 "Le tableau des disjoncteurs du mur du fond doit être réarmé… mais pas en entier.",
-                "Le chef mécanicien a laissé une note sur le bureau du module : elle dit quels disjoncteurs laisser coupés.",
+                "Le chef mécanicien a laissé une note… sur le bureau de ton coéquipier : demande-lui de te la lire.",
                 "Lève toutes les manettes sauf les deux nommés sur la note. Si tout disjoncte, recommence sans toucher à ces deux-là.",
             }, new[]
             {
                 "The breaker panel on the back wall must be reset… but not all of it.",
-                "The chief engineer left a note on the module's desk: it says which breakers to leave off.",
+                "The chief engineer left a note… on your teammate's desk: ask them to read it to you.",
                 "Raise every switch except the two named on the note. If everything trips, start again without touching those two.",
             }),
             ["morse"] = (new[]
             {
-                "Une balise clignote dehors, de l'autre côté d'un hublot. Le haut-parleur près du cadenas bipe en même temps.",
+                "Ta balise de détresse clignote devant le hublot du fond… de ton coéquipier. Lui seul la voit et l'entend à la radio.",
                 "C'est du morse : chaque chiffre fait 5 signaux courts (·) ou longs (—). La table est fixée au mur, à côté du cadenas.",
                 "Le message fait 3 chiffres et se répète après un long silence. Règle les 3 molettes dans l'ordre, puis VALIDER.",
             }, new[]
             {
-                "A beacon is flashing outside, beyond one of the windows. The speaker next to the lock beeps along.",
+                "Your distress beacon is flashing outside your teammate's back window. Only they can see it and hear it on the radio.",
                 "It is Morse code: each digit is 5 short (·) or long (—) signals. The table is on the wall, next to the lock.",
                 "The message has 3 digits and repeats after a long silence. Set the 3 wheels in order, then press CONFIRM.",
             }),
             ["simon"] = (new[]
             {
                 "La console du sonar, sur le mur du fond, doit être recalibrée : appuie sur ÉCOUTER.",
-                "Elle joue une séquence de couleurs qui s'allonge à chaque manche : répète-la touche par touche.",
+                "La séquence s'affiche sur le RÉCEPTEUR de ton coéquipier, pas chez toi : il doit te la dicter, tu la reproduis.",
                 "Une erreur et tout recommence : retiens les couleurs et les notes, l'écran indique où tu en es.",
             }, new[]
             {
                 "The sonar console on the back wall needs recalibrating: press LISTEN.",
-                "It plays a colour sequence that grows every round: repeat it key by key.",
+                "The sequence shows up on your teammate's RECEIVER, not yours: they read it to you, you repeat it.",
                 "One mistake and it starts over: remember colours and notes, the screen shows your progress.",
+            }),
+            ["relay"] = (new[]
+            {
+                "Chaque module a un panneau d'appels sur le mur extérieur. Quand toute l'équipe est prête, appuyez sur DÉMARRER.",
+                "Le symbole s'affiche chez un joueur, mais le bon bouton est chez un autre : décrivez la forme, pas la couleur (« deux vagues », « l'œil »…).",
+                "Inventez des noms courts pour les 6 symboles avant de démarrer : les manches accélèrent et une erreur relance la manche.",
+            }, new[]
+            {
+                "Every module has a call panel on the outer wall. When the whole team is ready, press START.",
+                "The symbol shows up for one player, but the right button is someone else's: describe the shape, not the colour (“two waves”, “the eye”…).",
+                "Agree on short names for the 6 symbols before starting: rounds speed up and a mistake restarts the round.",
             }),
             ["keypad"] = (new[]
             {
                 "Le code de ton digicode n'est pas chez toi : il est affiché dans le module voisin.",
-                "Regarde par le hublot du mur commun : ton coéquipier voit ton code sur son mur du fond. Demande-lui de te le dicter.",
+                "Ton coéquipier a ton code sur son mur du fond, et lui seul peut le lire : demande-lui de te le dicter.",
                 "Chaque symbole a une forme ET une couleur : dictez-les de gauche à droite (« cercle rouge, étoile jaune… »).",
             }, new[]
             {
                 "Your keypad code is not in your module: it is displayed in the neighbouring one.",
-                "Look through the window in the shared wall: your teammate sees your code on their back wall. Ask them to read it out.",
+                "Your teammate has your code on their back wall, and only they can read it: ask them to read it out.",
                 "Each symbol has a shape AND a colour: read them left to right (“red circle, yellow star…”).",
             }),
             ["keypadUV"] = (new[]

@@ -45,6 +45,11 @@ namespace Abysses.Player
         void Start()
         {
             if (messagePanel != null) messagePanel.SetActive(false);
+            // Le bouton MENU (collider) suit la main : le corps du joueur (CharacterController) ne doit pas buter dessus.
+            var body = GetComponentInParent<CharacterController>();
+            if (body != null)
+                foreach (Collider part in GetComponentsInChildren<Collider>(true))
+                    Physics.IgnoreCollision(body, part);
             Refresh();
         }
 
