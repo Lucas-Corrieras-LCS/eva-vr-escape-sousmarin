@@ -1,11 +1,56 @@
 # État du projet — ABYSSES
 
-> Bilan des sessions du **2026-11-03** (audit, corrections, ajouts) et du **2026-11-05** (passe artistique).
+> Bilan des sessions du **2026-11-03** (audit, corrections, ajouts), du **2026-11-05** (passe artistique) et du **2026-11-06** (surface, coopération obligatoire, réseau local).
 > Suivi détaillé tâche par tâche : [`BACKLOG.md`](../BACKLOG.md) · statut des consignes : [`CONSIGNES.md`](../CONSIGNES.md).
 
 ## Où on en est
 
 Les **3 étages se jouent de bout en bout**, de la surface jusqu'à la remontée finale, **en solo et à 2 joueurs** dans l'éditeur. Console sans erreur ; seul avertissement : les manettes *simulées* de l'éditeur ne savent pas vibrer (sans conséquence sur le Quest).
+
+## Mise à jour du 2026-11-06 (après-midi) — branche `feat/coop-et-correctifs`
+
+Retours du premier test à plusieurs casques :
+- certaines énigmes se résolvaient seul, alors que les réponses doivent toujours être chez les autres ;
+- l'étage 3 était trop court (partie finie en 13 min) ;
+- on pouvait traverser un mur et tomber dans le vide ;
+- le réseau local ne marchait pas.
+
+### Corrigé
+
+| Problème | Correctif |
+|----------|-----------|
+| Réseau local : aucun casque ne trouvait l'hôte | Verrou multicast Wi-Fi Android + permissions `CHANGE_WIFI_MULTICAST_STATE` / `ACCESS_WIFI_STATE` (`AbyssesAndroidManifest`). Le client sonde aussi **chaque adresse de son sous-réseau** en unicast, car les partages de connexion ne relaient souvent pas le broadcast. L'hôte affiche son IP, le client la sienne ; recherche de 20 s. |
+| Jeu en ligne | La cause de l'échec s'affiche dans le menu. **À faire côté compte** : lier le projet à Unity Cloud (*Project Settings → Services*) et activer Relay + Lobby. |
+| Chute dans le vide | Sol de secours invisible sous toute la piste ; `ZoneGuard` ramène au centre du module (fondu au noir) après une chute ou, au joystick, une sortie de zone de plus de 1,5 m. |
+| Menu introuvable | Bouton **MENU** sur la montre (poignet gauche), en plus du bouton Menu de la manette. |
+| Joueur soulevé par sa propre main | Le corps (CharacterController) ignore le collider du bouton de la montre. |
+
+### Énigmes croisées (voir [`refonte-enigmes.md`](refonte-enigmes.md))
+
+| Étage | Énigme | L'indice est chez… | L'action est chez… |
+|-------|--------|--------------------|--------------------|
+| 1 | Digicode | le partenaire (code **privé**, illisible par le hublot) | moi |
+| 1 | Disjoncteurs | le partenaire (note sur **son** bureau) | moi |
+| 2 | Morse | le partenaire (balise devant **son** hublot, radio chez lui) | moi (cadenas + table) |
+| 3 | Sonar (Simon) | le partenaire (**récepteur** qui affiche ma séquence) | moi (touches) |
+| 1, 2, 3 | **Relais d'appels** (nouveau) | l'appelant (symbole affiché chez lui seul) | la cible (6 boutons-symboles), rôles tirés à chaque appel |
+
+- Relais : 3 manches à l'étage 1 (surtension), 3 à l'étage 2 (fuites), **4 à l'étage 3** (barres de contrôle). Les manches accélèrent (12 s puis 7 s par appel, ×1,5 en mode facile) ; une erreur ou un retard relance la manche.
+- Partenaire absent : copie de la note, balise et bips locaux, séquence affichée sur les touches. Le solo reste jouable.
+- `PrivateView` : un indice n'est rendu que pour le joueur du module. Le pupitre du maître du jeu voit tout.
+
+### Vérifié
+
+- Partie solo automatique **63/63**, relais joué par de vrais appuis (erreur comprise).
+- Partie à 2 plongeurs + pupitre **41/41** : l'appelant n'est jamais la cible ; Simon croisé diffusé entre les deux machines.
+- Ergonomie : 253 objets, 0 à revoir. Console sans erreur.
+- Captures : `etage1_relais`, `etage2_relais`, `etage2_radio_balise`, `etage3_relais`, `etage3_recepteur`.
+
+### Reste à faire
+
+- **Au casque** : réseau local sur un partage de connexion, durée de partie (objectif 20 à 25 min), lisibilité du relais.
+- Rendre les 6 symboles du relais plus difficiles à nommer (variantes, rotations) si c'est trop facile.
+- Passe visuelle des objets d'énigme (liseré d'appel, animations de réussite) ; relier le projet à Unity Cloud.
 
 ## Mise à jour du 2026-11-06 — branche `feat/surface-et-plongee`
 

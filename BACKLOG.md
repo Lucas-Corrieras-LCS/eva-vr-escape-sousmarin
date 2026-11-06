@@ -8,10 +8,11 @@
 
 > Bilan complet de la dernière session : [`docs/etat-du-projet.md`](docs/etat-du-projet.md)
 
+- **Session 2026-11-06 après-midi** (branche `feat/coop-et-correctifs`, CC) : énigmes croisées entre partenaires (indices privés), boucle « relais d'appels » à chaque étage (4 manches à l'étage 3), réseau local réparé (verrou multicast + sondage unicast du sous-réseau), filet anti-chute, bouton MENU sur la montre. Tests : solo 63/63, 2 + pupitre 41/41, ergonomie 253/253
 - **Session 2026-11-06** (branche `feat/surface-et-plongee`) : départ en surface (plateforme offshore, île, phare), vraie plongée animée (secousse, mer qui monte, puits d'eau), 3 énigmes de module jouables seul (disjoncteurs, morse, sonar), vrai porte-fusible, boutons lisibles, aide-mémoire des manettes, manette de jeu (debug) ; fusion de `feat/test-casque`
 - **Session précédente** : 2026-11-05 — **passe artistique** : textures PBR procédurales (coque rivetée, tôle larmée, plafond ondulé, faïence), habillage des modules, mobilier par étage, cabine bathyscaphe redessinée, supports d'appareils ; étages 2 et 3 finis (identité labo, réacteur animé, balisage au sol)
-- **Prochaine action** : régénérer l'APK et premier test sur Quest 2 (perf réelle : 187 à 303 batches selon l'étage dans l'éditeur) ; playtests
-- **Bloquants** : pas de casque pour tester pour l'instant (tout est validé dans l'éditeur + simulateur XR) ; date/format de rendu inconnus ; Relay à activer dans le dashboard Unity
+- **Prochaine action** : test à plusieurs casques sur un partage de connexion (réseau local, durée de partie, relais), puis fusion dans `main`
+- **Bloquants** : jeu en ligne tant que le projet n'est pas lié à Unity Cloud (Relay + Lobby à activer) ; eduroam bloque les casques entre eux ; date/format de rendu inconnus
 
 ## Décisions
 

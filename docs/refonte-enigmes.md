@@ -1,6 +1,8 @@
 # Refonte des énigmes : coopération obligatoire
 
-> Proposition du 2026-11-06, après le premier test à plusieurs casques. **À valider par le binôme avant de coder.**
+> Proposition du 2026-11-06, après le premier test à plusieurs casques.
+> **Fait** (branche `feat/coop-et-correctifs`) : digicode privé, note des disjoncteurs et balise morse chez le partenaire, Simon croisé, relais d'appels aux 3 étages (il remplace « Surtension », « Fuites » et ajoute les barres de contrôle à l'étage 3).
+> **Pas encore fait** : fusibles « presque identiques », séquence du réacteur montrée au seul lecteur, passe visuelle complète des objets.
 > Retour de test : « je peux résoudre des choses tout seul, ça ne doit pas être possible en équipe ; les réponses doivent être chez les autres ».
 
 ## Règles de conception (inspirées de *Big Walk*)
