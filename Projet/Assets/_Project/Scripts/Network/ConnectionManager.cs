@@ -175,7 +175,9 @@ namespace Abysses.Network
                 }
             }
             if (last != null) Debug.LogException(last);
-            Fail("Connexion en ligne impossible (Internet ?).\nEssayez le réseau local.", "Online connection failed (Internet?).\nTry the local network.");
+            // La cause s'affiche dans le menu : sans câble ni console, c'est le seul diagnostic possible au casque.
+            string cause = last != null ? OnlineFailureCause(last) : "?";
+            Fail("Connexion en ligne impossible :\n" + cause + "\nEssayez le réseau local.", "Online connection failed:\n" + cause + "\nTry the local network.");
         }
 
         /// <summary>Quitte la session des services en ligne sans attendre (ni planter si elle n'existe plus).</summary>
@@ -414,8 +416,25 @@ namespace Abysses.Network
             if (Time.unscaledTime > lanJoinDeadline)
             {
                 lanDiscovery.Stop();
-                Fail("Aucune partie trouvée sur le réseau local.\nL'hôte a-t-il cliqué « Héberger » ? Même Wi-Fi ?", "No game found on the local network.\nDid the host press “Host”? Same Wi-Fi?");
+                Fail("Aucune partie trouvée sur le réseau local.\nL'hôte a-t-il choisi « Héberger » ? Même Wi-Fi ? Les réseaux d'école (eduroam)\nisolent les casques : utilisez un partage de connexion.",
+                    "No game found on the local network.\nDid the host press “Host”? Same Wi-Fi? School networks (eduroam)\nisolate headsets: use a phone hotspot.");
             }
+        }
+
+        /// <summary>Message court et compréhensible pour les échecs les plus courants des services en ligne.</summary>
+        static string OnlineFailureCause(Exception e)
+        {
+            string text = e.Message ?? string.Empty;
+            for (Exception inner = e.InnerException; inner != null; inner = inner.InnerException)
+                text += " | " + inner.Message;
+            string lower = text.ToLowerInvariant();
+            if (lower.Contains("project") && (lower.Contains("not found") || lower.Contains("link")))
+                return "projet Unity Cloud non lié (Project Settings → Services).";
+            if (lower.Contains("forbidden") || lower.Contains("not enabled") || lower.Contains("403"))
+                return "Relay / Lobby non activés sur cloud.unity.com.";
+            if (lower.Contains("timeout") || lower.Contains("timed out") || lower.Contains("network") || lower.Contains("host"))
+                return "pas d'accès Internet (ou réseau filtré).";
+            return text.Length > 90 ? text.Substring(0, 90) + "…" : text;
         }
 
         void Fail(string message, string english)

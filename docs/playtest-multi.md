@@ -1,6 +1,6 @@
 # Partie de test automatique — 2 plongeurs + pupitre
 
-> 2026-11-06 14:26 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-06 14:57 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Hôte réseau local lancé (plongeur ORANGE)
@@ -25,7 +25,7 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (429)
+- ✅ Balise morse : code à 3 chiffres tiré (549)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
 - ✅ Étage 2 : « passer l'étage » (pupitre) → étage résolu

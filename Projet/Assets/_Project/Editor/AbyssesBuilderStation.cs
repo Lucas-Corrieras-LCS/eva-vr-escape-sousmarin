@@ -5,6 +5,7 @@ using UnityEngine.Rendering;
 using UnityEngine.XR.Interaction.Toolkit.Filtering;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using Abysses.Interaction;
 using Abysses.Level;
 using Abysses.Network;
 using Abysses.Player;
@@ -205,6 +206,25 @@ namespace Abysses.EditorTools
             message.alignment = TextAlignmentOptions.Center;
             message.textWrappingMode = TextWrappingModes.Normal;
             ((RectTransform)textGo.transform).sizeDelta = new Vector2(0.3f, 0.11f);
+
+            // Bouton « MENU » sur le côté de la montre, appuyé du doigt de la main droite : plus visible que le bouton ☰ de la manette.
+            var menu = Object.FindFirstObjectByType<Abysses.UI.MainMenu>(FindObjectsInactive.Include);
+            GameObject menuButton = Prim(PrimitiveType.Cube, "MenuButton", watch, new Vector3(0.042f, 0f, -0.002f), Quaternion.identity,
+                new Vector3(0.024f, 0.03f, 0.014f), m.EmitAmber, true);
+            menuButton.AddComponent<XRSimpleInteractable>();
+            menuButton.AddComponent<XRPokeFilter>();
+            AudioSource menuClick = Sfx(menuButton, fx.Click, 0.5f);
+            SetFields(menuButton.AddComponent<PokeButton>(), ("receiver", menu), ("index", 0), ("click", menuClick), ("travel", 0.006f));
+            var menuLabelGo = new GameObject("MenuLabel", typeof(RectTransform));
+            menuLabelGo.transform.SetParent(watch, false);
+            menuLabelGo.transform.localPosition = new Vector3(0.042f, 0.024f, -0.004f);
+            var menuLabel = menuLabelGo.AddComponent<TextMeshPro>();
+            menuLabel.fontSize = 0.05f;
+            menuLabel.alignment = TextAlignmentOptions.Center;
+            menuLabel.textWrappingMode = TextWrappingModes.NoWrap;
+            menuLabel.color = new Color(1f, 0.85f, 0.5f);
+            menuLabel.text = "MENU";
+            ((RectTransform)menuLabelGo.transform).sizeDelta = new Vector2(0.04f, 0.012f);
 
             AudioSource chime = Sfx(watch.gameObject, fx.HintChime, 0.8f, 0f);
             SetFields(watch.gameObject.AddComponent<DiveWatch>(), ("face", face), ("messagePanel", panel.gameObject), ("messageText", message), ("chime", chime));

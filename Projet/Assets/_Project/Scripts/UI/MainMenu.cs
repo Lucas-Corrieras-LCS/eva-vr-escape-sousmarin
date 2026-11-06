@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Abysses.Core;
+using Abysses.Interaction;
 using Abysses.Level;
 using Abysses.Network;
 using Abysses.Player;
@@ -13,12 +14,12 @@ namespace Abysses.UI
     /// <summary>
     /// Menu VR (canvas World Space porté par le rig).
     /// - Toujours visible hors ligne, à la surface et à la fin ; en cours de partie, il s'ouvre et se ferme
-    ///   avec le bouton Menu de la manette gauche (touche M dans l'éditeur) pour recalibrer ou quitter.
+    ///   avec le bouton Menu de la manette gauche, le bouton MENU de la montre (touche M dans l'éditeur) pour recalibrer ou quitter.
     /// - À chaque ouverture, il se place devant le regard du joueur.
     /// - Guide la calibration : le départ n'est possible que lorsque chaque plongeur est dans sa cabine.
     /// Entièrement piloté par événements : connexion, joueurs, phase, présence en cabine.
     /// </summary>
-    public class MainMenu : MonoBehaviour
+    public class MainMenu : MonoBehaviour, IPokeReceiver
     {
         [SerializeField] GameObject panel;
         [SerializeField] TMP_Text statusText;
@@ -142,7 +143,12 @@ namespace Abysses.UI
             PlaceInFrontOfPlayer();
         }
 
-        void OnToggle(InputAction.CallbackContext context)
+        void OnToggle(InputAction.CallbackContext context) => ToggleInGame();
+
+        /// <summary>Bouton MENU de la montre.</summary>
+        public void Pressed(int index) => ToggleInGame();
+
+        void ToggleInGame()
         {
             if (!InGame) return;
             openedDuringGame = !openedDuringGame;
@@ -239,7 +245,7 @@ namespace Abysses.UI
         string Hint(GameStateManager state, GamePhase phase)
         {
             if (!Online) return connection.IsBusy ? string.Empty : Loc.T("Choisis comment rejoindre l'équipe.", "Choose how to join the team.");
-            if (InGame) return Loc.T("Bouton Menu (manette gauche) pour fermer.", "Menu button (left controller) to close.");
+            if (InGame) return Loc.T("Bouton MENU de la montre (ou Menu, manette gauche) pour fermer.", "Watch MENU button (or Menu on the left controller) to close.");
             if (phase == GamePhase.Finished) return Loc.T("Bravo ! « Nouvelle plongée » pour recommencer avec la même équipe.", "Well done! “New dive” to play again with the same team.");
 
             LocalRig rig = LocalRig.Instance;

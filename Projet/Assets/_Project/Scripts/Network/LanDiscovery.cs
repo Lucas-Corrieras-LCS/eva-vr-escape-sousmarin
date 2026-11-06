@@ -170,6 +170,13 @@ namespace Abysses.Network
             return list;
         }
 
+        /// <summary>Première adresse IPv4 locale (vide si aucune).</summary>
+        public static string LocalAddress()
+        {
+            List<string> all = LocalAddresses();
+            return all.Count > 0 ? all[0] : string.Empty;
+        }
+
         static IEnumerable<(IPAddress address, IPAddress mask)> Interfaces()
         {
             var found = new List<(IPAddress, IPAddress)>();
