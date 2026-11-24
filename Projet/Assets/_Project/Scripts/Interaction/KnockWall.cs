@@ -10,6 +10,7 @@ namespace Abysses.Interaction
     /// Plaque de coque partagée par deux modules voisins : quand l'un tape dessus, l'autre entend le coup
     /// de son côté de la cloison (son spatialisé) et le sent dans la manette. De quoi se parler en morse,
     /// comme de vrais sous-mariniers, ou simplement attirer l'attention du coéquipier.
+    /// Le serveur est prévenu de chaque coup (<see cref="ServerKnocked"/>) : l'énigme du code frappé l'écoute.
     /// </summary>
     public class KnockWall : NetworkBehaviour
     {
@@ -26,6 +27,11 @@ namespace Abysses.Interaction
         [SerializeField, Min(0.05f)] float cooldown = 0.12f;
 
         float nextKnock;
+
+        /// <summary>Serveur : un coup frappé sur ce mur, depuis le module donné.</summary>
+        public static event System.Action<KnockWall, int> ServerKnocked;
+
+        public int QuadrantOf(int side) => side == 0 ? sideA.quadrant : sideB.quadrant;
 
         public override void OnNetworkSpawn()
         {
@@ -50,7 +56,14 @@ namespace Abysses.Interaction
             if (from.knock != null) from.knock.PlayOneShot(from.knock.clip, 0.6f);
             LocalRig.Pulse(0.5f, 0.04f);
             KnockRpc(side);
+            KnockServerRpc(side);
         }
+
+        [Rpc(SendTo.Server)]
+        void KnockServerRpc(int fromSide) => ServerKnocked?.Invoke(this, QuadrantOf(fromSide));
+
+        /// <summary>Coup simulé côté serveur (tests automatiques).</summary>
+        public void ServerKnock(int quadrant) => ServerKnocked?.Invoke(this, quadrant);
 
         [Rpc(SendTo.NotMe)]
         void KnockRpc(int fromSide)

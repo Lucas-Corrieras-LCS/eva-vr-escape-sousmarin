@@ -1,6 +1,6 @@
 # Partie de test automatique — solo
 
-> 2026-11-24 17:01 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-24 17:18 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Partie solo lancée, quadrant ORANGE attribué
@@ -23,11 +23,13 @@
 - ✅ Fusible disponible pour le test d'objet perdu
 - ✅ Objet perdu (fusible passé sous le sol) revenu à sa place
 - ✅ Étage 1 : 4 tableaux de dérivation
-- ✅ Tableau : 5 fils, voyant, n° de série EC-5183
+- ✅ Tableau : 6 fils, voyant, n° de série LM-3089
 - ✅ Manuel : règles numérotées affichées
 - ✅ Tableau : un mauvais fil provoque un court-circuit
 - ✅ Tableau : nouveau tirage après le court-circuit
 - ✅ Tableau : 3 bons fils d'affilée → dérivation rétablie
+- ✅ Étage 1 : code frappé sur la cloison en place
+- ✅ Code frappé : sans partenaire, résolu d'office
 - ✅ Étage 1 : « passer l'étage » (pupitre) → étage résolu
 - ✅ Étage 1 : courant rétabli (néons rallumés un par un, lightmaps échangées)
 - ✅ Pas de descente tant que le plongeur n'est pas revenu dans sa cabine
@@ -37,9 +39,15 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (294)
+- ✅ Balise morse : code à 3 chiffres tiré (362)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
+- ✅ Étage 2 : 4 mélangeurs d'antidote
+- ✅ Antidote : recette et réactifs tirés
+- ✅ Antidote : tableau des réactifs (encre UV) rempli
+- ✅ Antidote : fiche de recette affichée
+- ✅ Antidote : un mauvais dosage mousse et se vide
+- ✅ Antidote : recette respectée → antidote prêt
 - ✅ Étage 2 : relais d'appels en place
 - ✅ Relais : DÉMARRER lance le premier appel
 - ✅ Relais en solo : le joueur est appelant et cible
@@ -60,7 +68,7 @@
 - ✅ Écran de surveillance : la carte de la cale est affichée
 - ✅ Cale : la dalle DÉPART arme le parcours
 - ✅ Cale : une dalle sous tension → décharge, retour au départ
-- ✅ Cale : chemin sûr suivi (9 dalles) → vanne de purge atteinte
+- ✅ Cale : chemin sûr suivi (6 dalles) → vanne de purge atteinte
 - ✅ Étage 3 : fuite et salle des pompes tirées
 - ✅ Cloisons : le plan est affiché (seul plongeur)
 - ✅ Cloisons : aucune porte ne se ferme avant l'alerte
@@ -74,6 +82,15 @@
 - ✅ Étage 3 : code de la cabine → étage résolu
 - ✅ Descente vers l'étage 4 (salle commune)
 - ✅ Montre : -4 000 m
+- ✅ Étage 4 : consoles sonar et lance-leurre en place
+- ✅ Léviathan : position tirée au début de l'étage
+- ✅ Sonar : la distance du module s'affiche
+- ✅ Léviathan : un tir à côté est raté
+- ✅ Léviathan : leurre tiré en C4 → touché
+- ✅ Étage 4 : standard des circuits en place
+- ✅ Standard : le tableau est chez l'opérateur
+- ✅ Standard : un câblage faux est refusé, tout se débranche
+- ✅ Standard : 4 bonnes liaisons → circuits rétablis
 - ✅ Séquence du réacteur + remontée → fin de partie
 - ✅ Chrono de fin cohérent
 - ✅ Temps enregistré au classement : 1.  1:12  ·  1 plongeur

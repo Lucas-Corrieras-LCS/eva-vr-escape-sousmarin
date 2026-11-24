@@ -76,6 +76,50 @@ namespace Abysses.EditorTools
                 "Only one diver has the MAP; the door controls are spread among you. They must say who closes what.",
                 "Only three closures: close every door between water and dry before it reaches the PUMP (yellow).",
             }),
+            ["sonarhunt"] = (new[]
+            {
+                "Le Léviathan rôde autour de la station. Chaque sonar mesure sa distance, en cases de la carte.",
+                "Chacun lit la distance de SON sonar (coin de la carte à sa couleur) ; celle du réacteur, au centre, est la même pour tous.",
+                "Distance = cases en ligne droite, sans diagonale. Cherchez ensemble la case qui colle à toutes les distances, puis lettre + chiffre + FEU.",
+            }, new[]
+            {
+                "The Leviathan is circling the station. Each sonar measures its distance, in map tiles.",
+                "Everyone reads THEIR sonar's distance (map corner in their colour); the reactor's, in the centre, is the same for all.",
+                "Distance = tiles in straight lines, no diagonals. Find together the tile matching every distance, then letter + number + FIRE.",
+            }),
+            ["patch"] = (new[]
+            {
+                "Le standard des circuits doit être recâblé : 4 fiches à brancher sur les bonnes prises.",
+                "L'opérateur ne voit que des numéros ; la liste des liaisons est en couleurs, et la légende traduit les couleurs en numéros. Chacun a une partie.",
+                "Liste : « ROUGE → GRIS ». Légende : « ROUGE = 37, GRIS = 52 ». L'opérateur branche alors la fiche 37 sur la prise 52.",
+            }, new[]
+            {
+                "The circuit switchboard must be rewired: 4 plugs into the right sockets.",
+                "The operator only sees numbers; the link list is in colours, and the legend turns colours into numbers. Each of you has a part.",
+                "List: “RED → GREY”. Legend: “RED = 37, GREY = 52”. The operator then plugs 37 into socket 52.",
+            }),
+            ["antidote"] = (new[]
+            {
+                "Le mélangeur du labo attend un antidote : un certain nombre de doses de chaque flacon de couleur, puis MÉLANGER.",
+                "La recette de TON antidote est chez un autre plongeur, en noms de molécules. Quelle molécule est dans quel flacon ? C'est écrit à l'encre UV au labo ORANGE.",
+                "Faites circuler la lampe UV par les sas jusqu'au tableau des réactifs, traduisez la recette en couleurs, puis dosez. VIDER pour recommencer.",
+            }, new[]
+            {
+                "The lab mixer needs an antidote: a number of doses from each coloured flask, then MIX.",
+                "YOUR antidote's recipe is at another diver's, in molecule names. Which molecule is in which flask? It is written in UV ink in the ORANGE lab.",
+                "Pass the UV lamp through the airlocks to the reagent chart, turn the recipe into colours, then dose. EMPTY to start over.",
+            }),
+            ["knock"] = (new[]
+            {
+                "Ton pupitre d'écoute, au-dessus de la plaque FRAPPER, affiche le rythme que ton partenaire doit frapper sur la cloison.",
+                "Décris-lui le rythme (« 3 coups, pause, 1 coup… ») : il frappe de son côté, ton pupitre affiche ce qui est reçu.",
+                "Chiffre = nombre de coups rapides ; marquez une petite pause entre les groupes, puis attendez 2 secondes à la fin.",
+            }, new[]
+            {
+                "Your listening panel, above the KNOCK plate, shows the rhythm your partner must knock on the bulkhead.",
+                "Describe the rhythm (“3 knocks, pause, 1 knock…”): they knock on their side, your panel shows what was received.",
+                "Digit = number of quick knocks; leave a short pause between groups, then wait 2 seconds at the end.",
+            }),
             ["floorlock"] = (new[]
             {
                 "La cabine est verrouillée par un code. Chaque énigme de l'étage en révèle un chiffre, sur le verrou d'un des modules.",

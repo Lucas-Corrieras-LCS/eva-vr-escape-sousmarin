@@ -268,7 +268,7 @@ namespace Abysses.EditorTools
         // ------------------------------------------------------------------ Coups sur la cloison
 
         /// <summary>Plaque de coque à frapper sur le mur commun de deux modules partenaires.</summary>
-        static void BuildKnockWall(Mats m, Transform parent, Module a, Module b)
+        static KnockWall BuildKnockWall(Mats m, Transform parent, Module a, Module b)
         {
             var root = new GameObject("KnockWall_Q" + a.Q + "_Q" + b.Q);
             root.transform.SetParent(parent, false);
@@ -278,6 +278,7 @@ namespace Abysses.EditorTools
             FillKnockSide(m, root.transform, a, so.FindProperty("sideA"));
             FillKnockSide(m, root.transform, b, so.FindProperty("sideB"));
             so.ApplyModifiedPropertiesWithoutUndo();
+            return knock;
         }
 
         static void FillKnockSide(Mats m, Transform parent, Module mod, SerializedProperty side)

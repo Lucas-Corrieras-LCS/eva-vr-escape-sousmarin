@@ -473,6 +473,117 @@ namespace Abysses.EditorTools
             yield return Until(() => network.Objective.Solved.Value, 4f, "Cloisons : portes autour de l'eau fermées → fuite isolée, pompe au sec");
         }
 
+        /// <summary>Étage 4 : triangulation du Léviathan — un tir raté, puis la case déduite des distances.</summary>
+        static IEnumerator Triangulation()
+        {
+            SonarHunt hunt = Object.FindFirstObjectByType<SonarHunt>();
+            Check(hunt != null, "Étage 4 : consoles sonar et lance-leurre en place");
+            if (hunt == null) yield break;
+            yield return Until(() => hunt.Target.Value >= 0, 3f, "Léviathan : position tirée au début de l'étage");
+            int mine = LocalRig.Instance.Quadrant;
+            TMP_Text distance = Field<TMP_Text[]>(hunt, "distanceTexts")[mine];
+            Check(distance.text.Contains(SonarHunt.Distance(hunt.Target.Value, SonarHunt.Sonars[mine]).ToString()), "Sonar : la distance du module s'affiche");
+            int wrong = (hunt.Target.Value + 1) % (SonarHunt.Size * SonarHunt.Size);
+            hunt.PressedFrom(mine, wrong % SonarHunt.Size);
+            hunt.PressedFrom(mine, SonarHunt.Size + wrong / SonarHunt.Size);
+            hunt.PressedFrom(mine, SonarHunt.FireIndex);
+            yield return Until(() => hunt.Misses.Value == 1, 3f, "Léviathan : un tir à côté est raté");
+            int target = hunt.Target.Value;
+            hunt.PressedFrom(mine, target % SonarHunt.Size);
+            hunt.PressedFrom(mine, SonarHunt.Size + target / SonarHunt.Size);
+            hunt.PressedFrom(mine, SonarHunt.FireIndex);
+            yield return Until(() => hunt.Objective.Solved.Value, 3f, $"Léviathan : leurre tiré en {SonarHunt.CellName(target)} → touché");
+        }
+
+        /// <summary>Étage 4 : câblage du standard — un câblage faux (tout se débranche), puis le bon.</summary>
+        static IEnumerator Switchboard()
+        {
+            PatchBoard board = Object.FindFirstObjectByType<PatchBoard>();
+            Check(board != null && board.Ready, "Étage 4 : standard des circuits en place");
+            if (board == null) yield break;
+            int mine = LocalRig.Instance.Quadrant;
+            PatchStation station = Object.FindObjectsByType<PatchStation>(FindObjectsSortMode.None).FirstOrDefault(p => Field<int>(p, "quadrant") == mine);
+            Check(station != null && Field<GameObject>(station, "boardGroup").activeSelf, "Standard : le tableau est chez l'opérateur");
+            if (station == null) yield break;
+            for (int i = 0; i < PatchBoard.Sources; i++)
+            {
+                station.Pressed(i);
+                station.Pressed(PatchBoard.Sources + board.Expected((i + 1) % PatchBoard.Sources));
+                yield return Wait(0.15f);
+            }
+            yield return Until(() => board.Errors.Value == 1 && board.Links.Value == 0, 3f, "Standard : un câblage faux est refusé, tout se débranche");
+            for (int i = 0; i < PatchBoard.Sources; i++)
+            {
+                station.Pressed(i);
+                station.Pressed(PatchBoard.Sources + board.Expected(i));
+                yield return Wait(0.15f);
+            }
+            yield return Until(() => board.Objective.Solved.Value, 3f, "Standard : 4 bonnes liaisons → circuits rétablis");
+        }
+
+        /// <summary>Étage 1 : code frappé — un rythme faux, puis le bon (coups simulés côté serveur, avec leurs pauses).</summary>
+        static IEnumerator KnockedCode()
+        {
+            KnockCode code = Object.FindObjectsByType<KnockCode>(FindObjectsSortMode.None).FirstOrDefault(c => c.ObjectiveOf(0).Quadrant == 0 || c.ObjectiveOf(1).Quadrant == 0);
+            Check(code != null, "Étage 1 : code frappé sur la cloison en place");
+            if (code == null) yield break;
+            int side = code.ObjectiveOf(0).Quadrant == 0 ? 0 : 1;
+            PuzzleObjective objective = code.ObjectiveOf(side);
+            if (objective.Solved.Value)
+            {
+                // En solo, le partenaire est absent : l'énigme est résolue d'office (personne pour écouter).
+                Check(true, "Code frappé : sans partenaire, résolu d'office");
+                yield break;
+            }
+            KnockWall wall = Field<KnockWall>(code, "wall");
+            IEnumerator Knock(int pattern)
+            {
+                foreach (char digit in pattern.ToString())
+                {
+                    for (int k = 0; k < digit - '0'; k++)
+                    {
+                        wall.ServerKnock(0);
+                        yield return Wait(0.25f);
+                    }
+                    yield return Wait(1.1f);
+                }
+            }
+            int target = code.Pattern(side);
+            yield return Knock(target == 111 ? 222 : 111);
+            yield return Until(() => (side == 0 ? code.ReceivedA.Value : code.ReceivedB.Value) > 0 && !objective.Solved.Value, 5f, "Code frappé : un rythme faux est reçu mais refusé");
+            yield return Knock(target);
+            yield return Until(() => objective.Solved.Value, 5f, "Code frappé : le bon rythme frappé sur la cloison → message reçu");
+        }
+
+        /// <summary>Étage 2 : antidote — un mauvais mélange (il mousse et se vide), puis la recette traduite en couleurs.</summary>
+        static IEnumerator Antidote()
+        {
+            Check(Object.FindObjectsByType<AntidoteMixer>(FindObjectsSortMode.None).Length == 4, "Étage 2 : 4 mélangeurs d'antidote");
+            AntidoteMixer mixer = Mine<AntidoteMixer>();
+            if (mixer == null) yield break;
+            yield return Until(() => mixer.Ready, 3f, "Antidote : recette et réactifs tirés");
+            AntidoteChart chart = Object.FindFirstObjectByType<AntidoteChart>();
+            Check(chart != null && Field<TMP_Text>(chart, "text").text.Contains("="), "Antidote : tableau des réactifs (encre UV) rempli");
+            AntidoteRecipe recipe = Object.FindObjectsByType<AntidoteRecipe>(FindObjectsSortMode.None).FirstOrDefault(r => Field<int>(r, "quadrant") == LocalRig.Instance.Quadrant);
+            Check(recipe != null && Field<TMP_Text>(recipe, "text").text.Contains("×"), "Antidote : fiche de recette affichée");
+            int failures = mixer.Failures.Value;
+            int wrongFlask = 0;
+            for (int i = 0; i < AntidoteMixer.Flasks; i++) if (mixer.Expected(i) < 3) { wrongFlask = i; break; }
+            for (int k = 0; k <= mixer.Expected(wrongFlask); k++) mixer.Pressed(wrongFlask);
+            yield return Wait(0.3f);
+            mixer.Pressed(AntidoteMixer.MixIndex);
+            yield return Until(() => mixer.Failures.Value == failures + 1 && mixer.Doses.Value == 0, 3f, "Antidote : un mauvais dosage mousse et se vide");
+            for (int i = 0; i < AntidoteMixer.Flasks; i++)
+                for (int k = 0; k < mixer.Expected(i); k++)
+                {
+                    mixer.Pressed(i);
+                    yield return Wait(0.05f);
+                }
+            yield return Wait(0.3f);
+            mixer.Pressed(AntidoteMixer.MixIndex);
+            yield return Until(() => mixer.Objective.Solved.Value, 3f, "Antidote : recette respectée → antidote prêt");
+        }
+
         /// <summary>Méta-énigme : fragments affichés, mauvais code refusé, bon code saisi touche par touche.</summary>
         static IEnumerator CabinCode(int floor)
         {
@@ -524,7 +635,11 @@ namespace Abysses.EditorTools
                 }
             }
 
-            if (checkLostItem) yield return Wiring();
+            if (checkLostItem)
+            {
+                yield return Wiring();
+                yield return KnockedCode();
+            }
 
             // Comme en vrai, le plongeur est aux leviers (hors de sa cabine) quand le courant revient.
             Transform rig = LocalRig.Instance.transform;
@@ -554,6 +669,7 @@ namespace Abysses.EditorTools
             Check(Object.FindObjectsByType<RisingWater>(FindObjectsSortMode.None).Length == 4, "Étage 2 : eau qui monte dans les 4 modules");
             Check(Object.FindObjectsByType<NeonFlicker>(FindObjectsSortMode.None).Length == 4, "Étage 2 : néons défaillants");
             yield return MorseLock();
+            yield return Antidote();
             yield return Relay(2);
             yield return SkipFloorAndDescend(2);
             yield return Until(() => Phase(GamePhase.Playing, 3), 45f, "Descente vers l'étage 3 (ballasts)");
@@ -566,6 +682,8 @@ namespace Abysses.EditorTools
             yield return Until(() => State.Phase.Value != GamePhase.Playing || State.Floor.Value != 3, 6f, "Étage 3 : code de la cabine → étage résolu");
             yield return Until(() => Phase(GamePhase.Playing, 4), 45f, "Descente vers l'étage 4 (salle commune)");
             Check(WatchText().Contains("-4000"), "Montre : -4 000 m");
+            yield return Triangulation();
+            yield return Switchboard();
             State.GmSkipFloorRpc();
             yield return Until(() => State.Phase.Value == GamePhase.Finished, 6f, "Séquence du réacteur + remontée → fin de partie");
             Check(State.EndTime.Value > State.StartTime.Value, "Chrono de fin cohérent");

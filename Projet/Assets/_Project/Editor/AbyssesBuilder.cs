@@ -1382,12 +1382,14 @@ namespace Abysses.EditorTools
             }
 
             foreach (Module mod in modules) BuildWiringManual(m, root, mod, wiringPanels, 1);
+            // Code frappé sur la cloison commune : chacun frappe le rythme que lui décrit son partenaire.
+            var knockGroup = new List<PuzzleObjective>();
+            knockGroup.AddRange(BuildKnockCode(m, root, BuildKnockWall(m, root, modules[0], modules[1]), modules[0], modules[1]));
+            knockGroup.AddRange(BuildKnockCode(m, root, BuildKnockWall(m, root, modules[2], modules[3]), modules[2], modules[3]));
             // Fin d'étage : le code de la cabine rallume aussi le courant.
-            PuzzleObjective powerObjective = BuildFloorLock(m, root, modules, 1, new List<PuzzleObjective[]> { keypadGroup, fuseGroup, wiringGroup }, 0);
+            PuzzleObjective powerObjective = BuildFloorLock(m, root, modules, 1, new List<PuzzleObjective[]> { keypadGroup, fuseGroup, wiringGroup, knockGroup.ToArray() }, 0);
             BuildHatch(m, root, modules[0], PartnerHatchSpot(modules[0]), modules[1], PartnerHatchSpot(modules[1]));
             BuildHatch(m, root, modules[2], PartnerHatchSpot(modules[2]), modules[3], PartnerHatchSpot(modules[3]));
-            BuildKnockWall(m, root, modules[0], modules[1]);
-            BuildKnockWall(m, root, modules[2], modules[3]);
             BuildPowerOutage(m, root, modules, powerObjective);
 
             BuildProbes(root, modules);
@@ -1412,26 +1414,16 @@ namespace Abysses.EditorTools
             OceanView(m, root, modules, 2);
             StationLife(m, root, modules, 2);
 
-            var keypads = new CodeKeypad[4];
             var gauges = new PressureGauge[4];
             var valves = new ValveWheel[4];
             for (int q = 0; q < 4; q++)
             {
                 Module mod = modules[q];
-                keypads[q] = BuildKeypad(m, root, mod, 2);
                 gauges[q] = BuildGauge(m, root, mod, 2);
                 valves[q] = BuildValve(m, root, mod);
             }
-
-            for (int q = 0; q < 4; q++)
-            {
-                Module mod = modules[q];
-                // Code du partenaire écrit à l'encre UV sur le mur du fond : il faut la lampe pour le lire.
-                BuildCodeDisplay(m, root, mod.P(-7.16f, 1.6f, -2f), mod.Facing(-1f, 0f), keypads[mod.Partner],
-                    "CODE DU MODULE " + QuadrantNames[mod.Partner] + "  (encre UV)", true, true, "UVCode_For_Q" + mod.Partner,
-                    "CODE FOR MODULE " + QuadrantNamesEn[mod.Partner] + "  (UV ink)");
-                BuildFallback(root, mod, BuildFallbackMonitor(m, root, mod, keypads[q]), null, null);
-            }
+            // Antidote : mélangeur ici, recette chez un autre plongeur, réactifs à l'encre UV (lampe qui circule par les sas).
+            List<PuzzleObjective> antidote = BuildAntidote(m, root, modules);
 
             var pressure = new GameObject("PressureNetwork");
             pressure.transform.SetParent(root, false);
@@ -1470,13 +1462,8 @@ namespace Abysses.EditorTools
             // Le relais d'appels n'existe qu'à cet étage (une mécanique = une seule fois dans la partie).
             PuzzleObjective relay = BuildCallOutRelay(m, root, modules, 2, RelayWallX, 3, "Fuites", "Leaks", "FUITES · VANNES DE DÉRIVATION", "LEAKS · BYPASS VALVES");
             var gaugeGroup = new PuzzleObjective[4];
-            var uvGroup = new PuzzleObjective[4];
-            for (int q = 0; q < 4; q++)
-            {
-                gaugeGroup[q] = gauges[q].GetComponent<PuzzleObjective>();
-                uvGroup[q] = keypads[q].GetComponent<PuzzleObjective>();
-            }
-            BuildFloorLock(m, root, modules, 2, new List<PuzzleObjective[]> { gaugeGroup, uvGroup, morseGroup, new[] { relay } }, 1);
+            for (int q = 0; q < 4; q++) gaugeGroup[q] = gauges[q].GetComponent<PuzzleObjective>();
+            BuildFloorLock(m, root, modules, 2, new List<PuzzleObjective[]> { gaugeGroup, antidote.ToArray(), morseGroup, new[] { relay } }, 1);
 
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[1]);
@@ -1610,8 +1597,9 @@ namespace Abysses.EditorTools
             rso.FindProperty("failSound").objectReferenceValue = reactorFail;
             rso.ApplyModifiedPropertiesWithoutUndo();
 
-            // Remontée (seuls leviers synchronisés de la partie) : après la séquence du réacteur et les énigmes de l'étage.
-            var ascentPrerequisites = new List<PuzzleObjective> { sequenceObjective };
+            // Remontée (seuls leviers synchronisés de la partie) : après la séquence du réacteur, la triangulation du
+            // Léviathan et le câblage du standard.
+            var ascentPrerequisites = new List<PuzzleObjective> { sequenceObjective, BuildSonarHunt(m, root, modules), BuildPatchBoard(m, root, modules) };
             BuildSyncLevers(root, CoreFloor, "Remontée d'urgence", "Emergency ascent", "ascent", levers, ascentPrerequisites.ToArray());
 
             // Fin : faisceau de lumière venu de la surface + bulles dans les colonnes d'eau.
