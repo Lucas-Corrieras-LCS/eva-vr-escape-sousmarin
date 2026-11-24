@@ -77,7 +77,9 @@ namespace Abysses.EditorTools
             foreach (Module mod in modules) BuildMazeMonitor(m, root, mod, mazes, 2);
             PuzzleObjective bulkheads = BuildBulkheads(m, root, modules, 3);
 
-            var groups = new List<PuzzleObjective[]> { manifoldGroup, mazeGroup, new[] { bulkheads } };
+            // Contrepoids : cibles chez un autre plongeur, lests à s'échanger par le sas entre partenaires.
+            PuzzleObjective counterweights = BuildBallastScale(m, root, modules, 2);
+            var groups = new List<PuzzleObjective[]> { manifoldGroup, mazeGroup, new[] { bulkheads }, new[] { counterweights } };
             BuildFloorLock(m, root, modules, BallastFloor, groups, 2);
 
             BuildHatch(m, root, modules[0], PartnerHatchSpot(modules[0]), modules[1], PartnerHatchSpot(modules[1]));

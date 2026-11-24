@@ -43,6 +43,8 @@ namespace Abysses.EditorTools
                     // Relais d'appels du module Q0, sur le mur extérieur (x local 1,55).
                     new View("etage1_manuel", new Vector3(9.05f, 1.55f, 1.6f), new Vector3(9.05f, 1.35f, 0.38f)),
                     new View("etage1_verrou", new Vector3(8.5f, 1.5f, 6.4f), new Vector3(8.5f, 1.3f, 7.62f)),
+                    // Pupitre d'écoute du code frappé, côté ORANGE de la cloison commune avec CYAN.
+                    new View("etage1_frappe", new Vector3(13.3f, 1.6f, 7.1f), new Vector3(14.66f, 1.7f, 7.1f)),
                 }
             },
             {
@@ -57,6 +59,9 @@ namespace Abysses.EditorTools
                     new View("etage2_relais", new Vector3(9.05f, 1.55f, 1.75f), new Vector3(9.05f, 1.3f, 0.38f)),
                     // Radio de la balise du module CYAN, chez ORANGE (au-dessus du hublot du fond).
                     new View("etage2_radio_balise", new Vector3(7.0f, 1.55f, 1.4f), new Vector3(7.0f, 1.42f, 0.38f)),
+                    // Antidote : mélangeur d'ORANGE (mur extérieur), recette et tableau UV (mur du fond).
+                    new View("etage2_melangeur", new Vector3(10f, 1.55f, 1.65f), new Vector3(10f, 1.25f, 0.38f)),
+                    new View("etage2_recette", new Vector3(1.9f, 1.5f, 1.5f), new Vector3(0.34f, 1.4f, 1.5f)),
                 }
             },
             {
@@ -70,6 +75,9 @@ namespace Abysses.EditorTools
                     new View("etage3b_surveillance", new Vector3(9.05f, 1.55f, 1.6f), new Vector3(9.05f, 1.35f, 0.38f)),
                     new View("etage3b_cale", new Vector3(8.4f, 2.3f, 1.6f), new Vector3(11.2f, 0f, 4.2f)),
                     new View("etage3b_cloisons", new Vector3(10.8f, 1.5f, 6.3f), new Vector3(10.8f, 1.3f, 7.62f)),
+                    // Contrepoids : plateau de pesée et étagère des lests d'ORANGE, registre sur le mur extérieur.
+                    new View("etage3b_balance", new Vector3(3.4f, 1.7f, 5.3f), new Vector3(3.0f, 0.85f, 7.0f)),
+                    new View("etage3b_registre", new Vector3(5.1f, 1.55f, 1.6f), new Vector3(5.1f, 1.4f, 0.38f)),
                 }
             },
             {
@@ -78,6 +86,8 @@ namespace Abysses.EditorTools
                     new View("etage3_reacteur", new Vector3(9f, 1.7f, 2f), new Vector3(15.5f, 1.4f, 8.25f)),
                     new View("etage3_salle", new Vector3(1.5f, 2.2f, 1.2f), new Vector3(20f, 0.8f, 12f)),
                     new View("etage3_ocean", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
+                    new View("etage4_sonar", new Vector3(10.76f, 1.5f, 1.5f), new Vector3(10.76f, 1.35f, 0.44f)),
+                    new View("etage4_standard", new Vector3(1.6f, 1.5f, 3.0f), new Vector3(0.34f, 1.3f, 3.0f)),
                 }
             },
         };

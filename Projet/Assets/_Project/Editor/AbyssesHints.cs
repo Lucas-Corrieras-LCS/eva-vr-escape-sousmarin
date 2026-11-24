@@ -120,6 +120,17 @@ namespace Abysses.EditorTools
                 "Describe the rhythm (“3 knocks, pause, 1 knock…”): they knock on their side, your panel shows what was received.",
                 "Digit = number of quick knocks; leave a short pause between groups, then wait 2 seconds at the end.",
             }),
+            ["ballastscale"] = (new[]
+            {
+                "Chaque module a un plateau de lest et quatre lests (1, 2, 2 et 5 kg). Il faut la bonne charge sur CHAQUE plateau, en même temps.",
+                "La charge demandée pour ton plateau est inscrite au registre d'un autre plongeur. Demandez-vous vos cibles.",
+                "Entre partenaires, les cibles ne tombent pas juste avec vos propres lests : calculez et envoyez-vous des lests par le sas.",
+            }, new[]
+            {
+                "Every module has a ballast pan and four weights (1, 2, 2 and 5 kg). Each pan needs the right load, all at the same time.",
+                "The load required on your pan is written in another diver's log. Ask each other for your targets.",
+                "Between partners, your own weights won't add up: work it out and send each other weights through the airlock.",
+            }),
             ["floorlock"] = (new[]
             {
                 "La cabine est verrouillée par un code. Chaque énigme de l'étage en révèle un chiffre, sur le verrou d'un des modules.",

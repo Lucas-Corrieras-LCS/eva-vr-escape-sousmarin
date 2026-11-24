@@ -285,7 +285,9 @@ namespace Abysses.EditorTools
         {
             Quaternion facing = mod.Facing(1f, 0f);
             Vector3 position = mod.P(7.15f, 1.3f, 3.1f);
-            GameObject plate = Prim(PrimitiveType.Cylinder, "KnockPlate_Q" + mod.Q, parent, position, facing * Quaternion.Euler(90f, 0f, 0f), new Vector3(0.24f, 0.012f, 0.24f), m.Pipe, true);
+            // Plaque de laiton sur un anneau rayé : on la repère tout de suite sur la coque sombre.
+            Prim(PrimitiveType.Cylinder, "Anneau", parent, position + facing * Vector3.forward * 0.006f, facing * Quaternion.Euler(90f, 0f, 0f), new Vector3(0.31f, 0.006f, 0.31f), m.Hazard, false);
+            GameObject plate = Prim(PrimitiveType.Cylinder, "KnockPlate_Q" + mod.Q, parent, position, facing * Quaternion.Euler(90f, 0f, 0f), new Vector3(0.24f, 0.012f, 0.24f), m.Brass, true);
             var interactable = plate.AddComponent<XRSimpleInteractable>();
             Halo(m, plate, plate, 1.1f);
             Label(parent, "FRAPPER", position + Vector3.up * 0.2f + facing * Vector3.back * 0.01f, 0.4f, facing, "KNOCK");

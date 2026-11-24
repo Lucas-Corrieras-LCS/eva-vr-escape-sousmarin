@@ -441,11 +441,15 @@ namespace Abysses.EditorTools
             }
             var path = new List<int>();
             for (int cell = maze.GoalCell; cell >= 0; cell = previous[cell]) path.Insert(0, cell);
+            var visited = new List<int>();
             foreach (int cell in path)
             {
                 MoveHeadTo(maze.CellCenter(cell));
                 yield return Wait(0.3f);
+                visited.Add(maze.CellAt(LocalRig.Instance.Head.position));
             }
+            if (!maze.Objective.Solved.Value)
+                Debug.Log($"[Abysses] Test cale : armé={maze.Armed.Value}, décharges={maze.Shocks.Value}, chemin={string.Join(",", path)}, vu={string.Join(",", visited)}");
             yield return Until(() => maze.Objective.Solved.Value, 3f, $"Cale : chemin sûr suivi ({path.Count} dalles) → vanne de purge atteinte");
             LocalRig.Instance.Recenter();
         }
@@ -456,9 +460,12 @@ namespace Abysses.EditorTools
             BulkheadNetwork network = Object.FindFirstObjectByType<BulkheadNetwork>();
             Check(network != null && network.Layout.Value >= 0 && network.Leak != network.Pump, "Étage 3 : fuite et salle des pompes tirées");
             if (network == null) yield break;
-            int mine = LocalRig.Instance.Quadrant;
-            BulkheadDisplay display = Object.FindObjectsByType<BulkheadDisplay>(FindObjectsSortMode.None).FirstOrDefault(d => Field<int>(d, "quadrant") == mine);
-            Check(display != null && Field<GameObject>(display, "map").activeSelf, "Cloisons : le plan est affiché (seul plongeur)");
+            // Le plan est chez un seul plongeur (routage) : on joue depuis son pupitre.
+            int holder = network.MapHolder(State.ActiveMask.Value);
+            BulkheadDisplay display = Object.FindObjectsByType<BulkheadDisplay>(FindObjectsSortMode.None).FirstOrDefault(d => Field<int>(d, "quadrant") == holder);
+            Check(display != null && Field<GameObject>(display, "map").activeSelf
+                && Object.FindObjectsByType<BulkheadDisplay>(FindObjectsSortMode.None).Count(d => Field<GameObject>(d, "map").activeSelf) == 1,
+                $"Cloisons : le plan n'est affiché que chez un plongeur (module {holder})");
             if (display == null) yield break;
             display.Pressed(0);
             yield return Wait(0.3f);
@@ -501,9 +508,10 @@ namespace Abysses.EditorTools
             PatchBoard board = Object.FindFirstObjectByType<PatchBoard>();
             Check(board != null && board.Ready, "Étage 4 : standard des circuits en place");
             if (board == null) yield break;
-            int mine = LocalRig.Instance.Quadrant;
-            PatchStation station = Object.FindObjectsByType<PatchStation>(FindObjectsSortMode.None).FirstOrDefault(p => Field<int>(p, "quadrant") == mine);
-            Check(station != null && Field<GameObject>(station, "boardGroup").activeSelf, "Standard : le tableau est chez l'opérateur");
+            // Les rôles tournent : on joue depuis le poste de l'opérateur, quel qu'il soit.
+            int operatorModule = board.Operator(State.ActiveMask.Value);
+            PatchStation station = Object.FindObjectsByType<PatchStation>(FindObjectsSortMode.None).FirstOrDefault(p => Field<int>(p, "quadrant") == operatorModule);
+            Check(station != null && Field<GameObject>(station, "boardGroup").activeSelf, $"Standard : le tableau est chez l'opérateur (module {operatorModule})");
             if (station == null) yield break;
             for (int i = 0; i < PatchBoard.Sources; i++)
             {
@@ -584,12 +592,109 @@ namespace Abysses.EditorTools
             yield return Until(() => mixer.Objective.Solved.Value, 3f, "Antidote : recette respectée → antidote prêt");
         }
 
+        /// <summary>Étage 3 : contrepoids — une charge fausse, puis la charge du registre (lests déplacés sur le plateau).</summary>
+        static IEnumerator Counterweights()
+        {
+            BallastScale scale = Object.FindFirstObjectByType<BallastScale>();
+            Check(scale != null, "Étage 3 : plateaux de lest en place");
+            if (scale == null) yield break;
+            int mine = LocalRig.Instance.Quadrant;
+            yield return Until(() => scale.Target(mine) > 0, 3f, "Contrepoids : charges cibles tirées au début de l'étage");
+            BallastRegister register = Object.FindObjectsByType<BallastRegister>(FindObjectsSortMode.None).FirstOrDefault(r => Field<int>(r, "quadrant") == mine);
+            Check(register != null && Field<TMP_Text>(register, "text").text.Contains("kg"), "Contrepoids : registre de lest affiché");
+            BallastWeight[] mineWeights = Field<BallastWeight[]>(scale, "weights").Where(w => w.name.EndsWith("_Q" + mine)).ToArray();
+            Vector3 pan = scale.Pan(mine).bounds.center;
+            float panFloor = scale.Pan(mine).bounds.min.y;
+            void Place(BallastWeight weight, int index)
+            {
+                // Posé juste au-dessus du plateau (bas de la zone de pesée) : pas de chute qui ferait rebondir le lest.
+                float height = weight.transform.localScale.y / 2f + 0.03f;
+                Move(weight, new Vector3(pan.x + (index % 3 - 1) * 0.14f, panFloor + height, pan.z + (index / 3 - 0.5f) * 0.15f));
+            }
+            // Comme le sas et le retour d'objet perdu : le Rigidbody est déplacé avec l'objet, sinon la physique le ramène.
+            void Move(BallastWeight weight, Vector3 position)
+            {
+                var body = weight.GetComponent<Rigidbody>();
+                body.position = position;
+                body.rotation = Quaternion.identity;
+                body.linearVelocity = Vector3.zero;
+                body.angularVelocity = Vector3.zero;
+                weight.GetComponent<NetworkTransform>().Teleport(position, Quaternion.identity, weight.transform.localScale);
+            }
+            // Le plongeur se tient DEVANT le plateau (après la cale, son corps peut être resté dessus et chasserait les lests).
+            Vector3 headNow = LocalRig.Instance.Head.position, away = new Vector3(headNow.x - pan.x, 0f, headNow.z - pan.z);
+            if (away.magnitude < 0.9f) MoveHeadTo(pan + (away.sqrMagnitude > 1e-4f ? away.normalized : Vector3.forward) * 0.9f);
+            yield return Wait(0.3f);
+            BallastWeight heavy = mineWeights.First(w => w.Kilograms == 5);
+            Vector3 home = heavy.transform.position;
+            Place(heavy, 0);
+            yield return Wait(1.5f);
+            if (scale.Load(mine) != 5)
+                Debug.Log($"[Abysses] Test contrepoids (1er lest) : charge {scale.Load(mine)}, lest @{heavy.transform.position}, zone {scale.Pan(mine).bounds}, "
+                    + $"propriétaire {heavy.GetComponent<NetworkObject>().OwnerClientId}, cinématique {heavy.GetComponent<Rigidbody>().isKinematic}, tête @{LocalRig.Instance.Head.position}");
+            yield return Until(() => scale.Load(mine) == 5, 6f, "Contrepoids : le plateau pèse les lests posés dessus (5 kg)");
+            Check(!scale.Objective.Solved.Value, "Contrepoids : charge fausse, pas d'équilibre");
+            Move(heavy, home);
+            yield return Until(() => scale.Load(mine) == 0, 4f, null);
+            // Chaque plateau occupé reçoit un sous-ensemble de lests dont la somme vaut sa cible (lests échangés si besoin).
+            // Les plus lourds d'abord : le moins de lests possible par plateau.
+            var pool = Field<BallastWeight[]>(scale, "weights").OrderByDescending(w => w.Kilograms).ToList();
+            int active = State.ActiveMask.Value;
+            for (int q = 0; q < 4; q++)
+            {
+                if ((active & (1 << q)) == 0) continue;
+                List<BallastWeight> chosen = Subset(pool, scale.Target(q));
+                Check(chosen != null, $"Contrepoids : combinaison de lests trouvée pour {scale.Target(q)} kg");
+                if (chosen == null) yield break;
+                pan = scale.Pan(q).bounds.center;
+                panFloor = scale.Pan(q).bounds.min.y;
+                for (int i = 0; i < chosen.Count; i++)
+                {
+                    Place(chosen[i], i);
+                    pool.Remove(chosen[i]);
+                }
+            }
+            yield return Wait(2f);
+            if (!scale.Objective.Solved.Value)
+            {
+                var report = new StringBuilder("[Abysses] Test contrepoids :");
+                for (int q = 0; q < 4; q++) report.Append($" Q{q} {scale.Load(q)}/{scale.Target(q)} kg ;");
+                foreach (BallastWeight w in Field<BallastWeight[]>(scale, "weights"))
+                    report.Append($" {w.name}@{w.transform.position}");
+                Debug.Log(report.ToString());
+            }
+            yield return Until(() => scale.Objective.Solved.Value, 6f, $"Contrepoids : chaque plateau à sa charge (dont {scale.Target(mine)} kg ici) → ballasts équilibrés");
+        }
+
+        static List<BallastWeight> Subset(List<BallastWeight> pool, int target)
+        {
+            if (target == 0) return new List<BallastWeight>();
+            for (int i = 0; i < pool.Count; i++)
+            {
+                if (pool[i].Kilograms > target) continue;
+                List<BallastWeight> rest = Subset(pool.Skip(i + 1).ToList(), target - pool[i].Kilograms);
+                if (rest == null) continue;
+                rest.Insert(0, pool[i]);
+                return rest;
+            }
+            return null;
+        }
+
         /// <summary>Méta-énigme : fragments affichés, mauvais code refusé, bon code saisi touche par touche.</summary>
         static IEnumerator CabinCode(int floor)
         {
             FloorLock floorLock = Object.FindObjectsByType<FloorLock>(FindObjectsSortMode.None).FirstOrDefault(l => l.Objective.Floor == floor);
             Check(floorLock != null, $"Étage {floor} : verrou de la cabine en place");
             if (floorLock == null) yield break;
+            // À plusieurs, le test ne joue que les énigmes de l'hôte : le maître du jeu résout celles des autres plongeurs.
+            int remaining = 0;
+            foreach (PuzzleObjective objective in PuzzleObjective.Registered.ToArray())
+                if (objective.Floor == floor && objective != floorLock.Objective && !objective.Solved.Value)
+                {
+                    objective.ServerSolve();
+                    remaining++;
+                }
+            if (remaining > 0) Check(true, $"Pupitre : {remaining} énigme(s) des autres plongeurs résolue(s) par le maître du jeu");
             yield return Until(() => floorLock.AllFragments, 6f, $"Étage {floor} : tous les fragments du code révélés");
             int mine = LocalRig.Instance.Quadrant;
             FloorLockPanel panel = Object.FindObjectsByType<FloorLockPanel>(FindObjectsSortMode.None).FirstOrDefault(p => Field<int>(p, "quadrant") == mine);
@@ -635,11 +740,8 @@ namespace Abysses.EditorTools
                 }
             }
 
-            if (checkLostItem)
-            {
-                yield return Wiring();
-                yield return KnockedCode();
-            }
+            if (checkLostItem) yield return Wiring();
+            yield return KnockedCode();
 
             // Comme en vrai, le plongeur est aux leviers (hors de sa cabine) quand le courant revient.
             Transform rig = LocalRig.Instance.transform;
@@ -678,6 +780,7 @@ namespace Abysses.EditorTools
             yield return Manifold();
             yield return Maze();
             yield return Bulkheads();
+            yield return Counterweights();
             yield return CabinCode(3);
             yield return Until(() => State.Phase.Value != GamePhase.Playing || State.Floor.Value != 3, 6f, "Étage 3 : code de la cabine → étage résolu");
             yield return Until(() => Phase(GamePhase.Playing, 4), 45f, "Descente vers l'étage 4 (salle commune)");
@@ -692,12 +795,17 @@ namespace Abysses.EditorTools
 
         // ------------------------------------------------------------------ Scénario solo
 
+        /// <summary>Une manette de jeu branchée sur le Mac (stick qui dérive) déplacerait le plongeur pendant le test.</summary>
+        static void DisableGamepad()
+        {
+            foreach (GamepadLocomotion pad in Object.FindObjectsByType<GamepadLocomotion>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                pad.enabled = false;
+        }
+
         static IEnumerator Solo()
         {
             yield return Wait(2f);
-            // Une manette de jeu branchée sur le Mac (stick qui dérive) déplacerait le plongeur pendant le test.
-            foreach (GamepadLocomotion pad in Object.FindObjectsByType<GamepadLocomotion>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                pad.enabled = false;
+            DisableGamepad();
             ConnectionManager connection = ConnectionManager.Instance;
             connection.PlaySolo();
             yield return Until(() => connection.State == ConnectionState.Online && LocalRig.Instance.Quadrant == 0, 15f, "Partie solo lancée, quadrant ORANGE attribué");
@@ -761,6 +869,7 @@ namespace Abysses.EditorTools
         static IEnumerator Multi()
         {
             yield return Wait(2f);
+            DisableGamepad();
             ConnectionManager connection = ConnectionManager.Instance;
             connection.HostLan();
             yield return Until(() => connection.State == ConnectionState.Online, 15f, "Hôte réseau local lancé (plongeur ORANGE)");

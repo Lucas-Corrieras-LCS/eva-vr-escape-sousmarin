@@ -35,6 +35,10 @@ namespace Abysses.EditorTools
             for (int c = 0; c < ShockMaze.Columns; c++)
                 Static(Prim(PrimitiveType.Cube, "Dalle", origin, new Vector3((c + 0.5f) * ShockMaze.Tile, 0.012f, (r + 0.5f) * ShockMaze.Tile), Quaternion.identity,
                     new Vector3(ShockMaze.Tile - 0.03f, 0.02f, ShockMaze.Tile - 0.03f), m.Frame, false));
+            // Sous les dalles, un plancher sous tension : les joints de 3 cm luisent et dessinent la grille à compter
+            // (« 3e colonne, 2e rangée ») sans trahir quelles dalles sont dangereuses.
+            Material seam = Lit("M_Emit_Seam", new Color(0.02f, 0.05f, 0.06f), 0f, 0.4f, new Color(0.12f, 0.55f, 0.7f) * 0.9f);
+            Prim(PrimitiveType.Cube, "JointsSousTension", origin, new Vector3(width / 2f, 0.003f, depth / 2f), Quaternion.identity, new Vector3(width, 0.004f, depth), seam, false);
             Static(Prim(PrimitiveType.Cube, "Cadre", origin, new Vector3(width / 2f, 0.008f, -0.04f), Quaternion.identity, new Vector3(width + 0.16f, 0.016f, 0.08f), m.Hazard, false));
             Static(Prim(PrimitiveType.Cube, "Cadre", origin, new Vector3(width / 2f, 0.008f, depth + 0.04f), Quaternion.identity, new Vector3(width + 0.16f, 0.016f, 0.08f), m.Hazard, false));
             Static(Prim(PrimitiveType.Cube, "Cadre", origin, new Vector3(-0.04f, 0.008f, depth / 2f), Quaternion.identity, new Vector3(0.08f, 0.016f, depth), m.Hazard, false));
@@ -194,6 +198,100 @@ namespace Abysses.EditorTools
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
             return objective;
+        }
+
+        /// <summary>
+        /// Contrepoids des ballasts : plateau de pesée sur colonne (côté voisin), étagère avec 4 lests (1, 2, 2, 5 kg),
+        /// cadran de charge, et registre (charge cible d'un autre plateau) sur le mur extérieur.
+        /// </summary>
+        static PuzzleObjective BuildBallastScale(Mats m, Transform parent, Module[] modules, int shift)
+        {
+            var scaleGo = new GameObject("Contrepoids");
+            scaleGo.transform.SetParent(parent, false);
+            scaleGo.AddComponent<NetworkObject>();
+            PuzzleObjective objective = Objective(scaleGo, BallastFloor, -1, "Contrepoids des ballasts", "Ballast counterweights", "ballastscale");
+            var scale = scaleGo.AddComponent<BallastScale>();
+            var pans = new BoxCollider[4];
+            var dials = new TMP_Text[4];
+            var weights = new List<BallastWeight>();
+            int[] kilograms = { 1, 2, 2, 5 };
+
+            foreach (Module mod in modules)
+            {
+                Transform t = Group("Pesee_Q" + mod.Q, parent, mod.P(-4.0f, 0f, -mod.Vz * 2.95f), mod.Facing(0f, -mod.Vz));
+                GameObject column = Prim(PrimitiveType.Cube, "Colonne", t, new Vector3(0f, 0.4f, 0f), Quaternion.identity, new Vector3(0.36f, 0.8f, 0.36f), m.PipeGrey, true);
+                Static(column);
+                GameObject pan = Prim(PrimitiveType.Cylinder, "Plateau", t, new Vector3(0f, 0.83f, 0f), Quaternion.identity, new Vector3(0.52f, 0.015f, 0.52f), m.Brass, false);
+                pan.AddComponent<BoxCollider>().size = new Vector3(1f, 2f, 1f);
+                AbyssesArt.MeshObject("Rebord", t, art.Ring, new Vector3(0f, 0.85f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.54f, 0.54f, 0.04f), m.Brass);
+                var zoneGo = new GameObject("ZonePesee");
+                zoneGo.transform.SetParent(t, false);
+                zoneGo.transform.localPosition = new Vector3(0f, 0.97f, 0f);
+                var zone = zoneGo.AddComponent<BoxCollider>();
+                zone.isTrigger = true;
+                zone.size = new Vector3(0.5f, 0.26f, 0.5f);
+                pans[mod.Q] = zone;
+                // Cadran sur la face avant de la colonne.
+                Prim(PrimitiveType.Cube, "Cadran", t, new Vector3(0f, 0.62f, -0.185f), Quaternion.identity, new Vector3(0.3f, 0.12f, 0.01f), m.SlotEmpty, false);
+                TextMeshPro dial = Text(t, "Charge", new Vector3(0f, 0.62f, -0.192f), Quaternion.identity, new Vector2(0.28f, 0.1f), 0.32f, new Color(1f, 0.85f, 0.5f), false);
+                dial.text = "CHARGE : 0 kg";
+                dials[mod.Q] = dial;
+                Label(t, "PLATEAU DE LEST", new Vector3(0f, 0.72f, -0.19f), 0.22f, null, "BALLAST PAN");
+
+                // Étagère des lests, à côté du plateau.
+                Transform shelf = Group("EtagereLests_Q" + mod.Q, parent, mod.P(-5.0f, 0f, -mod.Vz * 3.15f), mod.Facing(0f, -mod.Vz));
+                Static(Prim(PrimitiveType.Cube, "Tablette", shelf, new Vector3(0f, 0.8f, 0f), Quaternion.identity, new Vector3(0.7f, 0.04f, 0.32f), m.Panel, true));
+                Static(Prim(PrimitiveType.Cube, "Liseré", shelf, new Vector3(0f, 0.8f, -0.165f), Quaternion.identity, new Vector3(0.7f, 0.045f, 0.012f), m.Hazard, false));
+                foreach (float x in new[] { -0.3f, 0.3f })
+                    Static(Prim(PrimitiveType.Cube, "Pied", shelf, new Vector3(x, 0.39f, 0f), Quaternion.identity, new Vector3(0.04f, 0.78f, 0.28f), m.Frame, false));
+                for (int i = 0; i < kilograms.Length; i++)
+                    weights.Add(BuildWeight(m, parent, mod, kilograms[i], shelf.TransformPoint(new Vector3(-0.24f + i * 0.16f, 0.88f, 0f))));
+
+                // Registre : charge cible d'un autre plateau (routage), mur extérieur.
+                Transform register = Group("RegistreLest_Q" + mod.Q, parent, mod.P(-2.4f, 1.4f, mod.Vz * 3.62f), mod.Facing(0f, mod.Vz));
+                DeviceMount(m, register, new Vector2(0.56f, 0.5f), 1.4f);
+                Prim(PrimitiveType.Cube, "Fiche", register, new Vector3(0f, 0f, -0.02f), Quaternion.identity, new Vector3(0.5f, 0.44f, 0.02f), paperMaterial, false);
+                TextMeshPro text = Text(register, "Texte", new Vector3(0f, 0f, -0.032f), Quaternion.identity, new Vector2(0.46f, 0.4f), 0.2f, new Color(0.1f, 0.09f, 0.08f), true);
+                text.enableAutoSizing = true;
+                text.fontSizeMin = 0.1f;
+                text.fontSizeMax = 0.2f;
+                Private(register.gameObject, mod.Q, text.GetComponent<Renderer>());
+                SetFields(register.gameObject.AddComponent<BallastRegister>(), ("quadrant", mod.Q), ("scale", scale), ("shift", shift), ("text", text));
+            }
+
+            SetFields(scale, ("objective", objective), ("successSound", Sfx(scaleGo, fx.Success, 0.9f, 0f)));
+            var so = new UnityEditor.SerializedObject(scale);
+            SetArray(so.FindProperty("pans"), pans);
+            SetArray(so.FindProperty("weights"), weights.ToArray());
+            SetArray(so.FindProperty("dials"), dials);
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return objective;
+        }
+
+        /// <summary>Lest de fonte attrapable : taille selon la masse, poignée de laiton, masse gravée.</summary>
+        static BallastWeight BuildWeight(Mats m, Transform parent, Module mod, int kilograms, Vector3 position)
+        {
+            float size = kilograms >= 5 ? 0.13f : kilograms >= 2 ? 0.1f : 0.08f;
+            // Lest plombé gainé de peinture, une couleur par masse (comme les lests de plongée) : lisible de loin
+            // sur l'étagère sombre (« passe-moi le rouge de 2 kg »). Masse gravée devant et derrière.
+            Material paint = kilograms >= 5 ? Lit("M_Lest_5kg", new Color(0.12f, 0.27f, 0.55f), 0.35f, 0.5f)
+                : kilograms >= 2 ? Lit("M_Lest_2kg", new Color(0.72f, 0.18f, 0.08f), 0.35f, 0.5f)
+                : Lit("M_Lest_1kg", new Color(0.9f, 0.68f, 0.1f), 0.35f, 0.5f);
+            Color ink = kilograms >= 2 ? new Color(0.96f, 0.96f, 0.92f) : new Color(0.08f, 0.08f, 0.08f);
+            GameObject body = Prim(PrimitiveType.Cube, "Lest_" + kilograms + "kg_Q" + mod.Q, parent, position, Quaternion.identity, new Vector3(size, size * 0.7f, size), paint, true);
+            Prim(PrimitiveType.Cylinder, "Poignee", body.transform, new Vector3(0f, 0.65f, 0f), Quaternion.Euler(0f, 0f, 90f), new Vector3(0.18f, 0.35f, 0.18f), m.Brass, false);
+            foreach (float side in new[] { -1f, 1f })
+            {
+                TextMeshPro label = Text(body.transform, "Masse", new Vector3(0f, 0f, side * 0.51f), Quaternion.Euler(0f, side > 0f ? 180f : 0f, 0f), new Vector2(0.9f, 0.5f), 3f, ink, false);
+                label.text = kilograms + " kg";
+                label.fontStyle = FontStyles.Bold;
+                label.transform.localScale = new Vector3(1f, 1f / 0.7f, 1f) * 0.1f;
+            }
+            MakeNetworkGrabbable(body, 0.2f + kilograms * 0.1f);
+            Halo(m, body, body);
+            var weight = body.AddComponent<BallastWeight>();
+            SetFields(weight, ("kilograms", kilograms));
+            return weight;
         }
     }
 }
