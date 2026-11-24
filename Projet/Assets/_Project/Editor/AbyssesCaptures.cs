@@ -41,7 +41,8 @@ namespace Abysses.EditorTools
                     new View("etage1_fusible", new Vector3(5.0f, 1.35f, 1.05f), new Vector3(5.0f, 1.2f, 0.34f)),
                     new View("etage1_ocean_casiers", new Vector3(13.2f, 1.55f, 2.9f), new Vector3(13.9f, 1.45f, 0.3f)),
                     // Relais d'appels du module Q0, sur le mur extérieur (x local 1,55).
-                    new View("etage1_relais", new Vector3(9.05f, 1.55f, 1.75f), new Vector3(9.05f, 1.3f, 0.38f)),
+                    new View("etage1_manuel", new Vector3(9.05f, 1.55f, 1.6f), new Vector3(9.05f, 1.35f, 0.38f)),
+                    new View("etage1_verrou", new Vector3(8.5f, 1.5f, 6.4f), new Vector3(8.5f, 1.3f, 7.62f)),
                 }
             },
             {
@@ -66,7 +67,9 @@ namespace Abysses.EditorTools
                     new View("etage3b_collecteur", new Vector3(1.75f, 1.4f, 4f), new Vector3(0.34f, 1.15f, 4f)),
                     new View("etage3b_schema", new Vector3(1.7f, 1.4f, 2.3f), new Vector3(0.34f, 1.3f, 2.3f)),
                     new View("etage3b_pompe", new Vector3(4.5f, 1.5f, 2.8f), new Vector3(2.9f, 0.7f, 1.05f)),
-                    new View("etage3b_relais", new Vector3(9.05f, 1.55f, 1.75f), new Vector3(9.05f, 1.3f, 0.38f)),
+                    new View("etage3b_surveillance", new Vector3(9.05f, 1.55f, 1.6f), new Vector3(9.05f, 1.35f, 0.38f)),
+                    new View("etage3b_cale", new Vector3(8.4f, 2.3f, 1.6f), new Vector3(11.2f, 0f, 4.2f)),
+                    new View("etage3b_cloisons", new Vector3(10.8f, 1.5f, 6.3f), new Vector3(10.8f, 1.3f, 7.62f)),
                 }
             },
             {
@@ -74,11 +77,7 @@ namespace Abysses.EditorTools
                 {
                     new View("etage3_reacteur", new Vector3(9f, 1.7f, 2f), new Vector3(15.5f, 1.4f, 8.25f)),
                     new View("etage3_salle", new Vector3(1.5f, 2.2f, 1.2f), new Vector3(20f, 0.8f, 12f)),
-                    new View("etage3_sonar", new Vector3(1.7f, 1.4f, 3.35f), new Vector3(0.34f, 1.25f, 3.35f)),
                     new View("etage3_ocean", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
-                    new View("etage3_relais", new Vector3(10.5f, 1.55f, 1.75f), new Vector3(10.5f, 1.3f, 0.38f)),
-                    // Récepteur sonar du module CYAN, chez ORANGE, à côté de sa console.
-                    new View("etage3_recepteur", new Vector3(2.2f, 1.45f, 2.6f), new Vector3(0.34f, 1.3f, 2.4f)),
                 }
             },
         };

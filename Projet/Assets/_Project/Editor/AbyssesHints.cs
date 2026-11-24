@@ -43,6 +43,50 @@ namespace Abysses.EditorTools
                 "The sequence shows up on your teammate's RECEIVER, not yours: they read it to you, you repeat it.",
                 "One mistake and it starts over: remember colours and notes, the screen shows your progress.",
             }),
+            ["wiring"] = (new[]
+            {
+                "Le tableau de dérivation du mur du fond doit être désamorcé : il faut couper le bon fil, trois tableaux d'affilée.",
+                "Les règles sont dans le manuel du chef mécanicien… affiché chez un autre plongeur. Décris-lui ton tableau : couleurs des fils dans l'ordre, voyant, numéro de série.",
+                "Il applique la PREMIÈRE règle vraie et te dit quel fil couper. Un mauvais fil fait tout disjoncter : on repart du premier tableau.",
+            }, new[]
+            {
+                "The bypass panel on the back wall must be defused: cut the right wire, three panels in a row.",
+                "The rules are in the chief engineer's manual… shown at another diver's. Describe your panel: wire colours in order, light, serial number.",
+                "They apply the FIRST true rule and tell you which wire to cut. A wrong wire trips everything: back to the first panel.",
+            }),
+            ["maze"] = (new[]
+            {
+                "Une partie de la cale est électrifiée : seules certaines dalles sont sûres, et rien ne les distingue.",
+                "Un autre plongeur voit la carte de TA cale et ta position en direct sur son écran de surveillance : laisse-le te guider.",
+                "Pars de la dalle DÉPART. Une décharge te renvoie au départ ; sortir de la grille aussi. Avance case par case jusqu'à la vanne.",
+            }, new[]
+            {
+                "Part of the hold is electrified: only some tiles are safe, and nothing tells them apart.",
+                "Another diver sees YOUR hold's map and your live position on their monitor: let them guide you.",
+                "Start from the START tile. A shock sends you back; so does leaving the grid. Move tile by tile to the valve.",
+            }),
+            ["bulkhead"] = (new[]
+            {
+                "Une fuite inonde la coque des ballasts : l'eau passe d'un compartiment à l'autre par les portes ouvertes.",
+                "Un seul plongeur a le PLAN ; les commandes des portes sont réparties entre vous. Il doit dire qui ferme quoi.",
+                "Trois fermetures seulement : fermez toutes les portes entre l'eau et le sec avant qu'elle n'atteigne la POMPE (jaune).",
+            }, new[]
+            {
+                "A leak is flooding the ballast hull: water moves between compartments through open doors.",
+                "Only one diver has the MAP; the door controls are spread among you. They must say who closes what.",
+                "Only three closures: close every door between water and dry before it reaches the PUMP (yellow).",
+            }),
+            ["floorlock"] = (new[]
+            {
+                "La cabine est verrouillée par un code. Chaque énigme de l'étage en révèle un chiffre, sur le verrou d'un des modules.",
+                "Chacun lit sur SON verrou les fragments qu'il a reçus (« fragment 2 : 7 ») et les annonce aux autres.",
+                "Composez les chiffres dans l'ordre des fragments (1, 2, 3…) sur n'importe quel verrou, puis OK.",
+            }, new[]
+            {
+                "The cabin is locked by a code. Each puzzle on this floor reveals one digit, on the lock of one of the modules.",
+                "Everyone reads the fragments on THEIR lock (“fragment 2: 7”) and calls them out to the others.",
+                "Enter the digits in fragment order (1, 2, 3…) on any lock, then OK.",
+            }),
             ["manifold"] = (new[]
             {
                 "L'eau monte : la pompe de ton module ne démarrera qu'avec les bonnes vannes ouvertes sur le collecteur du mur du fond.",

@@ -475,7 +475,8 @@ namespace Abysses.EditorTools
             // Socle, plancher et toit
             Static(Prim(PrimitiveType.Cube, "Socle", t, new Vector3(0f, -0.04f, 0f), Quaternion.identity, new Vector3(inner + 0.5f, 0.12f, inner + 0.5f), m.Frame, true));
             Static(Prim(PrimitiveType.Cube, "Floor", t, new Vector3(0f, 0.005f, 0f), Quaternion.identity, new Vector3(inner + 2 * w, 0.03f, inner + 2 * w), m.Floor, true));
-            Static(Prim(PrimitiveType.Cube, "Ceiling", t, new Vector3(0f, h + 0.05f, 0f), Quaternion.identity, new Vector3(inner + 0.4f, 0.1f, inner + 0.4f), m.HullDark, true));
+            // Plafond, linteau et portes sans collision : un joueur grand ne doit jamais rester coincé (voir BodyHeightClamp).
+            Static(Prim(PrimitiveType.Cube, "Ceiling", t, new Vector3(0f, h + 0.05f, 0f), Quaternion.identity, new Vector3(inner + 0.4f, 0.1f, inner + 0.4f), m.HullDark, false));
             // Dôme : sa moitié basse reste cachée dans l'épaisseur du toit (rien ne dépasse à l'intérieur).
             Static(Prim(PrimitiveType.Sphere, "Dome", t, new Vector3(0f, h + 0.35f, 0f), Quaternion.identity, new Vector3(2.2f, 0.6f, 2.2f), m.HullDark, false));
             Static(AbyssesArt.MeshObject("Anneau_Dome", t, art.Ring, new Vector3(0f, h + 0.12f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(2.35f, 2.35f, 0.08f), m.EmitCyan));
@@ -492,8 +493,10 @@ namespace Abysses.EditorTools
                 Static(Prim(PrimitiveType.Cube, "Wall_" + n + "_Front", t, new Vector3(x, holeY, hole / 2f + jamb / 2f), Quaternion.identity, new Vector3(w, hole, jamb), m.Hull, true));
                 Static(Prim(PrimitiveType.Cube, "Wall_" + n + "_Rear", t, new Vector3(x, holeY, -hole / 2f - jamb / 2f), Quaternion.identity, new Vector3(w, hole, jamb), m.Hull, true));
                 Static(Prim(PrimitiveType.Cube, "Window_" + n, t, new Vector3(x, holeY, 0f), Quaternion.identity, new Vector3(0.02f, hole, hole), m.Glass, false));
-                foreach (float face in new[] { -1f, 1f })
-                    Static(AbyssesArt.MeshObject("Hublot_" + n, t, art.Ring, new Vector3(x + face * (w / 2f + 0.025f), holeY, 0f), Quaternion.Euler(0f, 90f, 0f), new Vector3(1.2f, 1.2f, 0.05f), m.Brass));
+                // Cadre rond épais : son bord extérieur couvre les coins du trou carré, son ouverture (70 cm) est plus
+                // petite que le trou (76 cm) : on ne voit jamais d'arête carrée, ni de face ni en biais.
+                Mesh porthole = AbyssesArt.FrameMesh(1.16f, 1.16f, 0.58f, 0.23f, w + 0.06f);
+                Static(AbyssesArt.MeshObject("Hublot_" + n, t, porthole, new Vector3(x, holeY, 0f), Quaternion.Euler(0f, 90f, 0f), Vector3.one, m.Brass));
             }
 
             // Poteaux d'angle arrondis : la cabine perd son air de boîte.
@@ -507,13 +510,13 @@ namespace Abysses.EditorTools
             // Façade avant avec ouverture de porte (1,2 m x 2,2 m), encadrement rayé.
             Static(Prim(PrimitiveType.Cube, "Front_L", t, new Vector3(-0.95f, h / 2f, half), Quaternion.identity, new Vector3(0.7f, h, w), m.Hull, true));
             Static(Prim(PrimitiveType.Cube, "Front_R", t, new Vector3(0.95f, h / 2f, half), Quaternion.identity, new Vector3(0.7f, h, w), m.Hull, true));
-            Static(Prim(PrimitiveType.Cube, "Front_Top", t, new Vector3(0f, 2.4f, half), Quaternion.identity, new Vector3(1.2f, 0.4f, w), m.Hull, true));
+            Static(Prim(PrimitiveType.Cube, "Front_Top", t, new Vector3(0f, 2.4f, half), Quaternion.identity, new Vector3(1.2f, 0.4f, w), m.Hull, false));
             Static(AbyssesArt.MeshObject("Cadre_Porte", t, AbyssesArt.FrameMesh(1.42f, 2.42f, 0.12f, 0.11f, w + 0.08f), new Vector3(0f, 1.1f, half), Quaternion.identity, Vector3.one, m.Hazard));
-            GameObject leftDoor = Prim(PrimitiveType.Cube, "Door_L", t, new Vector3(-0.3f, 1.1f, half - 0.08f), Quaternion.identity, new Vector3(0.62f, 2.2f, 0.05f), m.Locker, true);
-            GameObject rightDoor = Prim(PrimitiveType.Cube, "Door_R", t, new Vector3(0.3f, 1.1f, half - 0.08f), Quaternion.identity, new Vector3(0.62f, 2.2f, 0.05f), m.Locker, true);
+            GameObject leftDoor = Prim(PrimitiveType.Cube, "Door_L", t, new Vector3(-0.3f, 1.1f, half - 0.08f), Quaternion.identity, new Vector3(0.62f, 2.2f, 0.05f), m.Locker, false);
+            GameObject rightDoor = Prim(PrimitiveType.Cube, "Door_R", t, new Vector3(0.3f, 1.1f, half - 0.08f), Quaternion.identity, new Vector3(0.62f, 2.2f, 0.05f), m.Locker, false);
 
             // Intérieur : main courante, pupitre avec écran, repère de calibration au sol, plafonnier.
-            // Main courante sous le tutoriel (support du fusible d'entraînement à 0,96 m).
+            // Main courante contre le mur du fond.
             Static(Prim(PrimitiveType.Cylinder, "MainCourante", t, new Vector3(0f, 0.85f, -half + 0.12f), Quaternion.Euler(0f, 0f, 90f), new Vector3(0.05f, 1.0f, 0.05f), m.Brass, false));
             // Pupitre décalé vers l'arrière : il ne mord plus sur l'anneau du hublot agrandi.
             Static(Prim(PrimitiveType.Cube, "Pupitre", t, new Vector3(-half + 0.1f, 1.25f, -0.93f), Quaternion.identity, new Vector3(0.08f, 0.5f, 0.46f), m.Frame, false));
@@ -550,7 +553,6 @@ namespace Abysses.EditorTools
             // Une seule référence dans le script : la seconde suit la première.
             bubblesRight.transform.SetParent(bubblesLeft.transform, true);
             DescentStreaks(m, bubblesLeft, half);
-            BuildCabinTutorial(m, t, -inner / 2f);
             CabinDescentParts(t);
             foreach (Renderer r in root.GetComponentsInChildren<Renderer>(true)) r.renderingLayerMask |= CabinLayer;
 
@@ -633,10 +635,13 @@ namespace Abysses.EditorTools
             public float Along, Width, Bottom, Top;
             /// <summary>Hublot vitré (cadre arrondi, joint) plutôt que sas ouvert. Par défaut : toute ouverture d'au moins 1 m.</summary>
             public bool Window;
+            /// <summary>Hublot rond (cadre circulaire épais qui masque les coins du trou carré).</summary>
+            public bool Round;
             public Opening(float along, float width, float bottom, float top, bool? window = null)
             {
                 Along = along; Width = width; Bottom = bottom; Top = top;
                 Window = window ?? width >= 1f;
+                Round = false;
             }
         }
 
@@ -732,9 +737,17 @@ namespace Abysses.EditorTools
             // Mur commun avec le partenaire (axe Z).
             float partnerX = mod.Sx > 0 ? r.xMax + half : r.xMin - half;
             float backX = mod.Sx > 0 ? r.xMin - half : r.xMax + half;
+            // On se voit de mieux en mieux en descendant : petits hublots ronds (habitat), baies (labo),
+            // grandes vitres (ballasts), puis salle commune entièrement vitrée (cœur).
+            Opening Viewport(float along, float wide)
+            {
+                if (floor == 1) return new Opening(along, 0.8f, 1.15f, 1.95f, true) { Round = true };
+                if (floor == BallastStyle) return new Opening(along, wide, 0.9f, 2.3f, true);
+                return new Opening(along, 2.0f, 1.1f, 2.1f);
+            }
             List<Opening> partnerOpenings = open ? null : new List<Opening>
             {
-                new Opening(mod.Center.z + 1.5f - r.yMin, 2.0f, 1.1f, 2.1f),
+                Viewport(mod.Center.z + 1.5f - r.yMin, 2.6f),
                 new Opening(mod.Center.z - 1.5f - r.yMin, 0.5f, 0.9f, 1.4f),
             };
             Wall(m, t, "Wall_Partner", new Vector3(partnerX, 0f, r.yMin), new Vector3(partnerX, 0f, r.yMax), partnerOpenings, true, open, hull);
@@ -746,7 +759,7 @@ namespace Abysses.EditorTools
             List<Opening> neighborOpenings = null;
             if (!open)
             {
-                neighborOpenings = new List<Opening> { new Opening(mod.Center.x - mod.Sx * 3f - r.xMin, 2.0f, 1.1f, 2.1f) };
+                neighborOpenings = new List<Opening> { Viewport(mod.Center.x - mod.Sx * 3f - r.xMin, 3.0f) };
                 if (shell == Shell.VerticalHatches)
                     neighborOpenings.Add(new Opening(mod.Center.x + mod.Sx * 2f - r.xMin, 0.5f, 0.9f, 1.4f));
             }
@@ -972,12 +985,16 @@ namespace Abysses.EditorTools
                     // Encadrement arrondi qui mange les angles vifs de l'ouverture (hublot / sas).
                     Vector3 center = a + dir * o.Along + Vector3.up * ((o.Bottom + o.Top) / 2f);
                     bool window = o.Window;
-                    float margin = window ? 0.3f : 0.2f;
-                    Mesh frame = AbyssesArt.FrameMesh(o.Width + margin, o.Top - o.Bottom + margin, window ? 0.28f : 0.14f, window ? 0.2f : 0.12f, WallThickness + 0.08f);
+                    float margin = o.Round ? 0.4f : window ? 0.3f : 0.2f;
+                    float frameRadius = o.Round ? (o.Width + margin) / 2f : window ? 0.28f : 0.14f;
+                    float frameBorder = o.Round ? 0.25f : window ? 0.2f : 0.12f;
+                    Mesh frame = AbyssesArt.FrameMesh(o.Width + margin, o.Top - o.Bottom + margin, frameRadius, frameBorder, WallThickness + 0.08f);
                     Static(AbyssesArt.MeshObject(window ? "Cadre_Hublot" : "Cadre_Sas", t, frame, center, Quaternion.LookRotation(normal, Vector3.up), Vector3.one, window ? m.Frame : m.Hazard));
                     if (window)
                     {
-                        Mesh seal = AbyssesArt.FrameMesh(o.Width + 0.04f, o.Top - o.Bottom + 0.04f, 0.16f, 0.06f, WallThickness + 0.02f);
+                        Mesh seal = o.Round
+                            ? AbyssesArt.FrameMesh(o.Width - 0.06f, o.Top - o.Bottom - 0.06f, (o.Width - 0.06f) / 2f, 0.04f, WallThickness + 0.1f)
+                            : AbyssesArt.FrameMesh(o.Width + 0.04f, o.Top - o.Bottom + 0.04f, 0.16f, 0.06f, WallThickness + 0.02f);
                         Static(AbyssesArt.MeshObject("Joint_Hublot", t, seal, center, Quaternion.LookRotation(normal, Vector3.up), Vector3.one, m.Rubber));
                     }
                     cursor = end;
@@ -1329,24 +1346,27 @@ namespace Abysses.EditorTools
 
             var keypads = new CodeKeypad[4];
             var fuses = new NetworkTransform[4];
-            var levers = new LeverHandle[4];
-            var prerequisites = new List<PuzzleObjective>();
+            // Une énigme = un fragment du code de la cabine (méta-énigme de fin d'étage).
+            var keypadGroup = new PuzzleObjective[4];
+            var fuseGroup = new PuzzleObjective[4];
+            var wiringGroup = new PuzzleObjective[4];
+            var wiringPanels = new WiringPanel[4];
 
             for (int q = 0; q < 4; q++)
             {
                 keypads[q] = BuildKeypad(m, root, modules[q], 1);
-                prerequisites.Add(keypads[q].GetComponent<PuzzleObjective>());
+                keypadGroup[q] = keypads[q].GetComponent<PuzzleObjective>();
             }
             for (int q = 0; q < 4; q++)
             {
                 Module mod = modules[q];
                 BuildCodeDisplay(m, root, mod.P(-7.16f, 1.6f, 0f), mod.Facing(-1f, 0f), keypads[mod.Partner],
                     "CODE DU MODULE " + QuadrantNames[mod.Partner], true, false, "CodeDisplay_For_Q" + mod.Partner, "CODE FOR MODULE " + QuadrantNamesEn[mod.Partner], mod.Q);
-                prerequisites.Add(BuildFuseSocket(m, root, mod));
+                fuseGroup[q] = BuildFuseSocket(m, root, mod);
                 fuses[mod.Partner] = BuildFuse(m, root, mod, mod.Partner);
-                levers[q] = BuildLever(m, root, mod.Q, mod.P(5.4f, 0f, 2.6f), mod.Facing(0f, -1f));
-                // Énigme de module (jouable seul) : le tableau des disjoncteurs, avec la note sur le bureau.
-                prerequisites.Add(BuildBreakerPanel(m, root, mod));
+                // Manuel de désamorçage : le tableau ici, son manuel chez un autre plongeur (routage tournant).
+                wiringPanels[q] = BuildWiringPanel(m, root, mod);
+                wiringGroup[q] = wiringPanels[q].Objective;
             }
 
             // Repli : module partenaire vide → écran de surveillance avec son propre code, et fusible rapatrié.
@@ -1361,13 +1381,14 @@ namespace Abysses.EditorTools
                 BuildFallback(root, mod, monitor, fuses[q], fuseTarget);
             }
 
-            PuzzleObjective powerObjective = BuildSyncLevers(root, 1, "Remise sous tension", "Power restore", "levers", levers, prerequisites.ToArray());
+            foreach (Module mod in modules) BuildWiringManual(m, root, mod, wiringPanels, 1);
+            // Fin d'étage : le code de la cabine rallume aussi le courant.
+            PuzzleObjective powerObjective = BuildFloorLock(m, root, modules, 1, new List<PuzzleObjective[]> { keypadGroup, fuseGroup, wiringGroup }, 0);
             BuildHatch(m, root, modules[0], PartnerHatchSpot(modules[0]), modules[1], PartnerHatchSpot(modules[1]));
             BuildHatch(m, root, modules[2], PartnerHatchSpot(modules[2]), modules[3], PartnerHatchSpot(modules[3]));
             BuildKnockWall(m, root, modules[0], modules[1]);
             BuildKnockWall(m, root, modules[2], modules[3]);
             BuildPowerOutage(m, root, modules, powerObjective);
-            BuildCallOutRelay(m, root, modules, 1, RelayWallX, 3, "Surtension", "Power surge", "SURTENSION · RÉARMEMENT", "POWER SURGE · RESET");
 
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[0]);
@@ -1442,10 +1463,20 @@ namespace Abysses.EditorTools
             BuildKnockWall(m, root, modules[2], modules[3]);
             for (int q = 0; q < 4; q++)
                 BuildLeaks(m, root, modules[q], gauges[q].GetComponent<PuzzleObjective>());
-            // Énigme de module (jouable seul) : balise morse vue par le hublot, cadenas à molettes.
+            // Énigme croisée : balise morse vue par le hublot du partenaire, cadenas à molettes ici.
+            var morseGroup = new PuzzleObjective[4];
             for (int q = 0; q < 4; q++)
-                BuildMorsePuzzle(m, root, modules[q]);
-            BuildCallOutRelay(m, root, modules, 2, RelayWallX, 3, "Fuites", "Leaks", "FUITES · VANNES DE DÉRIVATION", "LEAKS · BYPASS VALVES");
+                morseGroup[q] = BuildMorsePuzzle(m, root, modules[q]);
+            // Le relais d'appels n'existe qu'à cet étage (une mécanique = une seule fois dans la partie).
+            PuzzleObjective relay = BuildCallOutRelay(m, root, modules, 2, RelayWallX, 3, "Fuites", "Leaks", "FUITES · VANNES DE DÉRIVATION", "LEAKS · BYPASS VALVES");
+            var gaugeGroup = new PuzzleObjective[4];
+            var uvGroup = new PuzzleObjective[4];
+            for (int q = 0; q < 4; q++)
+            {
+                gaugeGroup[q] = gauges[q].GetComponent<PuzzleObjective>();
+                uvGroup[q] = keypads[q].GetComponent<PuzzleObjective>();
+            }
+            BuildFloorLock(m, root, modules, 2, new List<PuzzleObjective[]> { gaugeGroup, uvGroup, morseGroup, new[] { relay } }, 1);
 
             BuildProbes(root, modules);
             ConfigureLighting(FloorScenes[1]);
@@ -1579,13 +1610,8 @@ namespace Abysses.EditorTools
             rso.FindProperty("failSound").objectReferenceValue = reactorFail;
             rso.ApplyModifiedPropertiesWithoutUndo();
 
-            // Énigme croisée : console de calibrage du sonar (séquence dictée par le partenaire), avant la remontée.
+            // Remontée (seuls leviers synchronisés de la partie) : après la séquence du réacteur et les énigmes de l'étage.
             var ascentPrerequisites = new List<PuzzleObjective> { sequenceObjective };
-            for (int q = 0; q < 4; q++)
-                ascentPrerequisites.Add(BuildSimonConsole(m, root, modules[q]));
-            // Boucle finale, plus longue (4 manches) : barres de contrôle du réacteur à abaisser sur appel.
-            ascentPrerequisites.Add(BuildCallOutRelay(m, root, modules, CoreFloor, RelayWallXCore, 4, "Barres de contrôle", "Control rods",
-                "BARRES DE CONTRÔLE · RÉACTEUR", "CONTROL RODS · REACTOR"));
             BuildSyncLevers(root, CoreFloor, "Remontée d'urgence", "Emergency ascent", "ascent", levers, ascentPrerequisites.ToArray());
 
             // Fin : faisceau de lumière venu de la surface + bulles dans les colonnes d'eau.
@@ -2143,6 +2169,7 @@ namespace Abysses.EditorTools
             cameraTransform.gameObject.AddComponent<DescentEars>();
 
             rig.AddComponent<XRRenderSettings>();
+            rig.AddComponent<BodyHeightClamp>();
             var localRig = rig.AddComponent<LocalRig>();
             SetFields(localRig, ("leftHand", Find(rig.transform, "Left Controller")), ("rightHand", Find(rig.transform, "Right Controller")));
 

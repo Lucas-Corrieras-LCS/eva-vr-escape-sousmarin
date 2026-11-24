@@ -316,8 +316,8 @@ namespace Abysses.UI
             bool meReady = state != null && rig != null && PlayArea.IsValid(rig.Quadrant)
                 && (state.ReadyMask.Value & (1 << rig.Quadrant)) != 0;
             if (!meReady)
-                return Loc.T("Entre dans ta cabine, fais l'entraînement, place-toi sur le repère lumineux face à la porte, puis « Recalibrer ma position ».",
-                    "Step into your cabin, do the training, stand on the glowing marker facing the door, then “Recalibrate my position”.");
+                return Loc.T("Entre dans ta cabine, place-toi sur le repère lumineux face à la porte, puis « Recalibrer ma position ».",
+                    "Step into your cabin, stand on the glowing marker facing the door, then “Recalibrate my position”.");
             if (!GameStateManager.EnoughDivers)
                 return Loc.T("Tu es à bord. Il faut au moins 2 plongeurs : on attend ton équipier…",
                     "You are aboard. At least 2 divers are needed: waiting for your teammate…");

@@ -1,6 +1,6 @@
 # Partie de test automatique — solo
 
-> 2026-11-24 15:12 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-24 17:01 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Partie solo lancée, quadrant ORANGE attribué
@@ -22,12 +22,12 @@
 - ✅ Indice lisible : « IA de la station — Le code de ton digicode n'est pas chez toi : il est affiché dans le module voisin. »
 - ✅ Fusible disponible pour le test d'objet perdu
 - ✅ Objet perdu (fusible passé sous le sol) revenu à sa place
-- ✅ Étage 1 : 4 tableaux de disjoncteurs
-- ✅ Disjoncteurs : 2 interdits tirés au hasard
-- ✅ Note du chef mécanicien : nomme les 2 disjoncteurs à laisser coupés
-- ✅ Disjoncteur armé (appui sur la manette)
-- ✅ Armer un disjoncteur interdit : court-circuit, tout disjoncte
-- ✅ Disjoncteurs : réarmés en suivant la note → énigme résolue
+- ✅ Étage 1 : 4 tableaux de dérivation
+- ✅ Tableau : 5 fils, voyant, n° de série EC-5183
+- ✅ Manuel : règles numérotées affichées
+- ✅ Tableau : un mauvais fil provoque un court-circuit
+- ✅ Tableau : nouveau tirage après le court-circuit
+- ✅ Tableau : 3 bons fils d'affilée → dérivation rétablie
 - ✅ Étage 1 : « passer l'étage » (pupitre) → étage résolu
 - ✅ Étage 1 : courant rétabli (néons rallumés un par un, lightmaps échangées)
 - ✅ Pas de descente tant que le plongeur n'est pas revenu dans sa cabine
@@ -37,9 +37,14 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (635)
+- ✅ Balise morse : code à 3 chiffres tiré (294)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
+- ✅ Étage 2 : relais d'appels en place
+- ✅ Relais : DÉMARRER lance le premier appel
+- ✅ Relais en solo : le joueur est appelant et cible
+- ✅ Relais : un mauvais symbole est refusé, la manche recommence
+- ✅ Relais : 3 manches réussies → énigme résolue
 - ✅ Étage 2 : « passer l'étage » (pupitre) → étage résolu
 - ✅ Étage 2 quitté (phase : Descending, étage 2)
 - ✅ Descente vers l'étage 3 (ballasts)
@@ -51,19 +56,24 @@
 - ✅ Collecteur : amorcer avec les vannes fermées → coup de bélier
 - ✅ Collecteur : vannes ouvertes une à une (appuis sur les poignées)
 - ✅ Collecteur : bonnes vannes ouvertes → la pompe démarre
-- ✅ Étage 3 : « passer l'étage » (pupitre) → étage résolu
-- ✅ Étage 3 quitté (phase : Descending, étage 3)
+- ✅ Étage 3 : 4 cales électrifiées
+- ✅ Écran de surveillance : la carte de la cale est affichée
+- ✅ Cale : la dalle DÉPART arme le parcours
+- ✅ Cale : une dalle sous tension → décharge, retour au départ
+- ✅ Cale : chemin sûr suivi (9 dalles) → vanne de purge atteinte
+- ✅ Étage 3 : fuite et salle des pompes tirées
+- ✅ Cloisons : le plan est affiché (seul plongeur)
+- ✅ Cloisons : aucune porte ne se ferme avant l'alerte
+- ✅ Cloisons : alerte déclenchée, le chrono de l'eau tourne
+- ✅ Cloisons : portes autour de l'eau fermées → fuite isolée, pompe au sec
+- ✅ Étage 3 : verrou de la cabine en place
+- ✅ Étage 3 : tous les fragments du code révélés
+- ✅ Verrou : le fragment confié à ce module s'affiche
+- ✅ Verrou : un mauvais code est refusé
+- ✅ Verrou : le bon code ouvre la cabine
+- ✅ Étage 3 : code de la cabine → étage résolu
 - ✅ Descente vers l'étage 4 (salle commune)
 - ✅ Montre : -4 000 m
-- ✅ Étage 4 : 4 consoles sonar
-- ✅ Console sonar : la première note est jouée
-- ✅ Console sonar : une erreur relance la séquence
-- ✅ Console sonar : séquence de 6 couleurs reproduite → calibrée
-- ✅ Étage 4 : relais d'appels en place
-- ✅ Relais : DÉMARRER lance le premier appel
-- ✅ Relais en solo : le joueur est appelant et cible
-- ✅ Relais : un mauvais symbole est refusé, la manche recommence
-- ✅ Relais : 4 manches réussies → énigme résolue
 - ✅ Séquence du réacteur + remontée → fin de partie
 - ✅ Chrono de fin cohérent
 - ✅ Temps enregistré au classement : 1.  1:12  ·  1 plongeur

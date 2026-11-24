@@ -298,41 +298,29 @@ namespace Abysses.EditorTools
             return count;
         }
 
-        /// <summary>Étage 1 : tableau des disjoncteurs résolu en suivant la note (et court-circuit si on arme un interdit).</summary>
-        static IEnumerator Breakers()
+        /// <summary>Étage 1 : manuel de désamorçage — un mauvais fil (court-circuit), puis 3 tableaux réussis d'affilée.</summary>
+        static IEnumerator Wiring()
         {
-            Check(Object.FindObjectsByType<BreakerPanel>(FindObjectsSortMode.None).Length == 4, "Étage 1 : 4 tableaux de disjoncteurs");
-            BreakerPanel panel = Mine<BreakerPanel>();
+            Check(Object.FindObjectsByType<WiringPanel>(FindObjectsSortMode.None).Length == 4, "Étage 1 : 4 tableaux de dérivation");
+            WiringPanel panel = Mine<WiringPanel>();
             if (panel == null) yield break;
-            int forbidden = panel.Forbidden.Value;
-            Check(Bits(forbidden) == 2, "Disjoncteurs : 2 interdits tirés au hasard");
-            string note = Field<TMP_Text[]>(panel, "notes")[0].text;
-            bool named = true;
-            for (int i = 0; i < BreakerPanel.Count; i++)
-                if ((forbidden & (1 << i)) != 0) named &= note.Contains(BreakerPanel.NameOf(i));
-            Check(named, "Note du chef mécanicien : nomme les 2 disjoncteurs à laisser coupés");
-            int allowed = 0, bad = 0;
-            for (int i = 0; i < BreakerPanel.Count; i++)
+            WiringPanel.Board board = panel.Current;
+            Check(board.Count >= 4 && board.Count <= 6 && !string.IsNullOrEmpty(board.Serial), $"Tableau : {board.Count} fils, voyant, n° de série {board.Serial}");
+            WiringManual manual = Object.FindObjectsByType<WiringManual>(FindObjectsSortMode.None).FirstOrDefault(w => Field<int>(w, "quadrant") == LocalRig.Instance.Quadrant);
+            Check(manual != null && Field<TMP_Text>(manual, "text").text.Contains("1."), "Manuel : règles numérotées affichées");
+            int wrong = (panel.Solution + 1) % board.Count;
+            panel.Pressed(wrong);
+            yield return Until(() => panel.Shorts.Value == 1 && panel.Round.Value == 0, 3f, "Tableau : un mauvais fil provoque un court-circuit");
+            yield return Until(() => panel.Cut.Value == 0, 4f, "Tableau : nouveau tirage après le court-circuit");
+            for (int round = 0; round < WiringPanel.Rounds; round++)
             {
-                if ((forbidden & (1 << i)) == 0) { allowed = i; break; }
+                int seed = panel.Seed.Value;
+                panel.Pressed(panel.Solution);
+                yield return Until(() => panel.Objective.Solved.Value || panel.Seed.Value != seed && panel.Cut.Value == 0, 4f, null);
             }
-            for (int i = 0; i < BreakerPanel.Count; i++)
-                if ((forbidden & (1 << i)) != 0) { bad = i; break; }
-            panel.Pressed(allowed);
-            yield return Until(() => panel.Armed.Value == 1 << allowed, 3f, "Disjoncteur armé (appui sur la manette)");
-            panel.Pressed(bad);
-            yield return Until(() => panel.Armed.Value == 0, 3f, "Armer un disjoncteur interdit : court-circuit, tout disjoncte");
-            var objective = Field<PuzzleObjective>(panel, "objective");
-            for (int i = 0; i < BreakerPanel.Count; i++)
-            {
-                if ((forbidden & (1 << i)) != 0) continue;
-                panel.Pressed(i);
-                yield return Wait(0.2f);
-            }
-            yield return Until(() => objective.Solved.Value, 3f, "Disjoncteurs : réarmés en suivant la note → énigme résolue");
+            Check(panel.Objective.Solved.Value, "Tableau : 3 bons fils d'affilée → dérivation rétablie");
         }
 
-        /// <summary>Étage 2 : la balise clignote, le cadenas refuse un mauvais code et s'ouvre avec le bon.</summary>
         static IEnumerator MorseLock()
         {
             Check(Object.FindObjectsByType<CombinationLock>(FindObjectsSortMode.None).Length == 4, "Étage 2 : 4 cadenas morse");
@@ -378,27 +366,6 @@ namespace Abysses.EditorTools
             yield return Until(() => objective.Solved.Value, 3f, "Collecteur : bonnes vannes ouvertes → la pompe démarre");
         }
 
-        /// <summary>Étage 4 : séquence de mémoire jouée manche par manche (avec une erreur au début).</summary>
-        static IEnumerator Sonar()
-        {
-            Check(Object.FindObjectsByType<SimonConsole>(FindObjectsSortMode.None).Length == 4, "Étage 4 : 4 consoles sonar");
-            SimonConsole console = Mine<SimonConsole>();
-            if (console == null) yield break;
-            int sequence = console.Sequence.Value;
-            var objective = Field<PuzzleObjective>(console, "objective");
-            console.Pressed(SimonConsole.ListenIndex);
-            yield return Until(() => !Field<bool>(console, "playing"), 5f, "Console sonar : la première note est jouée");
-            console.Pressed((SimonConsole.PadAt(sequence, 0) + 1) % SimonConsole.Pads);
-            yield return Until(() => !Field<bool>(console, "playing") && Field<int>(console, "round") == 1, 5f, "Console sonar : une erreur relance la séquence");
-            for (int round = 1; round <= SimonConsole.MaxLength; round++)
-            {
-                yield return Until(() => !Field<bool>(console, "playing"), 8f, null);  // fin de la démonstration de la manche
-                for (int i = 0; i < round; i++) console.Pressed(SimonConsole.PadAt(sequence, i));
-                yield return Wait(0.2f);
-            }
-            yield return Until(() => objective.Solved.Value, 4f, "Console sonar : séquence de 6 couleurs reproduite → calibrée");
-        }
-
         /// <summary>
         /// Relais d'appels joué par de vrais appuis sur les panneaux. Seul, le joueur est appelant et cible ;
         /// à plusieurs, l'appelant n'est jamais la cible (le test répond pour chaque plongeur sur son panneau).
@@ -434,6 +401,100 @@ namespace Abysses.EditorTools
             Check(relay.Finished && rolesOk, $"Relais : {relay.Rounds} manches réussies → énigme résolue");
         }
 
+        /// <summary>Place la tête du plongeur au-dessus d'un point du sol (on déplace l'origine du rig).</summary>
+        static void MoveHeadTo(Vector3 ground)
+        {
+            Transform rig = LocalRig.Instance.transform;
+            Vector3 head = LocalRig.Instance.Head.position;
+            rig.position += new Vector3(ground.x - head.x, 0f, ground.z - head.z);
+        }
+
+        /// <summary>Étage 3 : labyrinthe électrifié parcouru « à pied » (tête déplacée case par case), décharge comprise.</summary>
+        static IEnumerator Maze()
+        {
+            Check(Object.FindObjectsByType<ShockMaze>(FindObjectsSortMode.None).Length == 4, "Étage 3 : 4 cales électrifiées");
+            ShockMaze maze = Mine<ShockMaze>();
+            if (maze == null) yield break;
+            MazeMonitor monitor = Object.FindObjectsByType<MazeMonitor>(FindObjectsSortMode.None).FirstOrDefault(w => Field<int>(w, "quadrant") == LocalRig.Instance.Quadrant);
+            Check(monitor != null && Field<Renderer[]>(monitor, "cells")[maze.StartCell].enabled, "Écran de surveillance : la carte de la cale est affichée");
+            MoveHeadTo(maze.CellCenter(maze.StartCell));
+            yield return Until(() => maze.Armed.Value, 3f, "Cale : la dalle DÉPART arme le parcours");
+            int danger = System.Array.FindIndex(maze.Safe, safe => !safe);
+            MoveHeadTo(maze.CellCenter(danger));
+            yield return Until(() => maze.Shocks.Value == 1 && !maze.Armed.Value, 3f, "Cale : une dalle sous tension → décharge, retour au départ");
+            // Chemin sûr (parcours en largeur sur les dalles sûres), suivi case par case.
+            var previous = new int[maze.Safe.Length];
+            for (int i = 0; i < previous.Length; i++) previous[i] = -2;
+            var queue = new Queue<int>();
+            queue.Enqueue(maze.StartCell);
+            previous[maze.StartCell] = -1;
+            while (queue.Count > 0)
+            {
+                int cell = queue.Dequeue();
+                int column = cell % ShockMaze.Columns, row = cell / ShockMaze.Columns;
+                foreach (int next in new[] { column > 0 ? cell - 1 : -1, column < ShockMaze.Columns - 1 ? cell + 1 : -1, row > 0 ? cell - ShockMaze.Columns : -1, row < ShockMaze.Rows - 1 ? cell + ShockMaze.Columns : -1 })
+                {
+                    if (next < 0 || !maze.Safe[next] || previous[next] != -2) continue;
+                    previous[next] = cell;
+                    queue.Enqueue(next);
+                }
+            }
+            var path = new List<int>();
+            for (int cell = maze.GoalCell; cell >= 0; cell = previous[cell]) path.Insert(0, cell);
+            foreach (int cell in path)
+            {
+                MoveHeadTo(maze.CellCenter(cell));
+                yield return Wait(0.3f);
+            }
+            yield return Until(() => maze.Objective.Solved.Value, 3f, $"Cale : chemin sûr suivi ({path.Count} dalles) → vanne de purge atteinte");
+            LocalRig.Instance.Recenter();
+        }
+
+        /// <summary>Étage 3 : cloisons étanches — fermer les portes autour de la fuite avant qu'elle n'atteigne la pompe.</summary>
+        static IEnumerator Bulkheads()
+        {
+            BulkheadNetwork network = Object.FindFirstObjectByType<BulkheadNetwork>();
+            Check(network != null && network.Layout.Value >= 0 && network.Leak != network.Pump, "Étage 3 : fuite et salle des pompes tirées");
+            if (network == null) yield break;
+            int mine = LocalRig.Instance.Quadrant;
+            BulkheadDisplay display = Object.FindObjectsByType<BulkheadDisplay>(FindObjectsSortMode.None).FirstOrDefault(d => Field<int>(d, "quadrant") == mine);
+            Check(display != null && Field<GameObject>(display, "map").activeSelf, "Cloisons : le plan est affiché (seul plongeur)");
+            if (display == null) yield break;
+            display.Pressed(0);
+            yield return Wait(0.3f);
+            Check(!network.IsClosed(0), "Cloisons : aucune porte ne se ferme avant l'alerte");
+            display.Pressed(BulkheadDisplay.StartIndex);
+            yield return Until(() => network.Running.Value, 3f, "Cloisons : alerte déclenchée, le chrono de l'eau tourne");
+            for (int d = 0; d < BulkheadNetwork.Doors.Length; d++)
+            {
+                Vector2Int door = BulkheadNetwork.Doors[d];
+                if (network.IsFlooded(door.x) != network.IsFlooded(door.y)) display.Pressed(d);
+            }
+            yield return Until(() => network.Objective.Solved.Value, 4f, "Cloisons : portes autour de l'eau fermées → fuite isolée, pompe au sec");
+        }
+
+        /// <summary>Méta-énigme : fragments affichés, mauvais code refusé, bon code saisi touche par touche.</summary>
+        static IEnumerator CabinCode(int floor)
+        {
+            FloorLock floorLock = Object.FindObjectsByType<FloorLock>(FindObjectsSortMode.None).FirstOrDefault(l => l.Objective.Floor == floor);
+            Check(floorLock != null, $"Étage {floor} : verrou de la cabine en place");
+            if (floorLock == null) yield break;
+            yield return Until(() => floorLock.AllFragments, 6f, $"Étage {floor} : tous les fragments du code révélés");
+            int mine = LocalRig.Instance.Quadrant;
+            FloorLockPanel panel = Object.FindObjectsByType<FloorLockPanel>(FindObjectsSortMode.None).FirstOrDefault(p => Field<int>(p, "quadrant") == mine);
+            if (panel == null) { Check(false, "Verrou de la cabine dans le module du joueur"); yield break; }
+            string fragments = Field<TMP_Text>(panel, "fragmentsText").text;
+            Check(fragments.Contains(floorLock.Digit(0).ToString()), "Verrou : le fragment confié à ce module s'affiche");
+            int wrong = floorLock.Wrong.Value;
+            for (int i = 0; i < floorLock.Count; i++) panel.Pressed((floorLock.Digit(i) + 1) % 10);
+            panel.Pressed(FloorLockPanel.ValidateIndex);
+            yield return Until(() => floorLock.Wrong.Value == wrong + 1, 3f, "Verrou : un mauvais code est refusé");
+            for (int i = 0; i < floorLock.Count; i++) panel.Pressed(floorLock.Digit(i));
+            panel.Pressed(FloorLockPanel.ValidateIndex);
+            // Le plongeur est déjà dans sa cabine : la descente peut partir aussitôt (et décharger l'étage).
+            yield return Until(() => floorLock == null || floorLock.Unlocked || State.Phase.Value != GamePhase.Playing, 3f, "Verrou : le bon code ouvre la cabine");
+        }
+
         static IEnumerator FloorOne(bool checkLostItem)
         {
             PowerRestore power = Object.FindFirstObjectByType<PowerRestore>();
@@ -463,7 +524,7 @@ namespace Abysses.EditorTools
                 }
             }
 
-            if (checkLostItem) yield return Breakers();
+            if (checkLostItem) yield return Wiring();
 
             // Comme en vrai, le plongeur est aux leviers (hors de sa cabine) quand le courant revient.
             Transform rig = LocalRig.Instance.transform;
@@ -493,16 +554,18 @@ namespace Abysses.EditorTools
             Check(Object.FindObjectsByType<RisingWater>(FindObjectsSortMode.None).Length == 4, "Étage 2 : eau qui monte dans les 4 modules");
             Check(Object.FindObjectsByType<NeonFlicker>(FindObjectsSortMode.None).Length == 4, "Étage 2 : néons défaillants");
             yield return MorseLock();
+            yield return Relay(2);
             yield return SkipFloorAndDescend(2);
             yield return Until(() => Phase(GamePhase.Playing, 3), 45f, "Descente vers l'étage 3 (ballasts)");
             Check(WatchText().Contains("-2800"), "Montre : -2 800 m");
             Check(Object.FindObjectsByType<RisingWater>(FindObjectsSortMode.None).Length == 4, "Étage 3 : l'eau monte dans les 4 modules");
             yield return Manifold();
-            yield return SkipFloorAndDescend(3);
+            yield return Maze();
+            yield return Bulkheads();
+            yield return CabinCode(3);
+            yield return Until(() => State.Phase.Value != GamePhase.Playing || State.Floor.Value != 3, 6f, "Étage 3 : code de la cabine → étage résolu");
             yield return Until(() => Phase(GamePhase.Playing, 4), 45f, "Descente vers l'étage 4 (salle commune)");
             Check(WatchText().Contains("-4000"), "Montre : -4 000 m");
-            yield return Sonar();
-            yield return Relay(4);
             State.GmSkipFloorRpc();
             yield return Until(() => State.Phase.Value == GamePhase.Finished, 6f, "Séquence du réacteur + remontée → fin de partie");
             Check(State.EndTime.Value > State.StartTime.Value, "Chrono de fin cohérent");

@@ -16,8 +16,9 @@ namespace Abysses.EditorTools
     /// Générateur, étage 3 « Ballasts » (-2 800 m) : salle des pompes qui prend l'eau.
     /// - Collecteur de vannes croisé : les vannes sont ici, le schéma d'ouverture est chez le partenaire (privé).
     ///   Mauvaise combinaison = coup de bélier, l'eau monte d'un coup. Bonne = la pompe vide le module.
-    /// - Relais d'appels « purge des ballasts » (3 manches).
-    /// - Leviers de chasse des ballasts, à abaisser ensemble : fin de l'étage.
+    /// - Labyrinthe électrifié dans la cale (guidé par l'écran d'un autre plongeur) et cloisons étanches (plan chez un seul,
+    ///   commandes des portes chez tous).
+    /// - Fin d'étage : code de la cabine (méta-énigme, voir <see cref="FloorLock"/>).
     /// L'eau monte lentement dans chaque module tant que sa pompe n'est pas amorcée (jamais au-dessus des mollets).
     /// </summary>
     public static partial class AbyssesBuilder
@@ -47,8 +48,7 @@ namespace Abysses.EditorTools
             var water = new RisingWater[4];
             for (int q = 0; q < 4; q++) water[q] = BuildFloodWater(m, root, modules[q]);
 
-            var prerequisites = new List<PuzzleObjective>();
-            var levers = new LeverHandle[4];
+            var manifoldGroup = new PuzzleObjective[4];
             for (int q = 0; q < 4; q++)
             {
                 Module mod = modules[q];
@@ -63,13 +63,22 @@ namespace Abysses.EditorTools
 
                 var allIcons = new List<Renderer>(icons);
                 allIcons.AddRange(fallbackIcons);
-                prerequisites.Add(BuildValveManifold(m, root, mod, water[q], allIcons.ToArray(), new[] { text, fallbackText }));
-                levers[q] = BuildLever(m, root, mod.Q, mod.P(5.4f, 0f, 2.6f), mod.Facing(0f, -1f));
+                manifoldGroup[q] = BuildValveManifold(m, root, mod, water[q], allIcons.ToArray(), new[] { text, fallbackText });
             }
 
-            prerequisites.Add(BuildCallOutRelay(m, root, modules, BallastFloor, RelayWallX, 3, "Purge des ballasts", "Ballast purge",
-                "PURGE DES BALLASTS · DÉLESTAGE", "BALLAST PURGE · DUMPING"));
-            BuildSyncLevers(root, BallastFloor, "Chasse des ballasts", "Ballast blow", "ballast", levers, prerequisites.ToArray());
+            // Labyrinthe électrifié : la cale ici, l'écran de surveillance chez un autre plongeur (routage décalé de 2).
+            var mazes = new ShockMaze[4];
+            var mazeGroup = new PuzzleObjective[4];
+            for (int q = 0; q < 4; q++)
+            {
+                mazes[q] = BuildShockMaze(m, root, modules[q]);
+                mazeGroup[q] = mazes[q].Objective;
+            }
+            foreach (Module mod in modules) BuildMazeMonitor(m, root, mod, mazes, 2);
+            PuzzleObjective bulkheads = BuildBulkheads(m, root, modules, 3);
+
+            var groups = new List<PuzzleObjective[]> { manifoldGroup, mazeGroup, new[] { bulkheads } };
+            BuildFloorLock(m, root, modules, BallastFloor, groups, 2);
 
             BuildHatch(m, root, modules[0], PartnerHatchSpot(modules[0]), modules[1], PartnerHatchSpot(modules[1]));
             BuildHatch(m, root, modules[2], PartnerHatchSpot(modules[2]), modules[3], PartnerHatchSpot(modules[3]));
@@ -246,8 +255,8 @@ namespace Abysses.EditorTools
             float s = mod.Vz;
             BallastPump(m, t, mod.P(-4.6f, 0f, s * 2.95f), mod.Facing(0f, s));
             BallastPump(m, t, mod.P(4.3f, 0f, s * 2.95f), mod.Facing(0f, s));
-            Barrel(m, t, mod.P(0.5f, 0f, -s * 3.38f), m.PipeYellow);
-            Barrel(m, t, mod.P(1.15f, 0f, -s * 3.4f), m.PipeYellow);
+            Barrel(m, t, mod.P(-0.55f, 0f, -s * 3.38f), m.PipeYellow);
+            Barrel(m, t, mod.P(-1.2f, 0f, -s * 3.4f), m.PipeYellow);
             Crate(m, t, mod.P(5.5f, 0f, -s * 3.38f), mod.Facing(0f, s), new Vector3(0.65f, 0.55f, 0.5f));
             PipeColumn(m, t, mod.P(-6.85f, 0f, 3.35f));
             // Bouche d'évacuation au sol : grille de caoutchouc sur un puisard sombre, flaques autour.
