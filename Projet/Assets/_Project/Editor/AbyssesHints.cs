@@ -43,6 +43,28 @@ namespace Abysses.EditorTools
                 "The sequence shows up on your teammate's RECEIVER, not yours: they read it to you, you repeat it.",
                 "One mistake and it starts over: remember colours and notes, the screen shows your progress.",
             }),
+            ["manifold"] = (new[]
+            {
+                "L'eau monte : la pompe de ton module ne démarrera qu'avec les bonnes vannes ouvertes sur le collecteur du mur du fond.",
+                "Le schéma de TON collecteur est chez ton coéquipier, sur son mur du fond : lui seul peut le lire. Demande-lui couleur par couleur.",
+                "Poignée parallèle au tuyau = vanne ouverte. Règle les 5 vannes comme sur le schéma, puis AMORCER LA POMPE. Une erreur referme tout.",
+            }, new[]
+            {
+                "The water is rising: your module's pump only starts with the right valves open on the manifold on the back wall.",
+                "YOUR manifold's diagram is at your teammate's, on their back wall: only they can read it. Ask them colour by colour.",
+                "Handle along the pipe = valve open. Set the 5 valves like the diagram, then PRIME THE PUMP. A mistake closes everything.",
+            }),
+            ["ballast"] = (new[]
+            {
+                "Une fois les pompes amorcées et la purge terminée, il faut chasser les ballasts pour descendre.",
+                "Chaque module a un levier de chasse près du mur commun : il faut les abaisser tous ensemble.",
+                "Comptez à voix haute : « 3, 2, 1, maintenant ! » — moins de 2 secondes d'écart entre les leviers.",
+            }, new[]
+            {
+                "Once the pumps are primed and the purge is done, the ballasts must be blown to go down.",
+                "Each module has a blow lever near the shared wall: pull them all together.",
+                "Count out loud: “3, 2, 1, now!” — less than 2 seconds between the levers.",
+            }),
             ["relay"] = (new[]
             {
                 "Chaque module a un panneau d'appels sur le mur extérieur. Quand toute l'équipe est prête, appuyez sur DÉMARRER.",
@@ -156,6 +178,14 @@ namespace Abysses.EditorTools
                  "Cdr Réa Morel — Day 214.\nSomething very large is circling the station. The reactor is in safe mode. Restarting it takes the whole team, each at their console. Then the emergency ascent."),
                 ("Ing. Ines Valdès — Jour 214, dernier message.\nNous partons par la capsule de secours. Laissez les leviers de remontée pour la fin, et tirez-les ensemble. Bonne chance, plongeurs.",
                  "Eng. Ines Valdès — Day 214, last entry.\nWe are leaving in the escape pod. Keep the ascent levers for last, and pull them together. Good luck, divers."),
+            },
+            // Style 4 : ballasts (3e étage de la descente).
+            new[]
+            {
+                ("Cmdt Réa Morel — Jour 213, soir.\nLa coque fuit aux ballasts. Les pompes de cale tiennent, à condition d'ouvrir les bonnes vannes. Les schémas ont été affichés dans le module voisin, comme tout le reste ici. Ne forcez pas : un coup de bélier et l'eau monte d'un coup.",
+                 "Cdr Réa Morel — Day 213, evening.\nThe hull is leaking at the ballasts. The bilge pumps hold, as long as the right valves are open. The diagrams were posted in the next module, like everything else here. Don't force it: one water hammer and the water surges up."),
+                ("Ing. Ines Valdès — Jour 213, nuit.\nPour descendre au cœur, il faut chasser les ballasts : les quatre leviers d'un coup. Avant ça, videz l'eau et lancez la purge. Et parlez-vous. Cette station ne pardonne pas le silence.",
+                 "Eng. Ines Valdès — Day 213, night.\nTo reach the core, the ballasts must be blown: all four levers at once. Before that, pump out the water and run the purge. And talk to each other. This station does not forgive silence."),
             },
         };
     }

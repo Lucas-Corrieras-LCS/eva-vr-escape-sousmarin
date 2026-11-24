@@ -31,9 +31,9 @@ namespace Abysses.Level
     public class GameStateManager : NetworkBehaviour
     {
         [Tooltip("Scènes des étages, dans l'ordre de la descente. Elles doivent être dans les Build Settings.")]
-        [SerializeField] string[] floorScenes = { "Etage1_Habitat", "Etage2_Labo", "Etage3_Coeur" };
+        [SerializeField] string[] floorScenes = { "Etage1_Habitat", "Etage2_Labo", "Etage3_Ballasts", "Etage4_Coeur" };
         [Tooltip("Profondeur affichée pour chaque palier (surface puis étages), en mètres.")]
-        [SerializeField] int[] floorDepths = { 0, 200, 1500, 4000 };
+        [SerializeField] int[] floorDepths = { 0, 200, 1500, 2800, 4000 };
         [Tooltip("Durée minimale d'une descente en ascenseur (s).")]
         [SerializeField, Min(2f)] float descentDuration = 8f;
         [Tooltip("Première plongée (surface → étage 1) : plus longue, on voit la mer monter devant les hublots.")]

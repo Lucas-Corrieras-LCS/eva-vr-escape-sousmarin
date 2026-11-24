@@ -183,7 +183,7 @@ namespace Abysses.EditorTools
                     creakPoints.Add(point);
                 }
 
-                if (floor < 3) BuildDrips(m, life, mod);
+                if (floor != 3) BuildDrips(m, life, mod);
                 BuildCrewLog(m, root, mod, floor);
             }
 

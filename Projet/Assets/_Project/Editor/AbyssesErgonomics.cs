@@ -22,7 +22,7 @@ namespace Abysses.EditorTools
         /// <summary>Distance entre la main tendue et la tête d'un joueur debout face à l'objet.</summary>
         const float ArmReach = 0.45f;
 
-        static readonly string[] Floors = { "Etage1_Habitat", "Etage2_Labo", "Etage3_Coeur" };
+        static readonly string[] Floors = { "Etage1_Habitat", "Etage2_Labo", "Etage3_Ballasts", "Etage4_Coeur" };
 
         [MenuItem("Abysses/Vérifier l'ergonomie (hauteurs, marge)", priority = 20)]
         public static void Check()

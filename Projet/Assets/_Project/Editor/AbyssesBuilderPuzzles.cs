@@ -263,13 +263,18 @@ namespace Abysses.EditorTools
             Renderer lamp = MorseBeaconProp(m, beaconGo.transform);
             Private(beaconGo, partner.Q, lamp);
 
-            // Radio de la balise chez le partenaire, au-dessus de son hublot : bips synchronisés.
-            Transform radio = Group("RadioBalise_Pour_Q" + mod.Q, parent, partner.P(-0.5f, 1.95f, partner.Vz * 3.62f), partner.Facing(0f, partner.Vz));
-            RadioSpeaker(m, radio);
-            // Gros voyant sur la radio, qui clignote avec le bip : le morse se lit aussi sans l'entendre.
-            Renderer radioLamp = SignalLamp(m, radio, new Vector3(0.19f, 0f, -0.04f));
+            // Radio de la balise chez le partenaire, à hauteur des yeux : gros voyant qui clignote avec le bip.
+            Transform radio = Group("RadioBalise_Pour_Q" + mod.Q, parent, partner.P(-0.5f, 1.45f, partner.Vz * 3.62f), partner.Facing(0f, partner.Vz));
+            DeviceMount(m, radio, new Vector2(0.56f, 0.46f), 1.45f);
+            Prim(PrimitiveType.Cube, "Boitier", radio, new Vector3(0f, 0f, -0.02f), Quaternion.identity, new Vector3(0.5f, 0.4f, 0.06f), m.Panel, false);
+            Label(radio, "RADIO DE LA BALISE", new Vector3(0f, 0.15f, -0.055f), 0.34f, null, "BEACON RADIO");
+            Label(radio, "CODE DU MODULE " + QuadrantNames[mod.Q], new Vector3(0f, 0.1f, -0.055f), 0.28f, null, QuadrantNamesEn[mod.Q] + " MODULE'S CODE");
+            var grille = new GameObject("HautParleur").transform;
+            grille.SetParent(radio, false);
+            grille.localPosition = new Vector3(-0.11f, -0.06f, -0.03f);
+            RadioSpeaker(m, grille);
+            Renderer radioLamp = SignalLamp(m, radio, new Vector3(0.14f, -0.06f, -0.06f), 1.6f);
             Private(radio.gameObject, partner.Q, radioLamp);
-            Label(radio, "RADIO BALISE : CODE DE " + QuadrantNames[mod.Q], new Vector3(0f, 0.11f, -0.04f), 0.22f, null, "BEACON RADIO: " + QuadrantNamesEn[mod.Q] + "'S CODE");
             AudioSource partnerBeep = Sfx(radio.gameObject, fx.MorseTone, 0.4f);
             partnerBeep.loop = true;
 
@@ -314,7 +319,7 @@ namespace Abysses.EditorTools
             speaker.SetParent(t, false);
             speaker.localPosition = new Vector3(0f, 0.44f, 0f);
             RadioSpeaker(m, speaker);
-            Renderer fallbackRadioLamp = SignalLamp(m, speaker, new Vector3(0.19f, 0f, -0.04f));
+            Renderer fallbackRadioLamp = SignalLamp(m, speaker, new Vector3(0.19f, 0f, -0.04f), 1f);
             var fallbackSound = new GameObject("BipRepli");
             fallbackSound.transform.SetParent(speaker, false);
             AudioSource beep = Sfx(fallbackSound, fx.MorseTone, 0.35f);
@@ -354,11 +359,12 @@ namespace Abysses.EditorTools
         }
 
         /// <summary>Voyant de signal (morse) : culot, verre bombé, grille de protection. Renvoie le verre qui s'allume.</summary>
-        static Renderer SignalLamp(Mats m, Transform parent, Vector3 position)
+        static Renderer SignalLamp(Mats m, Transform parent, Vector3 position, float scale)
         {
             var lamp = new GameObject("VoyantMorse").transform;
             lamp.SetParent(parent, false);
             lamp.localPosition = position;
+            lamp.localScale = Vector3.one * scale;
             Prim(PrimitiveType.Cylinder, "Culot", lamp, new Vector3(0f, 0f, 0.01f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.11f, 0.02f, 0.11f), m.Frame, false);
             Renderer glass = Prim(PrimitiveType.Sphere, "Verre", lamp, new Vector3(0f, 0f, -0.02f), Quaternion.identity, new Vector3(0.085f, 0.085f, 0.06f), m.SlotEmpty, false).GetComponent<Renderer>();
             AbyssesArt.MeshObject("Grille", lamp, art.Ring, new Vector3(0f, 0f, -0.035f), Quaternion.identity, new Vector3(0.1f, 0.1f, 0.012f), m.Frame);
@@ -382,7 +388,7 @@ namespace Abysses.EditorTools
             root.transform.SetParent(parent, false);
             root.transform.SetPositionAndRotation(mod.P(-7.16f, 1.25f, mod.Vz * 0.65f), mod.Facing(-1f, 0f));
             root.AddComponent<NetworkObject>();
-            PuzzleObjective objective = Objective(root, 3, mod.Q, "Console sonar " + QuadrantNames[mod.Q], "Sonar console " + QuadrantNamesEn[mod.Q], "simon");
+            PuzzleObjective objective = Objective(root, CoreFloor, mod.Q, "Console sonar " + QuadrantNames[mod.Q], "Sonar console " + QuadrantNamesEn[mod.Q], "simon");
             var console = root.AddComponent<SimonConsole>();
             Transform t = root.transform;
             DeviceMount(m, t, new Vector2(0.84f, 0.84f), 1.25f);

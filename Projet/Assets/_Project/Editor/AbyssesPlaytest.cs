@@ -85,6 +85,8 @@ namespace Abysses.EditorTools
 
         static void Launch(string testMode)
         {
+            // Tests en arrière-plan : son de l'éditeur coupé (rétabli à la fin du test).
+            EditorUtility.audioMasterMute = true;
             SessionState.SetString(ModeKey, testMode);
             EditorSceneManager.OpenScene("Assets/_Project/Scenes/Station.unity", OpenSceneMode.Single);
             EditorApplication.isPlaying = true;
@@ -249,6 +251,7 @@ namespace Abysses.EditorTools
             PlayerPrefs.Save();
             if (ConnectionManager.Instance != null) ConnectionManager.Instance.Leave();
             EditorApplication.isPlaying = false;
+            EditorUtility.audioMasterMute = false;
         }
 
         static string ClientErrors(string path)
@@ -351,10 +354,34 @@ namespace Abysses.EditorTools
             yield return Until(() => objective.Solved.Value, 3f, "Cadenas : le code de la balise ouvre la vanne d'urgence");
         }
 
-        /// <summary>Étage 3 : séquence de mémoire jouée manche par manche (avec une erreur au début).</summary>
+        /// <summary>Étage 3 : collecteur de vannes réglé par de vrais appuis, après un coup de bélier volontaire.</summary>
+        static IEnumerator Manifold()
+        {
+            Check(Object.FindObjectsByType<ValveManifold>(FindObjectsSortMode.None).Length == 4, "Étage 3 : 4 collecteurs de vannes");
+            ValveManifold manifold = Mine<ValveManifold>();
+            if (manifold == null) yield break;
+            int target = manifold.Target.Value;
+            Check(target > 0 && target < 1 << ValveManifold.Count, "Collecteur : combinaison tirée au hasard");
+            var objective = Field<PuzzleObjective>(manifold, "objective");
+            string diagram = Field<TMP_Text[]>(manifold, "diagramTexts")[0].text;
+            Check(diagram.Contains(ValveManifold.ColorName(0)), "Schéma hydraulique : une ligne par vanne de couleur");
+            manifold.Pressed(ValveManifold.PrimeIndex);
+            yield return Until(() => manifold.Surges.Value == 1, 3f, "Collecteur : amorcer avec les vannes fermées → coup de bélier");
+            for (int v = 0; v < ValveManifold.Count; v++)
+                if ((target & (1 << v)) != 0)
+                {
+                    manifold.Pressed(v);
+                    yield return Wait(0.15f);
+                }
+            yield return Until(() => manifold.Open.Value == target, 3f, "Collecteur : vannes ouvertes une à une (appuis sur les poignées)");
+            manifold.Pressed(ValveManifold.PrimeIndex);
+            yield return Until(() => objective.Solved.Value, 3f, "Collecteur : bonnes vannes ouvertes → la pompe démarre");
+        }
+
+        /// <summary>Étage 4 : séquence de mémoire jouée manche par manche (avec une erreur au début).</summary>
         static IEnumerator Sonar()
         {
-            Check(Object.FindObjectsByType<SimonConsole>(FindObjectsSortMode.None).Length == 4, "Étage 3 : 4 consoles sonar");
+            Check(Object.FindObjectsByType<SimonConsole>(FindObjectsSortMode.None).Length == 4, "Étage 4 : 4 consoles sonar");
             SimonConsole console = Mine<SimonConsole>();
             if (console == null) yield break;
             int sequence = console.Sequence.Value;
@@ -467,10 +494,15 @@ namespace Abysses.EditorTools
             Check(Object.FindObjectsByType<NeonFlicker>(FindObjectsSortMode.None).Length == 4, "Étage 2 : néons défaillants");
             yield return MorseLock();
             yield return SkipFloorAndDescend(2);
-            yield return Until(() => Phase(GamePhase.Playing, 3), 45f, "Descente vers l'étage 3 (salle commune)");
+            yield return Until(() => Phase(GamePhase.Playing, 3), 45f, "Descente vers l'étage 3 (ballasts)");
+            Check(WatchText().Contains("-2800"), "Montre : -2 800 m");
+            Check(Object.FindObjectsByType<RisingWater>(FindObjectsSortMode.None).Length == 4, "Étage 3 : l'eau monte dans les 4 modules");
+            yield return Manifold();
+            yield return SkipFloorAndDescend(3);
+            yield return Until(() => Phase(GamePhase.Playing, 4), 45f, "Descente vers l'étage 4 (salle commune)");
             Check(WatchText().Contains("-4000"), "Montre : -4 000 m");
             yield return Sonar();
-            yield return Relay(3);
+            yield return Relay(4);
             State.GmSkipFloorRpc();
             yield return Until(() => State.Phase.Value == GamePhase.Finished, 6f, "Séquence du réacteur + remontée → fin de partie");
             Check(State.EndTime.Value > State.StartTime.Value, "Chrono de fin cohérent");
@@ -537,7 +569,7 @@ namespace Abysses.EditorTools
             if (exe == null) return null;
             string log = Path.GetFullPath("Builds/TestClient/" + name + ".log");
             clientLogs.Add(log);
-            var info = new ProcessStartInfo(exe, $"-batchmode -nographics -logFile \"{log}\" {extraArgs}") { UseShellExecute = false };
+            var info = new ProcessStartInfo(exe, $"-batchmode -nographics -abysses-mute -logFile \"{log}\" {extraArgs}") { UseShellExecute = false };
             Process process = Process.Start(info);
             processes.Add(process);
             return process;

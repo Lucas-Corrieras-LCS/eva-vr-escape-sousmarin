@@ -22,6 +22,9 @@ namespace Abysses.EditorTools
             public Texture2D HullAlbedo, HullNormal, PlateAlbedo, PlateNormal, CeilingAlbedo, CeilingNormal;
             public Texture2D LockerAlbedo, LockerNormal, Hazard, ScreenWave, ScreenBars, ScreenText;
             public Texture2D LabTileAlbedo, LabTileNormal;
+            /// <summary>Peinture usée (objets à UV 0..1 par face) : grain, rayures, arêtes écaillées, crasse.</summary>
+            public Texture2D WornAlbedo, WornNormal;
+            public Texture2D RubberAlbedo, RubberNormal, WoodAlbedo, WoodNormal;
             /// <summary>Cadre arrondi 1 x 1 (à mettre à l'échelle), bord de 0,1, profondeur 1.</summary>
             public Mesh RoundedFrame;
             /// <summary>Anneau de hublot (cadre circulaire) de diamètre 1, profondeur 1.</summary>
@@ -33,6 +36,7 @@ namespace Abysses.EditorTools
             EnsureFolder(ArtDir);
             EnsureFolder(MeshDir);
             FrameCache.Clear();
+            BevelCache.Clear();
             var kit = new Kit();
 
             float[] hull = HullHeight(512, out Color[] hullAlbedo);
@@ -54,6 +58,18 @@ namespace Abysses.EditorTools
             float[] labTile = LabTileHeight(256, out Color[] labTileAlbedo);
             kit.LabTileAlbedo = Png("T_LabTile_Albedo", labTileAlbedo, 256, false);
             kit.LabTileNormal = Png("T_LabTile_Normal", NormalFromHeight(labTile, 256, 5f), 256, true);
+
+            float[] worn = WornPaintHeight(256, out Color[] wornAlbedo);
+            kit.WornAlbedo = Png("T_Worn_Albedo", wornAlbedo, 256, false);
+            kit.WornNormal = Png("T_Worn_Normal", NormalFromHeight(worn, 256, 3f), 256, true);
+
+            float[] rubber = RubberHeight(128, out Color[] rubberAlbedo);
+            kit.RubberAlbedo = Png("T_Rubber_Albedo", rubberAlbedo, 128, false);
+            kit.RubberNormal = Png("T_Rubber_Normal", NormalFromHeight(rubber, 128, 2.5f), 128, true);
+
+            float[] wood = WoodHeight(256, out Color[] woodAlbedo);
+            kit.WoodAlbedo = Png("T_Wood_Albedo", woodAlbedo, 256, false);
+            kit.WoodNormal = Png("T_Wood_Normal", NormalFromHeight(wood, 256, 4f), 256, true);
 
             kit.Hazard = Png("T_Hazard", Hazard(128), 128, false);
             kit.ScreenWave = Png("T_Screen_Wave", Screen(256, 0), 256, false);
@@ -97,6 +113,94 @@ namespace Abysses.EditorTools
             if (FrameCache.TryGetValue(name, out Mesh cached) && cached != null) return cached;
             Mesh mesh = SaveMesh(name, RoundedFrameMesh(width, height, radius, border, depth));
             FrameCache[name] = mesh;
+            return mesh;
+        }
+
+        static readonly System.Collections.Generic.Dictionary<string, Mesh> BevelCache = new System.Collections.Generic.Dictionary<string, Mesh>();
+
+        /// <summary>
+        /// Cube unité (-0,5..0,5) aux arêtes arrondies, à mettre à l'échelle <paramref name="size"/> : le rayon de l'arrondi
+        /// est fixé en mètres (proportionnel au plus petit côté, 2,5 cm max), donc les arrondis restent ronds quelle que soit
+        /// l'échelle. Les normales tiennent compte de l'échelle. Asset partagé par toutes les pièces de mêmes proportions.
+        /// Renvoie null pour une pièce trop fine (feuille, joint) : le cube standard suffit.
+        /// </summary>
+        public static Mesh BeveledCube(Vector3 size)
+        {
+            float smallest = Mathf.Min(Mathf.Abs(size.x), Mathf.Min(Mathf.Abs(size.y), Mathf.Abs(size.z)));
+            if (smallest < 0.006f) return null;
+            float radius = Mathf.Clamp(smallest * 0.2f, 0.0015f, 0.025f);
+            // Rayons en espace unité, arrondis pour partager les maillages entre pièces de proportions voisines.
+            var r = new Vector3(Quantize(radius / Mathf.Abs(size.x)), Quantize(radius / Mathf.Abs(size.y)), Quantize(radius / Mathf.Abs(size.z)));
+            string name = string.Format(System.Globalization.CultureInfo.InvariantCulture, "Bevel_{0:0.000}_{1:0.000}_{2:0.000}", r.x, r.y, r.z);
+            if (BevelCache.TryGetValue(name, out Mesh cached) && cached != null) return cached;
+            EnsureFolder(MeshDir + "/Bevel");
+            Mesh mesh = AssetDatabase.LoadAssetAtPath<Mesh>(MeshDir + "/Bevel/" + name + ".asset");
+            if (mesh == null)
+            {
+                mesh = BeveledCubeMesh(r);
+                mesh.name = name;
+                AssetDatabase.CreateAsset(mesh, MeshDir + "/Bevel/" + name + ".asset");
+            }
+            BevelCache[name] = mesh;
+            return mesh;
+        }
+
+        static float Quantize(float value) => Mathf.Clamp(Mathf.Round(value / 0.005f) * 0.005f, 0.005f, 0.25f);
+
+        static Mesh BeveledCubeMesh(Vector3 r)
+        {
+            // 6 coordonnées par axe : face plane au centre, 2 segments d'arrondi de chaque côté.
+            float[] Coords(float radius) => new[] { -0.5f, -0.5f + radius * 0.35f, -0.5f + radius, 0.5f - radius, 0.5f - radius * 0.35f, 0.5f };
+            float[][] coords = { Coords(r.x), Coords(r.y), Coords(r.z) };
+            Vector3 inner = new Vector3(0.5f, 0.5f, 0.5f) - r;
+
+            var vertices = new System.Collections.Generic.List<Vector3>();
+            var normals = new System.Collections.Generic.List<Vector3>();
+            var uvs = new System.Collections.Generic.List<Vector2>();
+            var triangles = new System.Collections.Generic.List<int>();
+            for (int f = 0; f < 6; f++)
+            {
+                Vector3 n = FaceNormals[f];
+                int axis = Mathf.Abs(n.x) > 0.5f ? 0 : Mathf.Abs(n.y) > 0.5f ? 1 : 2;
+                int ua = (axis + 1) % 3, va = (axis + 2) % 3;
+                float side = n[axis];
+                // Ordre des sommets : face extérieure dans le sens horaire vu de dehors (convention Unity).
+                bool flip = side < 0f;
+                int start = vertices.Count;
+                float[] cu = coords[ua], cv = coords[va];
+                for (int j = 0; j < cv.Length; j++)
+                for (int i = 0; i < cu.Length; i++)
+                {
+                    var p = new Vector3();
+                    p[axis] = 0.5f * side;
+                    p[ua] = cu[i];
+                    p[va] = cv[j];
+                    // Arrondi : on ramène le point sur une « sphère » d'ellipsoïde autour du coeur du cube.
+                    Vector3 core = new Vector3(Mathf.Clamp(p.x, -inner.x, inner.x), Mathf.Clamp(p.y, -inner.y, inner.y), Mathf.Clamp(p.z, -inner.z, inner.z));
+                    Vector3 d = new Vector3((p.x - core.x) / r.x, (p.y - core.y) / r.y, (p.z - core.z) / r.z);
+                    Vector3 dir = d.sqrMagnitude > 1e-8f ? d.normalized : n;
+                    vertices.Add(core + Vector3.Scale(dir, r));
+                    // Normale en espace objet compensant l'échelle non uniforme (transformée par l'inverse transposée).
+                    normals.Add(new Vector3(dir.x / r.x, dir.y / r.y, dir.z / r.z).normalized);
+                    uvs.Add(new Vector2(cu[i] + 0.5f, cv[j] + 0.5f));
+                }
+                int w = cu.Length;
+                for (int j = 0; j < cv.Length - 1; j++)
+                for (int i = 0; i < w - 1; i++)
+                {
+                    int a = start + j * w + i, b = a + 1, c = a + w, e = c + 1;
+                    if (!flip) triangles.AddRange(new[] { a, b, c, b, e, c });
+                    else triangles.AddRange(new[] { a, c, b, b, c, e });
+                }
+            }
+            var mesh = new Mesh();
+            mesh.SetVertices(vertices);
+            mesh.SetNormals(normals);
+            mesh.SetUVs(0, uvs);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateTangents();
+            mesh.RecalculateBounds();
+            Unwrapping.GenerateSecondaryUVSet(mesh);
             return mesh;
         }
 
@@ -479,6 +583,91 @@ namespace Abysses.EditorTools
                 if (door || vent) value = 0.2f;
                 if (handle) value = 0.8f;
                 albedo[y * size + x] = new Color(value, value, value, 1f);
+            }
+            return height;
+        }
+
+        /// <summary>
+        /// Peinture industrielle usée, pour les pièces à UV 0..1 par face (cubes biseautés) : grain fin, taches de crasse,
+        /// fines rayures, et peinture écaillée près des bords de chaque face (là où les mains et les chocs usent le métal).
+        /// </summary>
+        static float[] WornPaintHeight(int size, out Color[] albedo)
+        {
+            var height = new float[size * size];
+            albedo = new Color[size * size];
+            var scratch = new float[size * size];
+            var random = new System.Random(71);
+            for (int i = 0; i < 46; i++)
+            {
+                float x0 = (float)random.NextDouble() * size, y0 = (float)random.NextDouble() * size;
+                float angle = (float)random.NextDouble() * Mathf.PI, length = 8f + (float)random.NextDouble() * 40f;
+                for (float t = 0f; t < length; t += 0.5f)
+                {
+                    int x = Mod(Mathf.RoundToInt(x0 + Mathf.Cos(angle) * t), size), y = Mod(Mathf.RoundToInt(y0 + Mathf.Sin(angle) * t), size);
+                    scratch[y * size + x] = 1f;
+                }
+            }
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = x / (float)size, v = y / (float)size;
+                float edge = Mathf.Min(Mathf.Min(u, 1f - u), Mathf.Min(v, 1f - v));
+                // Écaillures : seuil de bruit qui ronge la peinture près des bords.
+                float chip = Fbm(u, v, 12, 3, 73);
+                bool bare = chip > 0.5f + edge * 6f;
+                float grime = Fbm(u, v, 3, 4, 79);
+                float grain = Fbm(u, v, 32, 2, 83);
+                float s = scratch[y * size + x];
+                float h = 0.5f + 0.02f * (grain - 0.5f) - (bare ? 0.06f : 0f) - 0.03f * s;
+                height[y * size + x] = h;
+                float value = 0.9f + 0.1f * grain;
+                value *= Mathf.Lerp(0.72f, 1.05f, grime);
+                if (bare) value = 1.3f;
+                if (s > 0f) value = Mathf.Max(value, 1.1f);
+                value = Mathf.Clamp01(value / 1.35f);
+                albedo[y * size + x] = new Color(value, value, value, 1f);
+            }
+            return height;
+        }
+
+        /// <summary>Caoutchouc / plastique grainé (touches, poignées).</summary>
+        static float[] RubberHeight(int size, out Color[] albedo)
+        {
+            var height = new float[size * size];
+            albedo = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = x / (float)size, v = y / (float)size;
+                float grain = Fbm(u, v, 24, 2, 89);
+                height[y * size + x] = 0.5f + 0.05f * grain;
+                float value = 0.85f + 0.15f * Fbm(u, v, 4, 3, 97);
+                albedo[y * size + x] = new Color(value, value, value, 1f);
+            }
+            return height;
+        }
+
+        /// <summary>Planches de bois (caisses) : 4 planches, joints creusés, veinage, têtes de clous.</summary>
+        static float[] WoodHeight(int size, out Color[] albedo)
+        {
+            var height = new float[size * size];
+            albedo = new Color[size * size];
+            int plank = size / 4;
+            for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+            {
+                float u = x / (float)size, v = y / (float)size;
+                int index = y / plank, py = y % plank;
+                bool joint = py < 2 || py > plank - 3;
+                float grain = Fbm(u * 0.25f + index * 0.37f, v * 4f, 8, 4, 101 + index);
+                float rings = 0.5f + 0.5f * Mathf.Sin((grain * 9f + u * 3f) * Mathf.PI);
+                bool nail = (x % (size / 2) is > 10 and < 16) && (py > plank / 2 - 3 && py < plank / 2 + 3);
+                float h = joint ? 0.2f : 0.5f + 0.04f * rings;
+                if (nail) h = 0.6f;
+                height[y * size + x] = h;
+                float value = joint ? 0.35f : 0.75f + 0.25f * rings * (0.8f + 0.2f * Hash(index, 0, 7));
+                if (nail) value = 0.45f;
+                albedo[y * size + x] = new Color(value, value * 0.92f, value * 0.82f, 1f);
             }
             return height;
         }

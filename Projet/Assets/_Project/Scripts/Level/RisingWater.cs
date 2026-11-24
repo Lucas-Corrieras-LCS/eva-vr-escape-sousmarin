@@ -3,9 +3,11 @@ using UnityEngine;
 namespace Abysses.Level
 {
     /// <summary>
-    /// Montée de la tension (étage 2) : une brèche laisse entrer l'eau, le niveau monte lentement dans le module
-    /// tant que l'étage n'est pas résolu, puis l'eau est pompée. Purement visuel : jamais de défaite, jamais au-dessus
-    /// des chevilles (le joueur ne doit pas se sentir noyé ni perdre ses repères au sol).
+    /// Montée de la tension (étages 2 et 3) : une brèche laisse entrer l'eau, le niveau monte lentement dans le module
+    /// tant que l'étage n'est pas résolu, puis l'eau est pompée. Jamais de défaite, et jamais au-dessus des mollets
+    /// (le joueur ne doit pas se sentir noyé ni perdre ses repères au sol).
+    /// Étage des ballasts : un coup de bélier fait monter l'eau d'un coup (<see cref="Surge"/>), la pompe du module
+    /// la vide dès que son collecteur est réglé (<see cref="Drain"/>).
     /// </summary>
     public class RisingWater : MonoBehaviour
     {
@@ -32,6 +34,17 @@ namespace Abysses.Level
         {
             if (phase == GamePhase.FloorSolved || phase == GamePhase.Finished) draining = true;
         }
+
+        /// <summary>Montée brusque (coup de bélier), bornée au niveau maximal.</summary>
+        public void Surge(float amount)
+        {
+            if (draining) return;
+            height = Mathf.Min(maxHeight, height + amount);
+            Apply();
+        }
+
+        /// <summary>Vidange du module (pompe amorcée), sans attendre la fin de l'étage.</summary>
+        public void Drain() => draining = true;
 
         void Update()
         {

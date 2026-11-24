@@ -1,6 +1,6 @@
 # Partie de test automatique — solo
 
-> 2026-11-06 15:00 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-24 12:09 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Partie solo lancée, quadrant ORANGE attribué
@@ -37,20 +37,36 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (741)
+- ✅ Balise morse : code à 3 chiffres tiré (537)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
 - ✅ Étage 2 : « passer l'étage » (pupitre) → étage résolu
 - ✅ Étage 2 quitté (phase : Descending, étage 2)
-- ✅ Descente vers l'étage 3 (salle commune)
+- ✅ Descente vers l'étage 3 (ballasts)
+- ✅ Montre : -2 800 m
+- ✅ Étage 3 : l'eau monte dans les 4 modules
+- ✅ Étage 3 : 4 collecteurs de vannes
+- ✅ Collecteur : combinaison tirée au hasard
+- ✅ Schéma hydraulique : une ligne par vanne de couleur
+- ✅ Collecteur : amorcer avec les vannes fermées → coup de bélier
+- ✅ Collecteur : vannes ouvertes une à une (appuis sur les poignées)
+- ✅ Collecteur : bonnes vannes ouvertes → la pompe démarre
+- ✅ Étage 3 : « passer l'étage » (pupitre) → étage résolu
+- ✅ Étage 3 quitté (phase : Descending, étage 3)
+- ✅ Descente vers l'étage 4 (salle commune)
 - ✅ Montre : -4 000 m
-- ✅ Étage 3 : 4 consoles sonar
+- ✅ Étage 4 : 4 consoles sonar
 - ✅ Console sonar : la première note est jouée
 - ✅ Console sonar : une erreur relance la séquence
 - ✅ Console sonar : séquence de 6 couleurs reproduite → calibrée
+- ✅ Étage 4 : relais d'appels en place
+- ✅ Relais : DÉMARRER lance le premier appel
+- ✅ Relais en solo : le joueur est appelant et cible
+- ✅ Relais : un mauvais symbole est refusé, la manche recommence
+- ✅ Relais : 4 manches réussies → énigme résolue
 - ✅ Séquence du réacteur + remontée → fin de partie
 - ✅ Chrono de fin cohérent
-- ✅ Temps enregistré au classement : 1.  1:10  ·  1 plongeur
+- ✅ Temps enregistré au classement : 1.  1:12  ·  1 plongeur
 - ✅ « Nouvelle plongée » : retour surface, étages déchargés
 - ✅ Remontée : portes fermées pendant l'émersion
 - ✅ Remontée : on émerge à la surface, portes rouvertes

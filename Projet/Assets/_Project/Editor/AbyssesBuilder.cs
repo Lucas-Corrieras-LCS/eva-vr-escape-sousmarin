@@ -42,7 +42,7 @@ namespace Abysses.EditorTools
         const string SimulatorPath = "Assets/Samples/XR Interaction Toolkit/3.3.2/XR Interaction Simulator/XR Interaction Simulator.prefab";
         const string ParticleMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat";
 
-        static readonly string[] FloorScenes = { "Etage1_Habitat", "Etage2_Labo", "Etage3_Coeur" };
+        static readonly string[] FloorScenes = { "Etage1_Habitat", "Etage2_Labo", "Etage3_Ballasts", "Etage4_Coeur" };
         // Couleurs des joueurs : teintes très éloignées pour les distinguer d'un coup d'œil (réacteur, avatars).
         static readonly string[] QuadrantNames = { "ORANGE", "CYAN", "VERT", "MAGENTA" };
         static readonly Color[] QuadrantColors =
@@ -84,6 +84,7 @@ namespace Abysses.EditorTools
             GameObject cabin = BuildCabinPrefab(m);
             BuildFloor1(m);
             BuildFloor2(m);
+            BuildFloorBallasts(m);
             BuildFloor3(m);
             BuildStation(m, player, cabin);
             AssetDatabase.SaveAssets();
@@ -166,16 +167,17 @@ namespace Abysses.EditorTools
                 Floor = LitTex("M_Floor", new Color(0.62f, 0.64f, 0.66f), 0.55f, 0.5f, art.PlateAlbedo, art.PlateNormal, 1f),
                 Locker = LitTex("M_Locker", new Color(0.4f, 0.52f, 0.58f), 0.35f, 0.4f, art.LockerAlbedo, art.LockerNormal, 1f),
                 Hazard = LitTex("M_Hazard", Color.white, 0.1f, 0.35f, art.Hazard, null, 1f),
-                Panel = Lit("M_Panel", new Color(0.3f, 0.34f, 0.38f), 0.35f, 0.45f),
-                Frame = Lit("M_Frame", new Color(0.09f, 0.1f, 0.12f), 0.6f, 0.6f),
+                // Objets (UV 0..1 par face) : peinture usée, caoutchouc grainé, bois — plus aucun aplat de couleur.
+                Panel = LitTex("M_Panel", new Color(0.32f, 0.36f, 0.4f), 0.35f, 0.45f, art.WornAlbedo, art.WornNormal, 1f),
+                Frame = LitTex("M_Frame", new Color(0.11f, 0.12f, 0.14f), 0.6f, 0.55f, art.WornAlbedo, art.WornNormal, 1f),
                 Brass = Lit("M_Brass", new Color(0.72f, 0.52f, 0.24f), 0.85f, 0.62f),
-                Rubber = Lit("M_Rubber", new Color(0.035f, 0.035f, 0.04f), 0f, 0.3f),
-                PipeYellow = Lit("M_Pipe_Yellow", new Color(0.8f, 0.55f, 0.08f), 0.2f, 0.5f),
-                PipeRed = Lit("M_Pipe_Red", new Color(0.55f, 0.07f, 0.05f), 0.2f, 0.5f),
+                Rubber = LitTex("M_Rubber", new Color(0.045f, 0.045f, 0.05f), 0f, 0.3f, art.RubberAlbedo, art.RubberNormal, 1f),
+                PipeYellow = LitTex("M_Pipe_Yellow", new Color(0.85f, 0.58f, 0.1f), 0.2f, 0.5f, art.WornAlbedo, art.WornNormal, 1f),
+                PipeRed = LitTex("M_Pipe_Red", new Color(0.6f, 0.08f, 0.06f), 0.2f, 0.5f, art.WornAlbedo, art.WornNormal, 1f),
                 PipeGrey = Lit("M_Pipe_Grey", new Color(0.42f, 0.45f, 0.48f), 0.65f, 0.55f),
                 Liquid = Lit("M_Liquid", new Color(0.04f, 0.2f, 0.12f), 0f, 0.9f, new Color(0.25f, 1f, 0.55f) * 1.6f),
                 WarmBulb = Lit("M_WarmBulb", new Color(0.3f, 0.2f, 0.1f), 0f, 0.6f, new Color(1f, 0.68f, 0.35f) * 3f),
-                Crate = Lit("M_Crate", new Color(0.35f, 0.3f, 0.22f), 0.1f, 0.3f),
+                Crate = LitTex("M_Crate", new Color(0.55f, 0.44f, 0.3f), 0f, 0.25f, art.WoodAlbedo, art.WoodNormal, 1f),
                 HullLab = LitTex("M_HullLab", new Color(0.8f, 0.78f, 0.73f), 0.15f, 0.5f, art.HullAlbedo, art.HullNormal, 1f),
                 LabTile = LitTex("M_LabTile", new Color(0.9f, 0.94f, 0.94f), 0f, 0.7f, art.LabTileAlbedo, art.LabTileNormal, 1f),
                 // Sol mouillé plutôt que flaque noire : même tôle, plus sombre, reliefs noyés, très lisse.
@@ -193,7 +195,7 @@ namespace Abysses.EditorTools
                 StatusOk = Lit("M_Status_Ok", Color.black, 0f, 0.5f, new Color(0.2f, 1f, 0.35f) * 2.5f),
                 StatusError = Lit("M_Status_Error", Color.black, 0f, 0.5f, new Color(1f, 0.08f, 0.05f) * 2.5f),
                 Warning = Transparent("M_ZoneWarning", new Color(0.8f, 0.05f, 0.02f, 0f), true),
-                Key = Lit("M_Key", new Color(0.07f, 0.08f, 0.09f), 0.2f, 0.6f),
+                Key = LitTex("M_Key", new Color(0.09f, 0.1f, 0.11f), 0.1f, 0.45f, art.RubberAlbedo, art.RubberNormal, 1f),
                 ShaftRed = Additive("M_Shaft_Red", "Universal Render Pipeline/Unlit", new Color(1f, 0.12f, 0.05f, 0.14f), fx.ShaftGradient),
                 SunShaft = Additive("M_Shaft_Sun", "Universal Render Pipeline/Unlit", new Color(0.75f, 0.92f, 1f, 0.35f), fx.ShaftGradient),
                 PlanktonHabitat = Additive("M_Plankton_Habitat", "Universal Render Pipeline/Particles/Unlit", new Color(0.6f, 0.95f, 1f, 0.5f), fx.Dot),
@@ -664,7 +666,8 @@ namespace Abysses.EditorTools
             OpenHall,
         }
 
-        static readonly string[] FloorTitles = { "", "HABITAT  ·  -200 m", "LABORATOIRES  ·  -1 500 m", "CŒUR  ·  -4 000 m" };
+        // Indexé par le style d'étage (1 habitat, 2 labo, 3 cœur, 4 ballasts).
+        static readonly string[] FloorTitles = { "", "HABITAT  ·  -200 m", "LABORATOIRES  ·  -1 500 m", "CŒUR  ·  -4 000 m", "BALLASTS  ·  -2 800 m" };
 
         /// <summary>Intervalle (le long d'un mur, en coordonnées locales du module) à laisser libre : énigme, ouverture…</summary>
         struct Keepout
@@ -678,7 +681,7 @@ namespace Abysses.EditorTools
             // Hublots sur l'océan (OceanWindowX).
             new Keepout(-6.4f, 0.55f), new Keepout(6.4f, 0.55f),
             // Panneaux du relais d'appels (étages 1-2, étage 3) et radio de la balise morse.
-            new Keepout(RelayWallX, 0.45f), new Keepout(RelayWallXCore, 0.45f), new Keepout(-0.5f, 0.15f) };
+            new Keepout(RelayWallX, 0.45f), new Keepout(RelayWallXCore, 0.45f), new Keepout(-0.5f, 0.3f) };
         const float RelayWallX = 1.55f;
         const float RelayWallXCore = 3.0f;
         static readonly Keepout[] NeighborWallItems = { new Keepout(-3f, 1.2f), new Keepout(-5.5f, 0.6f), new Keepout(2f, 0.35f), new Keepout(2.6f, 0.2f) };
@@ -981,6 +984,7 @@ namespace Abysses.EditorTools
                 {
                     case 1: DressHabitat(m, root, modules[q]); break;
                     case 2: DressLabo(m, root, modules[q]); break;
+                    case BallastStyle: DressBallast(m, root, modules[q]); break;
                     default: DressCore(m, root, modules[q]); break;
                 }
             }
@@ -1422,7 +1426,7 @@ namespace Abysses.EditorTools
 
         static void BuildFloor3(Mats m)
         {
-            Scene scene = NewFloorScene(3, out Transform root);
+            Scene scene = NewFloorScene(CoreFloor, out Transform root);
             FloorEnvironment(root, new Color(0.005f, 0.015f, 0.03f), 0.06f, new Color(0.03f, 0.055f, 0.09f), fx.AmbienceCoeur);
 
             Module[] modules = BuildModules(m, root, Shell.OpenHall, new Color(0.25f, 0.85f, 1f), 6f, m.EmitCyan, 3);
@@ -1522,7 +1526,7 @@ namespace Abysses.EditorTools
             reactorGo.transform.SetParent(root, false);
             reactorGo.transform.position = center + Vector3.up * 1.5f;
             reactorGo.AddComponent<NetworkObject>();
-            PuzzleObjective sequenceObjective = Objective(reactorGo, 3, -1, "Séquence du réacteur", "Reactor sequence", "reactor");
+            PuzzleObjective sequenceObjective = Objective(reactorGo, CoreFloor, -1, "Séquence du réacteur", "Reactor sequence", "reactor");
             var sequence = reactorGo.AddComponent<ReactorSequence>();
             // Le cœur est au centre de la piste : son à moitié spatialisé pour que tous l'entendent bien.
             AudioSource tone = Sfx(reactorGo, fx.ReactorTone, 0.9f, 0.4f);
@@ -1550,9 +1554,9 @@ namespace Abysses.EditorTools
             for (int q = 0; q < 4; q++)
                 ascentPrerequisites.Add(BuildSimonConsole(m, root, modules[q]));
             // Boucle finale, plus longue (4 manches) : barres de contrôle du réacteur à abaisser sur appel.
-            ascentPrerequisites.Add(BuildCallOutRelay(m, root, modules, 3, RelayWallXCore, 4, "Barres de contrôle", "Control rods",
+            ascentPrerequisites.Add(BuildCallOutRelay(m, root, modules, CoreFloor, RelayWallXCore, 4, "Barres de contrôle", "Control rods",
                 "BARRES DE CONTRÔLE · RÉACTEUR", "CONTROL RODS · REACTOR"));
-            BuildSyncLevers(root, 3, "Remontée d'urgence", "Emergency ascent", "ascent", levers, ascentPrerequisites.ToArray());
+            BuildSyncLevers(root, CoreFloor, "Remontée d'urgence", "Emergency ascent", "ascent", levers, ascentPrerequisites.ToArray());
 
             // Fin : faisceau de lumière venu de la surface + bulles dans les colonnes d'eau.
             var beamGo = new GameObject("Sunbeam");
@@ -1593,8 +1597,8 @@ namespace Abysses.EditorTools
             fso.ApplyModifiedPropertiesWithoutUndo();
 
             BuildProbes(root, modules);
-            ConfigureLighting(FloorScenes[2]);
-            SaveScene(scene, FloorScenes[2]);
+            ConfigureLighting(FloorScenes[CoreFloor - 1]);
+            SaveScene(scene, FloorScenes[CoreFloor - 1]);
         }
 
         // ---------- Éléments d'énigme
@@ -2689,6 +2693,12 @@ namespace Abysses.EditorTools
             go.transform.localScale = scale;
             go.GetComponent<Renderer>().sharedMaterial = material;
             if (!keepCollider) Object.DestroyImmediate(go.GetComponent<Collider>());
+            // Arêtes arrondies : plus aucun cube « brut » (le collider reste une boîte exacte).
+            if (type == PrimitiveType.Cube)
+            {
+                Mesh beveled = AbyssesArt.BeveledCube(scale);
+                if (beveled != null) go.GetComponent<MeshFilter>().sharedMesh = beveled;
+            }
             return go;
         }
 

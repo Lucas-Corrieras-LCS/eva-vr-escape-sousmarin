@@ -44,6 +44,8 @@ namespace Abysses.Network
                 else if (args[i] == "-abysses-join-lan") joinLan = true;
                 else if (args[i] == "-abysses-spectator") connection.Spectator = true;
                 else if (args[i] == "-abysses-gm-hint") requestHints = true;
+                // Clients de test lancés en arrière-plan : aucun son.
+                else if (args[i] == "-abysses-mute") AudioListener.volume = 0f;
             }
 #if UNITY_EDITOR
             var tags = CurrentPlayer.Tags;

@@ -55,11 +55,22 @@ namespace Abysses.EditorTools
                     new View("etage2_fuite", new Vector3(4f, 1.7f, 4.2f), new Vector3(0.45f, 2.1f, 1.7f)),
                     new View("etage2_relais", new Vector3(9.05f, 1.55f, 1.75f), new Vector3(9.05f, 1.3f, 0.38f)),
                     // Radio de la balise du module CYAN, chez ORANGE (au-dessus du hublot du fond).
-                    new View("etage2_radio_balise", new Vector3(7.0f, 1.6f, 1.9f), new Vector3(7.0f, 1.85f, 0.38f)),
+                    new View("etage2_radio_balise", new Vector3(7.0f, 1.55f, 1.4f), new Vector3(7.0f, 1.42f, 0.38f)),
                 }
             },
             {
-                "Etage3_Coeur", new[]
+                "Etage3_Ballasts", new[]
+                {
+                    new View("etage3b_module", new Vector3(13.5f, 2f, 1.2f), new Vector3(2f, 1.2f, 6f)),
+                    // Collecteur de vannes du module ORANGE (mur du fond) et schéma du collecteur CYAN, chez ORANGE.
+                    new View("etage3b_collecteur", new Vector3(1.75f, 1.4f, 4f), new Vector3(0.34f, 1.15f, 4f)),
+                    new View("etage3b_schema", new Vector3(1.7f, 1.4f, 2.3f), new Vector3(0.34f, 1.3f, 2.3f)),
+                    new View("etage3b_pompe", new Vector3(4.5f, 1.5f, 2.8f), new Vector3(2.9f, 0.7f, 1.05f)),
+                    new View("etage3b_relais", new Vector3(9.05f, 1.55f, 1.75f), new Vector3(9.05f, 1.3f, 0.38f)),
+                }
+            },
+            {
+                "Etage4_Coeur", new[]
                 {
                     new View("etage3_reacteur", new Vector3(9f, 1.7f, 2f), new Vector3(15.5f, 1.4f, 8.25f)),
                     new View("etage3_salle", new Vector3(1.5f, 2.2f, 1.2f), new Vector3(20f, 0.8f, 12f)),
@@ -104,7 +115,7 @@ namespace Abysses.EditorTools
                 foreach (View view in floor.Value)
                     Render(view, background, Path.Combine(dir, view.Name + ".png"));
 
-                if (floor.Key == "Etage3_Coeur")
+                if (floor.Key == "Etage4_Coeur")
                 {
                     ShowFinale(scene);
                     Render(new View("etage3_final", new Vector3(9f, 1.6f, 2.5f), new Vector3(15.5f, 2.2f, 8.25f)), RenderSettings.fogColor, Path.Combine(dir, "etage3_final.png"));
