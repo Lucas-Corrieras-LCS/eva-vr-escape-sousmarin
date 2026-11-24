@@ -1,6 +1,6 @@
 # Partie de test automatique — 2 plongeurs + pupitre
 
-> 2026-11-24 15:15 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-24 23:38 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Hôte réseau local lancé (plongeur ORANGE)
@@ -25,9 +25,20 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (969)
+- ✅ Balise morse : code à 3 chiffres tiré (769)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
+- ✅ Étage 2 : 4 mélangeurs d'antidote
+- ✅ Antidote : recette et réactifs tirés
+- ✅ Antidote : tableau des réactifs (encre UV) rempli
+- ✅ Antidote : fiche de recette affichée
+- ✅ Antidote : un mauvais dosage mousse et se vide
+- ✅ Antidote : recette respectée → antidote prêt
+- ✅ Étage 2 : relais d'appels en place
+- ✅ Relais : DÉMARRER lance le premier appel
+- ✅ Relais à plusieurs : le symbole s'affiche chez un autre que la cible
+- ✅ Relais : un mauvais symbole est refusé, la manche recommence
+- ✅ Relais : 3 manches réussies → énigme résolue
 - ✅ Étage 2 : « passer l'étage » (pupitre) → étage résolu
 - ✅ Étage 2 quitté (phase : FloorSolved, étage 2)
 - ✅ Descente vers l'étage 3 (ballasts)
@@ -39,19 +50,42 @@
 - ✅ Collecteur : amorcer avec les vannes fermées → coup de bélier
 - ✅ Collecteur : vannes ouvertes une à une (appuis sur les poignées)
 - ✅ Collecteur : bonnes vannes ouvertes → la pompe démarre
-- ✅ Étage 3 : « passer l'étage » (pupitre) → étage résolu
-- ✅ Étage 3 quitté (phase : FloorSolved, étage 3)
+- ✅ Étage 3 : 4 cales électrifiées
+- ✅ Écran de surveillance : la carte de la cale est affichée
+- ✅ Cale : la dalle DÉPART arme le parcours
+- ✅ Cale : une dalle sous tension → décharge, retour au départ
+- ✅ Cale : chemin sûr suivi (10 dalles) → vanne de purge atteinte
+- ✅ Étage 3 : fuite et salle des pompes tirées
+- ✅ Cloisons : le plan n'est affiché que chez un plongeur (module 1)
+- ✅ Cloisons : aucune porte ne se ferme avant l'alerte
+- ✅ Cloisons : alerte déclenchée, le chrono de l'eau tourne
+- ✅ Cloisons : portes autour de l'eau fermées → fuite isolée, pompe au sec
+- ✅ Étage 3 : plateaux de lest en place
+- ✅ Contrepoids : charges cibles tirées au début de l'étage
+- ✅ Contrepoids : registre de lest affiché
+- ✅ Contrepoids : le plateau pèse les lests posés dessus (5 kg)
+- ✅ Contrepoids : charge fausse, pas d'équilibre
+- ✅ Contrepoids : combinaison de lests trouvée pour 14 kg
+- ✅ Contrepoids : combinaison de lests trouvée pour 6 kg
+- ✅ Contrepoids : chaque plateau à sa charge (dont 14 kg ici) → ballasts équilibrés
+- ✅ Étage 3 : verrou de la cabine en place
+- ✅ Pupitre : 2 énigme(s) des autres plongeurs résolue(s) par le maître du jeu
+- ✅ Étage 3 : tous les fragments du code révélés
+- ✅ Verrou : le fragment confié à ce module s'affiche
+- ✅ Verrou : un mauvais code est refusé
+- ✅ Verrou : le bon code ouvre la cabine
+- ✅ Étage 3 : code de la cabine → étage résolu
 - ✅ Descente vers l'étage 4 (salle commune)
 - ✅ Montre : -4 000 m
-- ✅ Étage 4 : 4 consoles sonar
-- ✅ Console sonar : la première note est jouée
-- ✅ Console sonar : une erreur relance la séquence
-- ✅ Console sonar : séquence de 6 couleurs reproduite → calibrée
-- ✅ Étage 4 : relais d'appels en place
-- ✅ Relais : DÉMARRER lance le premier appel
-- ✅ Relais à plusieurs : le symbole s'affiche chez un autre que la cible
-- ✅ Relais : un mauvais symbole est refusé, la manche recommence
-- ✅ Relais : 4 manches réussies → énigme résolue
+- ✅ Étage 4 : consoles sonar et lance-leurre en place
+- ✅ Léviathan : position tirée au début de l'étage
+- ✅ Sonar : la distance du module s'affiche
+- ✅ Léviathan : un tir à côté est raté
+- ✅ Léviathan : leurre tiré en B3 → touché
+- ✅ Étage 4 : standard des circuits en place
+- ✅ Standard : le tableau est chez l'opérateur (module 1)
+- ✅ Standard : un câblage faux est refusé, tout se débranche
+- ✅ Standard : 4 bonnes liaisons → circuits rétablis
 - ✅ Séquence du réacteur + remontée → fin de partie
 - ✅ Chrono de fin cohérent
 - ✅ Temps enregistré au classement : 1.  1:12  ·  1 plongeur
@@ -60,12 +94,12 @@
 
 **Journal client_plongeur.log** : 
   - `[Abysses] Connexion : Connecting — Recherche d'une partie locale…`
-  - `[Abysses] Recherche LAN depuis 192.0.0.2 : broadcast + 1021 adresses sondées une à une.`
+  - `[Abysses] Recherche LAN depuis 192.168.1.24 : broadcast + 1274 adresses sondées une à une.`
   - `[Abysses] Connexion : Connecting — Partie trouvée, connexion…`
   - `[Abysses] Connexion : Online — Équipe rejointe`
   - `[Abysses] Cabine Q1 : plongeur à bord (Lobby)`
   - `[Abysses] Connexion : Failed — Connexion perdue — reconnexion…`
-  - `[Abysses] Connexion : Connecting — Connexion à 192.0.0.2…`
+  - `[Abysses] Connexion : Connecting — Connexion à 192.168.1.24…`
   - `[Abysses] Cabine Q1 : plongeur à bord (FloorSolved)`
 
 **Journal client_pupitre.log** : 

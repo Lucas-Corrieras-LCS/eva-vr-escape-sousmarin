@@ -1,6 +1,8 @@
 # Répertoire des énigmes — ABYSSES
 
-> 2026-11-24, après le test à 3 casques. **Document de travail : à valider (choix des nouvelles énigmes) avant de coder.**
+> 2026-11-24, après le test à 3 casques. **Validé et codé le jour même** (branche `feat/etage4-finitions`) :
+> les 8 nouvelles énigmes, le relais d'appels gardé une seule fois (étage 2), la méta-énigme de fin d'étage, la visibilité
+> croissante, la rotation des rôles. Enchaînement réellement en place : voir la section 8.
 >
 > Retours du test qui ont mené à ce document :
 > - le relais de symboles revient dans plusieurs salles : on ne veut **jamais deux fois la même énigme** ;
@@ -158,3 +160,15 @@ Rôles : A = celui qui agit, B = celui qui sait. Le routage change à chaque én
 1. Quelles nouvelles énigmes coder en premier ? Proposition : **N1** (manuel), **N2** (labyrinthe) et **N6** (cloisons), les plus fortes et les plus différentes.
 2. On garde le relais d'appels une fois, à l'étage 2, ou on le retire complètement ?
 3. Méta-énigme d'étage (chiffres à rassembler) pour remplacer les leviers en fin d'étage : oui ou non ?
+
+## 8. Enchaînement en place (2026-11-24)
+
+| Étage | Énigmes (une mécanique chacune) | Fin d'étage |
+|-------|----------------------------------|-------------|
+| 1 Habitat — hublots ronds de 80 cm | Digicode à glyphes (code privé chez le partenaire) · Fusibles par le sas · **N1 Manuel de désamorçage** (manuel routé, décalage 1) · **N7 Code frappé** (cloison commune) | Code de cabine à 4 chiffres (rallume le courant) |
+| 2 Labo — baies | Vannes croisées (anneau) · **N5 Antidote** (recette routée, réactifs à l'encre UV, lampe qui circule) · Morse (balise chez le partenaire) · Relais d'appels (seule occurrence) | Code de cabine à 4 chiffres |
+| 3 Ballasts — grandes vitres | Collecteur de vannes (schéma chez le partenaire) · **N2 Labyrinthe électrifié** (écran routé, décalage 2) · **N6 Cloisons étanches** (plan chez un seul, commandes réparties) · **N8 Contrepoids** (cibles routées, lests échangés par le sas) | Code de cabine à 4 chiffres |
+| 4 Cœur — salle vitrée | **N4 Triangulation du Léviathan** · **N3 Câblage du standard** (3 rôles) · Séquence du réacteur | Leviers de remontée (seule occurrence) |
+
+Retirés : entraînement de la cabine, sonar « Simon », relais des étages 1, 3 et 4, leviers des étages 1 et 3, digicode UV.
+Vérifié par les parties automatiques : chaque nouvelle énigme est jouée par de vrais appuis, erreurs comprises.

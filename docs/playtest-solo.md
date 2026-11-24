@@ -1,6 +1,6 @@
 # Partie de test automatique — solo
 
-> 2026-11-24 17:18 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-25 00:00 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Partie solo lancée, quadrant ORANGE attribué
@@ -23,7 +23,7 @@
 - ✅ Fusible disponible pour le test d'objet perdu
 - ✅ Objet perdu (fusible passé sous le sol) revenu à sa place
 - ✅ Étage 1 : 4 tableaux de dérivation
-- ✅ Tableau : 6 fils, voyant, n° de série LM-3089
+- ✅ Tableau : 4 fils, voyant, n° de série PS-4523
 - ✅ Manuel : règles numérotées affichées
 - ✅ Tableau : un mauvais fil provoque un court-circuit
 - ✅ Tableau : nouveau tirage après le court-circuit
@@ -39,7 +39,7 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (362)
+- ✅ Balise morse : code à 3 chiffres tiré (585)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
 - ✅ Étage 2 : 4 mélangeurs d'antidote
@@ -68,12 +68,19 @@
 - ✅ Écran de surveillance : la carte de la cale est affichée
 - ✅ Cale : la dalle DÉPART arme le parcours
 - ✅ Cale : une dalle sous tension → décharge, retour au départ
-- ✅ Cale : chemin sûr suivi (6 dalles) → vanne de purge atteinte
+- ✅ Cale : chemin sûr suivi (7 dalles) → vanne de purge atteinte
 - ✅ Étage 3 : fuite et salle des pompes tirées
-- ✅ Cloisons : le plan est affiché (seul plongeur)
+- ✅ Cloisons : le plan n'est affiché que chez un plongeur (module 0)
 - ✅ Cloisons : aucune porte ne se ferme avant l'alerte
 - ✅ Cloisons : alerte déclenchée, le chrono de l'eau tourne
 - ✅ Cloisons : portes autour de l'eau fermées → fuite isolée, pompe au sec
+- ✅ Étage 3 : plateaux de lest en place
+- ✅ Contrepoids : charges cibles tirées au début de l'étage
+- ✅ Contrepoids : registre de lest affiché
+- ✅ Contrepoids : le plateau pèse les lests posés dessus (5 kg)
+- ✅ Contrepoids : charge fausse, pas d'équilibre
+- ✅ Contrepoids : combinaison de lests trouvée pour 10 kg
+- ✅ Contrepoids : chaque plateau à sa charge (dont 10 kg ici) → ballasts équilibrés
 - ✅ Étage 3 : verrou de la cabine en place
 - ✅ Étage 3 : tous les fragments du code révélés
 - ✅ Verrou : le fragment confié à ce module s'affiche
@@ -86,9 +93,9 @@
 - ✅ Léviathan : position tirée au début de l'étage
 - ✅ Sonar : la distance du module s'affiche
 - ✅ Léviathan : un tir à côté est raté
-- ✅ Léviathan : leurre tiré en C4 → touché
+- ✅ Léviathan : leurre tiré en D1 → touché
 - ✅ Étage 4 : standard des circuits en place
-- ✅ Standard : le tableau est chez l'opérateur
+- ✅ Standard : le tableau est chez l'opérateur (module 0)
 - ✅ Standard : un câblage faux est refusé, tout se débranche
 - ✅ Standard : 4 bonnes liaisons → circuits rétablis
 - ✅ Séquence du réacteur + remontée → fin de partie

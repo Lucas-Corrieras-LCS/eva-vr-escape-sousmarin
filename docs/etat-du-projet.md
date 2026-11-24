@@ -7,6 +7,31 @@
 
 Les **3 étages se jouent de bout en bout**, de la surface jusqu'à la remontée finale, **en solo et à 2 joueurs** dans l'éditeur. Console sans erreur ; seul avertissement : les manettes *simulées* de l'éditeur ne savent pas vibrer (sans conséquence sur le Quest).
 
+## Mise à jour du 2026-11-24 (soir) — refonte des énigmes, même branche
+
+Retours du test à 3 casques et réponses :
+
+| Retour | Fait |
+|--------|------|
+| Hublot de cabine rond mais bords carrés qui dépassent | Ouverture ronde découpée dans le mur, cadre ajusté. |
+| Coincé à la sortie de cabine quand on est grand | Pièces de cabine sans collision, hauteur du corps plafonnée à 1,6 m (`BodyHeightClamp`). |
+| Relais de symboles chronométré répété partout ; « jamais 2 fois la même énigme » | Relais gardé **une seule fois** (étage 2). Chaque énigme n'apparaît qu'à un seul étage ([`repertoire-enigmes.md`](repertoire-enigmes.md), section 8). |
+| Enlever le test du salon (tutoriel de cabine) | Retiré. |
+| Nouvel étage bien mais vide | Étage 3 : collecteur, **labyrinthe électrifié**, **cloisons étanches**, **contrepoids**, code de cabine. |
+| Toujours le même joueur qui aide le même | Routage des indices **tournant** : l'aide vient d'un partenaire différent à chaque énigme (`Routing`, décalages 1, 2…). |
+| Se voir de mieux en mieux au fil des étages | Hublots de 80 cm (étage 1), baies (2), grandes vitres (3), salle vitrée (4). |
+| Énigmes plus élaborées et plus dures | 8 nouvelles énigmes (N1 à N8) : manuel de désamorçage, labyrinthe, cloisons, triangulation du Léviathan, standard à 3 rôles, antidote (UV), code frappé, contrepoids. Fin d'étage par **méta-énigme** : code de cabine dont chaque chiffre est gagné dans une énigme et lu chez un autre plongeur. |
+
+Corrigés en plus :
+- **Plantage de l'éditeur Mac** pendant l'annonce LAN. Quand la route par défaut passe par un VPN ou un partage de connexion, `sendto` renvoie « Operation not supported ». Mono ne sait pas traduire cette erreur et tue le processus au lieu de lever une exception. Les envois passent désormais par la libc sur Mac/Mono ; le Quest, en IL2CPP, n'était pas concerné.
+- **Cale électrifiée illisible** (dalles noires sur sol noir) : joints lumineux sous les dalles, on compte les cases sans voir lesquelles sont dangereuses.
+- **Lests invisibles sur l'étagère** : peinture par masse (1 kg jaune, 2 kg rouge, 5 kg bleu) et masse gravée des deux côtés.
+- **Plaque « FRAPPER » invisible** : laiton sur anneau rayé.
+
+Vérifié automatiquement : partie solo **107/107**, partie à 2 + pupitre **86/86**, ergonomie **505 objets, 0 à revoir**. Chaque nouvelle énigme est jouée par de vrais appuis, erreurs comprises.
+
+Reste à faire : test au casque à 2 puis 3-4 joueurs (durée visée 25-35 min, difficulté réelle des nouvelles énigmes), puis PR `feat/etage4-finitions` → `main`.
+
 ## Mise à jour du 2026-11-24 — branche `feat/etage4-finitions`
 
 Retours de test :
