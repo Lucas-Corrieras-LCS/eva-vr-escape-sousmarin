@@ -25,7 +25,7 @@ namespace Abysses.EditorTools
 
         static void PuzzleMaterials()
         {
-            paperMaterial = Lit("M_Paper", new Color(0.86f, 0.83f, 0.74f), 0f, 0.15f, new Color(0.86f, 0.83f, 0.74f) * 0.05f);
+            paperMaterial = Lit("M_Paper", new Color(0.66f, 0.63f, 0.55f), 0f, 0.1f, new Color(0.86f, 0.83f, 0.74f) * 0.015f);
             morseOnMaterial = Lit("M_Morse_On", Color.black, 0f, 0.5f, new Color(1f, 0.92f, 0.65f) * 6f);
             simonOff = new Material[SimonConsole.Pads];
             simonOn = new Material[SimonConsole.Pads];
@@ -232,7 +232,7 @@ namespace Abysses.EditorTools
             lamp.localPosition = new Vector3(-0.68f, 0.785f, 0.12f);
             Static(Prim(PrimitiveType.Cylinder, "Socle", lamp, new Vector3(0f, 0.01f, 0f), Quaternion.identity, new Vector3(0.12f, 0.01f, 0.12f), m.Frame, false));
             Static(Prim(PrimitiveType.Cylinder, "Bras", lamp, new Vector3(0.05f, 0.18f, -0.03f), Quaternion.Euler(-20f, 0f, -18f), new Vector3(0.015f, 0.18f, 0.015f), m.Brass, false));
-            Static(Prim(PrimitiveType.Cylinder, "AbatJour", lamp, new Vector3(0.14f, 0.34f, -0.1f), Quaternion.Euler(-25f, 0f, -30f), new Vector3(0.12f, 0.05f, 0.12f), m.PipeYellow, false));
+            Static(Prim(PrimitiveType.Cylinder, "AbatJour", lamp, new Vector3(0.14f, 0.34f, -0.1f), Quaternion.Euler(-25f, 0f, -30f), new Vector3(0.12f, 0.05f, 0.12f), m.Brass, false));
             Static(Prim(PrimitiveType.Sphere, "Ampoule", lamp, new Vector3(0.15f, 0.31f, -0.11f), Quaternion.identity, Vector3.one * 0.04f, m.WarmBulb, false));
             var lightGo = new GameObject("Lumiere");
             lightGo.transform.SetParent(lamp, false);

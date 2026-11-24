@@ -121,9 +121,52 @@ namespace Abysses.EditorTools
                     Render(new View("etage3_final", new Vector3(9f, 1.6f, 2.5f), new Vector3(15.5f, 2.2f, 8.25f)), RenderSettings.fogColor, Path.Combine(dir, "etage3_final.png"));
                 }
             }
+            CaptureAvatar(dir);
             CaptureSurface(dir);
             EditorSceneManager.OpenScene(SceneDir + "/Station.unity", OpenSceneMode.Single);
             Debug.Log("[Abysses] Captures enregistrées dans " + dir);
+        }
+
+        /// <summary>Avatar d'un coéquipier (scaphandrier CYAN) posé dans l'étage 1 : de face et de trois quarts.</summary>
+        [MenuItem("Abysses/Captures : avatar seulement", priority = 21)]
+        public static void CaptureAvatarOnly()
+        {
+            CaptureAvatar(Path.GetFullPath(Path.Combine(Application.dataPath, "../../docs/captures")));
+            EditorSceneManager.OpenScene(SceneDir + "/Station.unity", OpenSceneMode.Single);
+        }
+
+        static void CaptureAvatar(string dir)
+        {
+            Scene station = EditorSceneManager.OpenScene(SceneDir + "/Station.unity", OpenSceneMode.Single);
+            foreach (GameObject root in station.GetRootGameObjects()) root.SetActive(false);
+            Scene scene = EditorSceneManager.OpenScene(SceneDir + "/Etage1_Habitat.unity", OpenSceneMode.Additive);
+            SceneManager.SetActiveScene(scene);
+            LightProbes.Tetrahedralize();
+            Color background = ApplyAmbience(scene);
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/NetworkPlayer.prefab");
+            var avatar = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var player = avatar.GetComponent<Abysses.Network.NetworkPlayer>();
+            var tinted = (Renderer[])player.GetType().GetField("tintedRenderers", flags).GetValue(player);
+            var materials = (Material[])player.GetType().GetField("quadrantMaterials", flags).GetValue(player);
+            foreach (Renderer r in tinted) r.sharedMaterial = materials[1];
+
+            // Pose : debout près de la cabine, regard vers -Z, une main levée (signe), l'autre le long du corps.
+            Transform t = avatar.transform;
+            var center = new Vector3(5.2f, 0f, 4.6f);
+            Quaternion look = Quaternion.LookRotation(Vector3.back);
+            t.Find("Head").SetPositionAndRotation(center + new Vector3(0f, 1.65f, 0f), look);
+            t.Find("LeftHand").SetPositionAndRotation(center + new Vector3(-0.3f, 0.95f, -0.12f), look * Quaternion.Euler(70f, 0f, 0f));
+            t.Find("RightHand").SetPositionAndRotation(center + new Vector3(0.38f, 1.55f, -0.28f), look * Quaternion.Euler(-20f, 0f, 0f));
+            var body = avatar.GetComponent<Abysses.Network.AvatarBody>();
+            var lateUpdate = body.GetType().GetMethod("LateUpdate", flags);
+            for (int i = 0; i < 60; i++) lateUpdate.Invoke(body, null);
+
+            Render(new View("avatar_face", center + new Vector3(0.1f, 1.45f, -1.9f), center + new Vector3(0f, 1.05f, 0f)), background, Path.Combine(dir, "avatar_face.png"));
+            Render(new View("avatar_profil", center + new Vector3(1.6f, 1.6f, -1.2f), center + new Vector3(0f, 1.1f, 0f)), background, Path.Combine(dir, "avatar_profil.png"));
+            Render(new View("avatar_casque", center + new Vector3(0.25f, 1.7f, -0.6f), center + new Vector3(0f, 1.6f, 0f)), background, Path.Combine(dir, "avatar_casque.png"));
+            Object.DestroyImmediate(avatar);
         }
 
         /// <summary>Surface : plateforme vue du pont, cabine et potence, et vue par le hublot gauche d'une cabine.</summary>

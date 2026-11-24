@@ -131,13 +131,20 @@ namespace Abysses.EditorTools
             float radius = Mathf.Clamp(smallest * 0.2f, 0.0015f, 0.025f);
             // Rayons en espace unité, arrondis pour partager les maillages entre pièces de proportions voisines.
             var r = new Vector3(Quantize(radius / Mathf.Abs(size.x)), Quantize(radius / Mathf.Abs(size.y)), Quantize(radius / Mathf.Abs(size.z)));
+            // Grande pièce (poutre, socle) : UV en mètres, sinon la texture d'usure s'étire (rayures en « veinage de bois »).
+            float largest = Mathf.Max(Mathf.Abs(size.x), Mathf.Max(Mathf.Abs(size.y), Mathf.Abs(size.z)));
+            Vector3 uvScale = largest > 1.2f
+                ? new Vector3(Mathf.Round(Mathf.Abs(size.x) * 10f) / 10f, Mathf.Round(Mathf.Abs(size.y) * 10f) / 10f, Mathf.Round(Mathf.Abs(size.z) * 10f) / 10f)
+                : Vector3.one;
             string name = string.Format(System.Globalization.CultureInfo.InvariantCulture, "Bevel_{0:0.000}_{1:0.000}_{2:0.000}", r.x, r.y, r.z);
+            if (uvScale != Vector3.one)
+                name += string.Format(System.Globalization.CultureInfo.InvariantCulture, "_uv{0:0.0}x{1:0.0}x{2:0.0}", uvScale.x, uvScale.y, uvScale.z);
             if (BevelCache.TryGetValue(name, out Mesh cached) && cached != null) return cached;
             EnsureFolder(MeshDir + "/Bevel");
             Mesh mesh = AssetDatabase.LoadAssetAtPath<Mesh>(MeshDir + "/Bevel/" + name + ".asset");
             if (mesh == null)
             {
-                mesh = BeveledCubeMesh(r);
+                mesh = BeveledCubeMesh(r, uvScale);
                 mesh.name = name;
                 AssetDatabase.CreateAsset(mesh, MeshDir + "/Bevel/" + name + ".asset");
             }
@@ -147,7 +154,7 @@ namespace Abysses.EditorTools
 
         static float Quantize(float value) => Mathf.Clamp(Mathf.Round(value / 0.005f) * 0.005f, 0.005f, 0.25f);
 
-        static Mesh BeveledCubeMesh(Vector3 r)
+        static Mesh BeveledCubeMesh(Vector3 r, Vector3 uvScale)
         {
             // 6 coordonnées par axe : face plane au centre, 2 segments d'arrondi de chaque côté.
             float[] Coords(float radius) => new[] { -0.5f, -0.5f + radius * 0.35f, -0.5f + radius, 0.5f - radius, 0.5f - radius * 0.35f, 0.5f };
@@ -182,7 +189,7 @@ namespace Abysses.EditorTools
                     vertices.Add(core + Vector3.Scale(dir, r));
                     // Normale en espace objet compensant l'échelle non uniforme (transformée par l'inverse transposée).
                     normals.Add(new Vector3(dir.x / r.x, dir.y / r.y, dir.z / r.z).normalized);
-                    uvs.Add(new Vector2(cu[i] + 0.5f, cv[j] + 0.5f));
+                    uvs.Add(new Vector2((cu[i] + 0.5f) * Mathf.Max(1f, uvScale[ua]), (cv[j] + 0.5f) * Mathf.Max(1f, uvScale[va])));
                 }
                 int w = cu.Length;
                 for (int j = 0; j < cv.Length - 1; j++)

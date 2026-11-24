@@ -139,6 +139,7 @@ namespace Abysses.EditorTools
 
         class Mats
         {
+            public Material Suit;
             public Material Hull, Panel, Floor, Glass, EmitCyan, EmitWarm, EmitRed, EmitPurple, Visor, SlotEmpty, StatusIdle, StatusOk, StatusError, Warning, Crate;
             public Material Key, ShaftRed, SunShaft, PlanktonHabitat, PlanktonLabo, PlanktonCoeur;
             /// <summary>Néon éteint (panne), lampe de secours ambre, halo de survol, tuyauterie, eau, créatures des hublots.</summary>
@@ -149,6 +150,8 @@ namespace Abysses.EditorTools
             public Material HullLab, LabTile, Puddle, EmitCold, Steam;
             public Material[] Screens = new Material[3];
             public Material[] Avatar = new Material[4];
+            /// <summary>Peinture des scaphandres (casque, gants, épaulettes) : métal peint usé à la couleur du joueur, légère lueur.</summary>
+            public Material[] AvatarPaint = new Material[4];
             /// <summary>Couleur seule (fusibles, anneaux).</summary>
             public Material[] Symbols = new Material[6];
             /// <summary>Forme + couleur (digicode) : lisible sans distinguer les couleurs.</summary>
@@ -171,11 +174,13 @@ namespace Abysses.EditorTools
                 Panel = LitTex("M_Panel", new Color(0.32f, 0.36f, 0.4f), 0.35f, 0.45f, art.WornAlbedo, art.WornNormal, 1f),
                 Frame = LitTex("M_Frame", new Color(0.11f, 0.12f, 0.14f), 0.6f, 0.55f, art.WornAlbedo, art.WornNormal, 1f),
                 Brass = Lit("M_Brass", new Color(0.72f, 0.52f, 0.24f), 0.85f, 0.62f),
+                Suit = LitTex("M_Suit", new Color(0.34f, 0.36f, 0.38f), 0f, 0.4f, art.RubberAlbedo, art.RubberNormal, 1f),
                 Rubber = LitTex("M_Rubber", new Color(0.045f, 0.045f, 0.05f), 0f, 0.3f, art.RubberAlbedo, art.RubberNormal, 1f),
-                PipeYellow = LitTex("M_Pipe_Yellow", new Color(0.85f, 0.58f, 0.1f), 0.2f, 0.5f, art.WornAlbedo, art.WornNormal, 1f),
-                PipeRed = LitTex("M_Pipe_Red", new Color(0.6f, 0.08f, 0.06f), 0.2f, 0.5f, art.WornAlbedo, art.WornNormal, 1f),
+                // Peinture unie : ces matériaux habillent de longues pièces (conduites, potences) où une texture s'étirerait.
+                PipeYellow = Lit("M_Pipe_Yellow", new Color(0.95f, 0.68f, 0.1f), 0.2f, 0.45f),
+                PipeRed = Lit("M_Pipe_Red", new Color(0.6f, 0.08f, 0.06f), 0.2f, 0.5f),
                 PipeGrey = Lit("M_Pipe_Grey", new Color(0.42f, 0.45f, 0.48f), 0.65f, 0.55f),
-                Liquid = Lit("M_Liquid", new Color(0.04f, 0.2f, 0.12f), 0f, 0.9f, new Color(0.25f, 1f, 0.55f) * 1.6f),
+                Liquid = Lit("M_Liquid", new Color(0.04f, 0.2f, 0.12f), 0f, 0.9f, new Color(0.25f, 1f, 0.55f) * 0.9f),
                 WarmBulb = Lit("M_WarmBulb", new Color(0.3f, 0.2f, 0.1f), 0f, 0.6f, new Color(1f, 0.68f, 0.35f) * 3f),
                 Crate = LitTex("M_Crate", new Color(0.55f, 0.44f, 0.3f), 0f, 0.25f, art.WoodAlbedo, art.WoodNormal, 1f),
                 HullLab = LitTex("M_HullLab", new Color(0.8f, 0.78f, 0.73f), 0.15f, 0.5f, art.HullAlbedo, art.HullNormal, 1f),
@@ -221,7 +226,14 @@ namespace Abysses.EditorTools
             m.Screens[1] = Screen("M_Screen_Bars", art.ScreenBars);
             m.Screens[2] = Screen("M_Screen_Text", art.ScreenText);
             for (int i = 0; i < 4; i++)
+            {
                 m.Avatar[i] = Lit("M_Avatar_Q" + i, QuadrantColors[i] * 0.6f, 0.3f, 0.6f, QuadrantColors[i]);
+                // Lueur faible : le coéquipier reste repérable par un hublot sombre sans devenir un aplat fluo.
+                m.AvatarPaint[i] = LitTex("M_AvatarPaint_Q" + i, QuadrantColors[i], 0.3f, 0.55f, art.WornAlbedo, art.WornNormal, 1f);
+                m.AvatarPaint[i].EnableKeyword("_EMISSION");
+                m.AvatarPaint[i].SetColor("_EmissionColor", QuadrantColors[i] * 0.35f);
+                EditorUtility.SetDirty(m.AvatarPaint[i]);
+            }
             for (int i = 0; i < 6; i++)
             {
                 m.Symbols[i] = Unlit("M_Symbol_" + i, SymbolColors[i]);
@@ -258,6 +270,10 @@ namespace Abysses.EditorTools
             // l'écrire ici ferait osciller la valeur à chaque génération / build (faux diffs git).
             material.SetFloat("_Metallic", metallic);
             material.SetFloat("_Smoothness", smoothness);
+            // Matériau réutilisé d'une génération précédente : on repart sans texture (LitTex les remet ensuite).
+            material.SetTexture("_BaseMap", null);
+            material.SetTexture("_BumpMap", null);
+            material.DisableKeyword("_NORMALMAP");
             if (emission.HasValue)
             {
                 material.EnableKeyword("_EMISSION");
@@ -411,14 +427,11 @@ namespace Abysses.EditorTools
             Transform left = SyncedPoint(root.transform, "LeftHand");
             Transform right = SyncedPoint(root.transform, "RightHand");
 
-            GameObject helmet = Prim(PrimitiveType.Sphere, "Helmet", head, Vector3.zero, Quaternion.identity, new Vector3(0.26f, 0.28f, 0.28f), m.Avatar[0], false);
-            GameObject visor = Prim(PrimitiveType.Sphere, "Visor", head, new Vector3(0f, -0.01f, 0.07f), Quaternion.identity, new Vector3(0.21f, 0.13f, 0.17f), m.Visor, false);
-            GameObject lamp = Prim(PrimitiveType.Cylinder, "Lamp", head, new Vector3(0f, 0.14f, 0.05f), Quaternion.Euler(70f, 0f, 0f), new Vector3(0.05f, 0.02f, 0.05f), m.EmitCyan, false);
-            GameObject leftGlove = Prim(PrimitiveType.Sphere, "Glove", left, Vector3.zero, Quaternion.identity, new Vector3(0.09f, 0.06f, 0.12f), m.Avatar[0], false);
-            GameObject rightGlove = Prim(PrimitiveType.Sphere, "Glove", right, Vector3.zero, Quaternion.identity, new Vector3(0.09f, 0.06f, 0.12f), m.Avatar[0], false);
-
-            var hidden = new List<GameObject> { helmet, visor, lamp, leftGlove, rightGlove };
-            var tinted = new List<Renderer> { helmet.GetComponent<Renderer>(), leftGlove.GetComponent<Renderer>(), rightGlove.GetComponent<Renderer>() };
+            var hidden = new List<GameObject>();
+            var tinted = new List<Renderer>();
+            BuildDiverHelmet(m, head, hidden, tinted);
+            BuildGlove(m, left, -1f, hidden, tinted);
+            BuildGlove(m, right, 1f, hidden, tinted);
             BuildAvatarBody(m, root, head, left, right, hidden, tinted);
 
             var so = new SerializedObject(player);
@@ -426,7 +439,7 @@ namespace Abysses.EditorTools
             so.FindProperty("leftHand").objectReferenceValue = left;
             so.FindProperty("rightHand").objectReferenceValue = right;
             SetArray(so.FindProperty("tintedRenderers"), tinted.ToArray());
-            SetArray(so.FindProperty("quadrantMaterials"), m.Avatar);
+            SetArray(so.FindProperty("quadrantMaterials"), m.AvatarPaint);
             SetArray(so.FindProperty("hiddenForOwner"), hidden.ToArray());
             so.ApplyModifiedPropertiesWithoutUndo();
 
@@ -1139,6 +1152,23 @@ namespace Abysses.EditorTools
             Static(Prim(PrimitiveType.Cylinder, "Liquide", root, new Vector3(0f, 0.9f, 0f), Quaternion.identity, new Vector3(0.44f, 0.62f, 0.44f), m.Liquid, false));
             Static(Prim(PrimitiveType.Cylinder, "Verre", root, new Vector3(0f, 0.92f, 0f), Quaternion.identity, new Vector3(0.54f, 0.7f, 0.54f), m.Glass, false));
             Static(Prim(PrimitiveType.Cylinder, "Couvercle", root, new Vector3(0f, 1.66f, 0f), Quaternion.identity, new Vector3(0.62f, 0.06f, 0.62f), m.Frame, false));
+            Static(AbyssesArt.MeshObject("Cerclage_Bas", root, art.Ring, new Vector3(0f, 0.26f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.6f, 0.6f, 0.04f), m.Brass));
+            // Montants du cadre autour du verre.
+            for (int i = 0; i < 4; i++)
+            {
+                float a = i * Mathf.PI / 2f + Mathf.PI / 4f;
+                Static(Prim(PrimitiveType.Cylinder, "Montant", root, new Vector3(Mathf.Cos(a) * 0.29f, 0.95f, Mathf.Sin(a) * 0.29f), Quaternion.identity, new Vector3(0.03f, 0.7f, 0.03f), m.Frame, false));
+            }
+            // Spécimen en suspension : silhouette sombre (corps et tentacules) dans le liquide lumineux.
+            Static(Prim(PrimitiveType.Sphere, "Specimen", root, new Vector3(0f, 1.08f, 0f), Quaternion.Euler(10f, 30f, 0f), new Vector3(0.2f, 0.16f, 0.17f), m.Frame, false));
+            for (int i = 0; i < 5; i++)
+            {
+                float a = i * Mathf.PI * 2f / 5f;
+                Static(Prim(PrimitiveType.Capsule, "Tentacule", root, new Vector3(Mathf.Cos(a) * 0.06f, 0.88f, Mathf.Sin(a) * 0.06f),
+                    Quaternion.Euler(Mathf.Sin(a) * 18f, 0f, -Mathf.Cos(a) * 18f), new Vector3(0.025f, 0.15f, 0.025f), m.Frame, false));
+            }
+            // Plaque d'étiquette sur le socle.
+            Static(Prim(PrimitiveType.Cube, "Etiquette", root, new Vector3(0f, 0.14f, -0.335f), Quaternion.identity, new Vector3(0.2f, 0.07f, 0.01f), m.Brass, false));
             Static(AbyssesArt.MeshObject("Cerclage", root, art.Ring, new Vector3(0f, 1.58f, 0f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.6f, 0.6f, 0.05f), m.Brass));
             Pipe(m.PipeGrey, root, new Vector3(0f, (1.72f + WallHeight) / 2f, 0f), Vector3.up, WallHeight - 1.72f, 0.04f);
 
@@ -1921,11 +1951,17 @@ namespace Abysses.EditorTools
             Static(Prim(PrimitiveType.Cube, "Base", t, new Vector3(0f, 0.5f, 0f), Quaternion.identity, new Vector3(0.3f, 1.0f, 0.3f), m.Panel, true));
             Static(Prim(PrimitiveType.Cube, "Platine", t, new Vector3(0f, 0.006f, 0f), Quaternion.identity, new Vector3(0.6f, 0.012f, 0.6f), m.Hazard, false));
             Static(Prim(PrimitiveType.Cube, "Stripe", t, new Vector3(0f, 0.85f, 0.151f), Quaternion.identity, new Vector3(0.25f, 0.05f, 0.005f), m.Avatar[quadrant], false));
+            // Tête du levier : capot à fente, collier de laiton, axe.
+            Static(Prim(PrimitiveType.Cube, "Capot", t, new Vector3(0f, 1.03f, 0f), Quaternion.identity, new Vector3(0.24f, 0.06f, 0.24f), m.Frame, false));
+            Static(Prim(PrimitiveType.Cube, "Fente", t, new Vector3(0f, 1.062f, 0f), Quaternion.identity, new Vector3(0.05f, 0.006f, 0.2f), m.Rubber, false));
+            Static(Prim(PrimitiveType.Cylinder, "Axe", t, new Vector3(0f, 1.0f, 0f), Quaternion.Euler(0f, 0f, 90f), new Vector3(0.07f, 0.14f, 0.07f), m.Brass, false));
             var pivot = new GameObject("Pivot").transform;
             pivot.SetParent(t, false);
             pivot.localPosition = new Vector3(0f, 1.0f, 0f);
-            Prim(PrimitiveType.Cylinder, "Arm", pivot, new Vector3(0f, 0.22f, 0f), Quaternion.identity, new Vector3(0.04f, 0.22f, 0.04f), m.Hull, false);
-            GameObject knob = Prim(PrimitiveType.Sphere, "Knob", pivot, new Vector3(0f, 0.45f, 0f), Quaternion.identity, Vector3.one * 0.1f, m.EmitRed, true);
+            Prim(PrimitiveType.Capsule, "Arm", pivot, new Vector3(0f, 0.22f, 0f), Quaternion.identity, new Vector3(0.04f, 0.24f, 0.04f), m.PipeGrey, false);
+            Prim(PrimitiveType.Cylinder, "Bague", pivot, new Vector3(0f, 0.36f, 0f), Quaternion.identity, new Vector3(0.055f, 0.015f, 0.055f), m.Avatar[quadrant], false);
+            // Poignée en T, caoutchouc rouge (prise franche, lisible de loin).
+            GameObject knob = Prim(PrimitiveType.Capsule, "Knob", pivot, new Vector3(0f, 0.45f, 0f), Quaternion.Euler(0f, 0f, 90f), new Vector3(0.07f, 0.11f, 0.07f), m.EmitRed, true);
             knob.AddComponent<XRSimpleInteractable>();
             Halo(m, knob, knob);
             var lever = knob.AddComponent<LeverHandle>();
