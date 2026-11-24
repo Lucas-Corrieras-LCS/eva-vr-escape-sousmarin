@@ -7,6 +7,45 @@
 
 Les **3 étages se jouent de bout en bout**, de la surface jusqu'à la remontée finale, **en solo et à 2 joueurs** dans l'éditeur. Console sans erreur ; seul avertissement : les manettes *simulées* de l'éditeur ne savent pas vibrer (sans conséquence sur le Quest).
 
+## Mise à jour du 2026-11-24 — branche `feat/etage4-finitions`
+
+Retours de test :
+- on a encore du mal à rejoindre les autres ;
+- il faut retirer le solo ;
+- il reste des éléments cubiques ;
+- le morse est difficile à entendre ;
+- la partie dure 15 min, c'est trop court.
+
+| Demande | Fait |
+|---------|------|
+| Rejoindre les autres | Fusion avec le réseau de Jeremy (verrou multicast, canal demande/réponse) + **sondage direct de chaque adresse du réseau** (les partages de connexion bloquent souvent le broadcast) + **« Rejoindre par IP »** : pavé numérique, début d'adresse pré-rempli, dernière adresse mémorisée. |
+| Pas de solo | Bouton solo retiré ; la plongée ne part qu'avec **2 plongeurs minimum** (solo réservé à l'éditeur pour les tests). |
+| Morse | Radio de la balise à hauteur des yeux (1,45 m), lisible, avec un **gros voyant** qui clignote en même temps que le bip. |
+| Durée de vie | **Nouvel étage 3 « Ballasts »** (-2 800 m) entre le labo et le cœur (le cœur devient l'étage 4). |
+| Éléments cubiques | Tous les cubes du générateur ont des **arêtes arrondies** (maillages biseautés, normales corrigées, partagés entre pièces de mêmes proportions). |
+| Détails / immersion | Textures procédurales sur les objets : **peinture usée** (grain, rayures, arêtes écaillées, crasse) pour boîtiers, cadres et tuyaux, **caoutchouc grainé** pour touches et poignées, **planches de bois** pour les caisses. |
+
+### Étage 3 « Ballasts » — la salle des pompes prend l'eau
+
+- **Eau qui monte** dans chaque module : lentement, jusqu'aux mollets au maximum, jamais de défaite.
+- **Collecteur de vannes croisé**, sur le mur du fond :
+  - 5 vannes quart de tour de couleur, poignée parallèle au tuyau = ouverte ;
+  - la bonne combinaison est sur le **schéma hydraulique du partenaire**, visible de lui seul ;
+  - mauvaise combinaison = **coup de bélier** : vapeur, choc, l'eau monte d'un coup, les vannes se referment ;
+  - bonne combinaison = la pompe vide le module.
+- **Relais d'appels** « purge des ballasts » (3 manches).
+- **Leviers de chasse** à abaisser ensemble : fin de l'étage.
+- Décor : pompes de cale (moteur à ailettes, volute, refoulement), puisard, flaques, gyrophares, panneau d'alerte, journaux de bord.
+
+### Vérifié
+
+- Partie solo automatique **73/73** (collecteur joué par de vrais appuis, coup de bélier compris), 2 plongeurs + pupitre **52/52**, ergonomie **321 objets, 0 à revoir**, console sans erreur.
+- Les tests automatiques ne font plus de bruit : éditeur muet, client Mac lancé avec `-abysses-mute`.
+
+### Reste à faire
+
+- Au casque : performance avec les objets arrondis (plus de triangles), durée totale, « Rejoindre par IP ».
+
 ## Mise à jour du 2026-11-06 (après-midi) — branche `feat/coop-et-correctifs`
 
 Retours du premier test à plusieurs casques :
