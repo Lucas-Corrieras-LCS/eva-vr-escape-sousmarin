@@ -34,7 +34,16 @@ namespace Abysses.UI
         [SerializeField] Button joinOnlineButton;
         [SerializeField] Button hostLanButton;
         [SerializeField] Button joinLanButton;
-        [SerializeField] Button soloButton;
+        [Tooltip("Ouvre le pavé numérique pour rejoindre l'hôte par son adresse IP (si la recherche automatique échoue).")]
+        [SerializeField] Button joinIpButton;
+
+        [Header("Rejoindre par IP")]
+        [SerializeField] GameObject ipGroup;
+        [SerializeField] TMP_Text ipText;
+        [Tooltip("12 touches : 1 à 9, point, 0, effacer.")]
+        [SerializeField] Button[] ipKeys;
+        [SerializeField] Button ipConfirmButton;
+        [SerializeField] Button ipCancelButton;
 
         [Header("En partie")]
         [SerializeField] GameObject onlineGroup;
@@ -61,6 +70,10 @@ namespace Abysses.UI
         bool openedDuringGame;
         bool wasVisible;
         GamePhase lastPhase = GamePhase.Lobby;
+        bool enteringIp;
+        string ipEntry = string.Empty;
+        const string LastHostKey = "Abysses.LastHost";
+        static readonly string[] IpKeyValues = { "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "<" };
 
         void Awake()
         {
@@ -85,7 +98,15 @@ namespace Abysses.UI
             joinOnlineButton.onClick.AddListener(connection.JoinOnline);
             hostLanButton.onClick.AddListener(connection.HostLan);
             joinLanButton.onClick.AddListener(connection.JoinLan);
-            soloButton.onClick.AddListener(connection.PlaySolo);
+            if (joinIpButton != null) joinIpButton.onClick.AddListener(OpenIpPad);
+            if (ipConfirmButton != null) ipConfirmButton.onClick.AddListener(ConfirmIp);
+            if (ipCancelButton != null) ipCancelButton.onClick.AddListener(CloseIpPad);
+            if (ipKeys != null)
+                for (int i = 0; i < ipKeys.Length && i < IpKeyValues.Length; i++)
+                {
+                    string key = IpKeyValues[i];
+                    if (ipKeys[i] != null) ipKeys[i].onClick.AddListener(() => TypeIp(key));
+                }
             leaveButton.onClick.AddListener(OnLeavePressed);
             startButton.onClick.AddListener(OnStartPressed);
             recenterButton.onClick.AddListener(OnRecenterPressed);
@@ -176,6 +197,41 @@ namespace Abysses.UI
             connection.Leave();
         }
 
+        // ---------- Rejoindre par IP ----------
+
+        void OpenIpPad()
+        {
+            // Même réseau que l'hôte : le début de l'adresse est le même que la nôtre. On garde la dernière adresse utilisée.
+            string own = LanDiscovery.LocalAddress();
+            string prefix = string.IsNullOrEmpty(own) ? string.Empty : own.Substring(0, own.LastIndexOf('.') + 1);
+            string last = PlayerPrefs.GetString(LastHostKey, string.Empty);
+            ipEntry = !string.IsNullOrEmpty(last) && last.StartsWith(prefix, System.StringComparison.Ordinal) ? last : prefix;
+            enteringIp = true;
+            Refresh();
+        }
+
+        void CloseIpPad()
+        {
+            enteringIp = false;
+            Refresh();
+        }
+
+        void TypeIp(string key)
+        {
+            if (key == "<") ipEntry = ipEntry.Length > 0 ? ipEntry.Substring(0, ipEntry.Length - 1) : ipEntry;
+            else if (ipEntry.Length < 15) ipEntry += key;
+            Refresh();
+        }
+
+        void ConfirmIp()
+        {
+            if (!System.Net.IPAddress.TryParse(ipEntry, out System.Net.IPAddress address) || ipEntry.Split('.').Length != 4) return;
+            PlayerPrefs.SetString(LastHostKey, ipEntry);
+            PlayerPrefs.Save();
+            enteringIp = false;
+            connection.JoinDirect(address.ToString());
+        }
+
         bool Online => connection != null && connection.State == ConnectionState.Online;
 
         GamePhase Phase => GameStateManager.Instance != null ? GameStateManager.Instance.Phase.Value : GamePhase.Lobby;
@@ -198,7 +254,12 @@ namespace Abysses.UI
             if (visible && !wasVisible) PlaceInFrontOfPlayer();
             wasVisible = visible;
 
-            offlineGroup.SetActive(!connection.IsBusy);
+            if (connection.IsBusy) enteringIp = false;
+            offlineGroup.SetActive(!connection.IsBusy && !enteringIp);
+            if (ipGroup != null) ipGroup.SetActive(enteringIp);
+            if (ipText != null) ipText.text = ipEntry + "<color=#5FD3F0>_</color>";
+            if (ipConfirmButton != null)
+                ipConfirmButton.interactable = System.Net.IPAddress.TryParse(ipEntry, out _) && ipEntry.Split('.').Length == 4;
             onlineGroup.SetActive(Online);
             if (statusDot != null)
                 statusDot.color = connection.State switch
@@ -210,7 +271,7 @@ namespace Abysses.UI
                 };
 
             bool finished = phase == GamePhase.Finished;
-            bool everyoneReady = state != null && state.EveryoneReady;
+            bool everyoneReady = state != null && state.CanStartDive;
             bool abandon = CanAbandon;
             startButton.gameObject.SetActive(Online && (phase == GamePhase.Lobby || finished || abandon));
             startButton.interactable = finished || abandon || everyoneReady;
@@ -244,7 +305,10 @@ namespace Abysses.UI
 
         string Hint(GameStateManager state, GamePhase phase)
         {
-            if (!Online) return connection.IsBusy ? string.Empty : Loc.T("Choisis comment rejoindre l'équipe.", "Choose how to join the team.");
+            if (enteringIp) return Loc.T("Tape l'adresse affichée sur le menu du casque hôte, puis « Rejoindre ».",
+                "Type the address shown on the host headset's menu, then “Join”.");
+            if (!Online) return connection.IsBusy ? string.Empty : Loc.T("Un casque héberge, les autres rejoignent (2 plongeurs minimum).",
+                "One headset hosts, the others join (2 divers minimum).");
             if (InGame) return Loc.T("Bouton MENU de la montre (ou Menu, manette gauche) pour fermer.", "Watch MENU button (or Menu on the left controller) to close.");
             if (phase == GamePhase.Finished) return Loc.T("Bravo ! « Nouvelle plongée » pour recommencer avec la même équipe.", "Well done! “New dive” to play again with the same team.");
 
@@ -254,6 +318,9 @@ namespace Abysses.UI
             if (!meReady)
                 return Loc.T("Entre dans ta cabine, fais l'entraînement, place-toi sur le repère lumineux face à la porte, puis « Recalibrer ma position ».",
                     "Step into your cabin, do the training, stand on the glowing marker facing the door, then “Recalibrate my position”.");
+            if (!GameStateManager.EnoughDivers)
+                return Loc.T("Tu es à bord. Il faut au moins 2 plongeurs : on attend ton équipier…",
+                    "You are aboard. At least 2 divers are needed: waiting for your teammate…");
             return state.EveryoneReady
                 ? Loc.T("Tout le monde est à bord : lancez la plongée !", "Everyone is aboard: start the dive!")
                 : Loc.T("Tu es à bord. On attend les autres plongeurs…", "You are aboard. Waiting for the other divers…");

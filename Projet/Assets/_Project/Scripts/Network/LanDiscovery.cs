@@ -13,7 +13,9 @@ namespace Abysses.Network
     /// Deux canaux, pour passer sur tous les réseaux :
     /// - l'hôte annonce sa partie chaque seconde en broadcast (255.255.255.255 ET l'adresse de broadcast de chaque
     ///   réseau, que certains points d'accès et partages de connexion exigent) ;
-    /// - le casque qui cherche envoie lui-même une demande en broadcast, et l'hôte lui répond directement (unicast).
+    /// - le casque qui cherche envoie lui-même une demande en broadcast ET directement à chaque adresse de son réseau
+    ///   (unicast : les partages de connexion des téléphones ne relaient souvent pas le broadcast entre appareils),
+    ///   et l'hôte lui répond directement.
     /// Sur Quest (Android), le Wi-Fi jette les broadcasts reçus tant que l'application ne tient pas un « verrou
     /// multicast » : il est pris pendant la recherche et l'annonce (permission ajoutée au manifeste par le build).
     /// Non bloquant : aucune thread, lecture des sockets dans Update uniquement quand des données sont disponibles.
@@ -23,12 +25,15 @@ namespace Abysses.Network
         const string Signature = "ABYSSES1";
         const string Probe = "ABYSSES1?";
         const float Interval = 1f;
+        /// <summary>Taille maximale du réseau sondé adresse par adresse (/22, 1 022 adresses).</summary>
+        const int MaxScannedHosts = 1022;
 
         /// <summary>Socket principal : annonces (hôte) ou écoute des annonces (client), sur le port de découverte.</summary>
         UdpClient socket;
         /// <summary>Hôte : écoute des demandes des clients (port de découverte + 1).</summary>
         UdpClient probeSocket;
         readonly List<IPEndPoint> targets = new List<IPEndPoint>();
+        readonly List<IPEndPoint> scanTargets = new List<IPEndPoint>();
         byte[] announcement;
         byte[] probe;
         float nextSend;
@@ -80,7 +85,9 @@ namespace Abysses.Network
                 socket.EnableBroadcast = true;
                 probe = Encoding.ASCII.GetBytes(Probe);
                 BuildTargets((ushort)(discoveryPort + 1));
+                BuildScanTargets((ushort)(discoveryPort + 1));
                 nextSend = 0f;
+                Debug.Log($"[Abysses] Recherche LAN depuis {LocalAddress()} : broadcast + {scanTargets.Count} adresses sondées une à une.");
             }
             catch (SocketException e)
             {
@@ -109,7 +116,7 @@ namespace Abysses.Network
 
                 if (broadcasting)
                 {
-                    if (send) SendAll(socket, announcement);
+                    if (send) SendAll(socket, announcement, targets);
                     // Demandes des clients : réponse directe à l'expéditeur, sur son port d'écoute.
                     while (probeSocket != null && probeSocket.Available > 0)
                     {
@@ -121,7 +128,11 @@ namespace Abysses.Network
                     return;
                 }
 
-                if (send) SendAll(socket, probe);
+                if (send)
+                {
+                    SendAll(socket, probe, targets);
+                    SendAll(socket, probe, scanTargets);
+                }
                 while (socket != null && socket.Available > 0)
                 {
                     IPEndPoint sender = null;
@@ -137,15 +148,36 @@ namespace Abysses.Network
             }
         }
 
-        void SendAll(UdpClient client, byte[] message)
+        static void SendAll(UdpClient client, byte[] message, List<IPEndPoint> to)
         {
-            for (int i = 0; i < targets.Count; i++)
+            for (int i = 0; i < to.Count; i++)
             {
-                // Une adresse refusée (interface tombée) ne doit pas empêcher les autres.
-                try { client.Send(message, message.Length, targets[i]); }
+                // Une adresse refusée (interface tombée, hôte absent) ne doit pas empêcher les autres.
+                try { client.Send(message, message.Length, to[i]); }
                 catch (SocketException) { }
             }
         }
+
+        /// <summary>Chaque adresse du réseau local (limité à un /22 autour du casque sur les grands réseaux).</summary>
+        void BuildScanTargets(ushort targetPort)
+        {
+            scanTargets.Clear();
+            foreach ((IPAddress address, IPAddress mask) in Interfaces())
+            {
+                uint ip = ToUInt(address.GetAddressBytes());
+                uint m = ToUInt(mask.GetAddressBytes());
+                if (~m - 1 > MaxScannedHosts) m = 0xFFFFFC00;
+                uint network = ip & m, count = ~m - 1;
+                for (uint i = 1; i <= count; i++)
+                {
+                    uint candidate = network + i;
+                    if (candidate != ip) scanTargets.Add(new IPEndPoint(FromUInt(candidate), targetPort));
+                }
+            }
+        }
+
+        static uint ToUInt(byte[] b) => (uint)b[0] << 24 | (uint)b[1] << 16 | (uint)b[2] << 8 | b[3];
+        static IPAddress FromUInt(uint v) => new IPAddress(new[] { (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v });
 
         /// <summary>Broadcast général + broadcast dirigé de chaque réseau IPv4 actif (ex. 192.168.43.255, 172.20.10.15).</summary>
         void BuildTargets(ushort targetPort)

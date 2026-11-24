@@ -6,7 +6,9 @@ namespace Abysses.Interaction
 {
     /// <summary>
     /// Étage 2 — balise de détresse visible par le hublot : elle clignote un code à 3 chiffres en morse, en boucle.
-    /// Un haut-parleur près du cadenas bipe en même temps (lisible les yeux fermés, ou sans voir la balise).
+    /// Coopération : la balise et son haut-parleur sont chez le PARTENAIRE du module qui a le cadenas et la table du morse.
+    /// Le partenaire décrit les signaux (« court, long, long »), le joueur décode. Module partenaire vide : une seconde
+    /// balise devant son propre hublot prend le relais (activée par le repli de module).
     /// Le code est tiré par le serveur ; chaque client rejoue le clignotement localement.
     /// </summary>
     public class MorseBeacon : NetworkBehaviour
@@ -15,11 +17,11 @@ namespace Abysses.Interaction
 
         static readonly string[] Morse = { "-----", ".----", "..---", "...--", "....-", ".....", "-....", "--...", "---..", "----." };
 
-        [SerializeField] Renderer lamp;
+        [SerializeField] Renderer[] lamps;
         [SerializeField] Material lampOff;
         [SerializeField] Material lampOn;
         [Tooltip("Bip synchronisé (boucle jouée pendant chaque signal).")]
-        [SerializeField] AudioSource beep;
+        [SerializeField] AudioSource[] beeps;
         [Tooltip("Durée d'un point (s). Trait = 3 points.")]
         [SerializeField, Range(0.15f, 0.6f)] float unit = 0.3f;
 
@@ -82,10 +84,15 @@ namespace Abysses.Interaction
         {
             if (lit == on) return;
             lit = on;
-            if (lamp != null) lamp.sharedMaterial = on ? lampOn : lampOff;
-            if (beep == null) return;
-            if (on) beep.Play();
-            else beep.Stop();
+            for (int i = 0; i < lamps.Length; i++)
+                if (lamps[i] != null) lamps[i].sharedMaterial = on ? lampOn : lampOff;
+            for (int i = 0; i < beeps.Length; i++)
+            {
+                AudioSource beep = beeps[i];
+                if (beep == null || !beep.isActiveAndEnabled) continue;
+                if (on) beep.Play();
+                else beep.Stop();
+            }
         }
     }
 }

@@ -190,6 +190,7 @@ namespace Abysses.Level
             bool inside = Mathf.Abs(local.x) <= half.x && Mathf.Abs(local.y) <= half.y && Mathf.Abs(local.z) <= half.z;
             if (inside == reportedInside) return;
             reportedInside = inside;
+            Debug.Log($"[Abysses] Cabine Q{quadrant} : plongeur {(inside ? "à bord" : "sorti")} ({phase})");
             state.SetReadyRpc(quadrant, inside);
         }
 

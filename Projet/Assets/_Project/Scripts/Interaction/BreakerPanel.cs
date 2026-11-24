@@ -8,11 +8,11 @@ using Abysses.Player;
 namespace Abysses.Interaction
 {
     /// <summary>
-    /// Étage 1 — tableau des disjoncteurs (énigme de module, jouable aussi en solo).
+    /// Étage 1 — tableau des disjoncteurs (énigme coopérative : la note est chez le partenaire).
     /// Après la panne, il faut réarmer tous les disjoncteurs SAUF deux qui sont en court-circuit.
     /// Les deux à laisser coupés sont tirés au hasard à chaque partie et écrits sur la note du chef mécanicien,
-    /// posée sur le bureau du module. Réarmer un disjoncteur interdit fait tout disjoncter (étincelles) :
-    /// on ne peut pas trouver la solution en essayant au hasard, il faut lire la note.
+    /// posée sur le bureau du module PARTENAIRE (visible de lui seul) : il doit la lire à voix haute.
+    /// Réarmer un disjoncteur interdit fait tout disjoncter (étincelles) : on ne peut pas trouver la solution au hasard.
     /// </summary>
     public class BreakerPanel : NetworkBehaviour, IPokeReceiver
     {
@@ -29,8 +29,12 @@ namespace Abysses.Interaction
         [SerializeField] Renderer[] lamps;
         [SerializeField] Material lampOff;
         [SerializeField] Material lampOn;
-        [Tooltip("Texte de la note du chef mécanicien (sur le bureau).")]
-        [SerializeField] TMP_Text note;
+        [Tooltip("Notes du chef mécanicien : sur le bureau du module PARTENAIRE (il faut se la faire lire), "
+            + "et une copie de repli dans ce module, visible seulement si le partenaire est absent.")]
+        [SerializeField] TMP_Text[] notes;
+        [Tooltip("Nom du module de ce tableau, écrit sur la note (elle est lue dans un autre module).")]
+        [SerializeField] string moduleFrench;
+        [SerializeField] string moduleEnglish;
         [SerializeField] AudioSource clickSound;
         [SerializeField] AudioSource tripSound;
         [SerializeField] AudioSource successSound;
@@ -122,12 +126,14 @@ namespace Abysses.Interaction
 
         void RefreshNote()
         {
-            if (note == null) return;
-            if (Forbidden.Value < 0)
-            {
-                note.text = string.Empty;
-                return;
-            }
+            string text = NoteText();
+            for (int i = 0; i < notes.Length; i++)
+                if (notes[i] != null) notes[i].text = text;
+        }
+
+        string NoteText()
+        {
+            if (Forbidden.Value < 0) return string.Empty;
             int a = -1, b = -1;
             for (int i = 0; i < Count; i++)
             {
@@ -135,9 +141,9 @@ namespace Abysses.Interaction
                 if (a < 0) a = i;
                 else b = i;
             }
-            note.text = Loc.T(
-                "<b>NOTE DU CHEF MÉCANICIEN</b>\n\nAprès la panne, réarmez tout\nle tableau des disjoncteurs,\n<b>SAUF " + NamesFr[a] + "</b> et <b>" + NamesFr[b] + "</b> :\nils sont en court-circuit !\n\n— M. Ferrand",
-                "<b>CHIEF ENGINEER'S NOTE</b>\n\nAfter the blackout, reset the\nwhole breaker panel,\n<b>EXCEPT " + NamesEn[a] + "</b> and <b>" + NamesEn[b] + "</b>:\nthey are short-circuited!\n\n— M. Ferrand");
+            return Loc.T(
+                "<b>NOTE DU CHEF MÉCANICIEN</b>\n<b>Module " + moduleFrench + "</b>\n\nAprès la panne, réarmez tout\nle tableau des disjoncteurs,\n<b>SAUF " + NamesFr[a] + "</b> et <b>" + NamesFr[b] + "</b> :\nils sont en court-circuit !\n\n— M. Ferrand",
+                "<b>CHIEF ENGINEER'S NOTE</b>\n<b>" + moduleEnglish + " module</b>\n\nAfter the blackout, reset the\nwhole breaker panel,\n<b>EXCEPT " + NamesEn[a] + "</b> and <b>" + NamesEn[b] + "</b>:\nthey are short-circuited!\n\n— M. Ferrand");
         }
     }
 }

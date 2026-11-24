@@ -88,6 +88,7 @@ namespace Abysses.Player
 
         System.Collections.IEnumerator Recover(LocalRig rig)
         {
+            Debug.Log($"[Abysses] Retour au module : origine {rig.transform.position}, tête {rig.Head.position}");
             recovering = true;
             lostSince = -1f;
             Color black = Color.black;

@@ -93,6 +93,17 @@ namespace Abysses.Level
             }
         }
 
+        /// <summary>
+        /// Le jeu est coopératif : il faut au moins 2 plongeurs pour plonger. Le solo n'existe plus que dans l'éditeur
+        /// (tests automatiques, mise au point).
+        /// </summary>
+        public const int MinDivers = 2;
+
+        public static bool EnoughDivers => Application.isEditor || NetworkPlayer.All.Count >= MinDivers;
+
+        /// <summary>Condition de départ de la plongée : assez de plongeurs, et tous dans leur cabine.</summary>
+        public bool CanStartDive => EnoughDivers && EveryoneReady;
+
         public override void OnNetworkSpawn()
         {
             Instance = this;
@@ -147,7 +158,7 @@ namespace Abysses.Level
         [Rpc(SendTo.Server)]
         public void RequestStartRpc()
         {
-            if (Phase.Value != GamePhase.Lobby || !EveryoneReady) return;
+            if (Phase.Value != GamePhase.Lobby || !CanStartDive) return;
             StartTime.Value = NetworkManager.ServerTime.Time;
             StartCoroutine(DescendTo(1));
         }
