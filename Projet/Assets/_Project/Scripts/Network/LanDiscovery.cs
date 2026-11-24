@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using UnityEngine;
 
@@ -123,7 +124,7 @@ namespace Abysses.Network
                         IPEndPoint sender = null;
                         byte[] data = probeSocket.Receive(ref sender);
                         if (Encoding.ASCII.GetString(data) == Probe)
-                            socket.Send(announcement, announcement.Length, new IPEndPoint(sender.Address, port));
+                            Send(socket, announcement, new IPEndPoint(sender.Address, port));
                     }
                     return;
                 }
@@ -150,13 +151,38 @@ namespace Abysses.Network
 
         static void SendAll(UdpClient client, byte[] message, List<IPEndPoint> to)
         {
-            for (int i = 0; i < to.Count; i++)
-            {
-                // Une adresse refusée (interface tombée, hôte absent) ne doit pas empêcher les autres.
-                try { client.Send(message, message.Length, to[i]); }
-                catch (SocketException) { }
-            }
+            // Une adresse refusée (interface tombée, hôte absent) ne doit pas empêcher les autres.
+            for (int i = 0; i < to.Count; i++) Send(client, message, to[i]);
         }
+
+        /// <summary>Envoi d'un datagramme ; un refus du système est ignoré (renvoie false).</summary>
+        static bool Send(UdpClient client, byte[] message, IPEndPoint to)
+        {
+#if UNITY_EDITOR_OSX || (UNITY_STANDALONE_OSX && !ENABLE_IL2CPP)
+            // Mono sur macOS (éditeur, builds Mac Mono) n'a pas de traduction pour certaines erreurs de sendto, par exemple
+            // 45 « Operation not supported » vers un broadcast quand la route par défaut passe par un VPN ou un partage
+            // de connexion : il AVORTE alors tout le processus au lieu de lever une exception. On envoie par la libc.
+            var address = new byte[16];
+            address[0] = 16;                       // sin_len
+            address[1] = 2;                        // sin_family = AF_INET
+            address[2] = (byte)(to.Port >> 8);     // sin_port, ordre réseau
+            address[3] = (byte)to.Port;
+            Array.Copy(to.Address.GetAddressBytes(), 0, address, 4, 4);
+            return sendto(client.Client.Handle.ToInt32(), message, (UIntPtr)message.Length, 0, address, 16).ToInt64() >= 0;
+#else
+            try
+            {
+                client.Send(message, message.Length, to);
+                return true;
+            }
+            catch (SocketException) { return false; }
+#endif
+        }
+
+#if UNITY_EDITOR_OSX || (UNITY_STANDALONE_OSX && !ENABLE_IL2CPP)
+        [DllImport("libc")]
+        static extern IntPtr sendto(int socket, byte[] buffer, UIntPtr length, int flags, byte[] address, uint addressLength);
+#endif
 
         /// <summary>Chaque adresse du réseau local (limité à un /22 autour du casque sur les grands réseaux).</summary>
         void BuildScanTargets(ushort targetPort)
