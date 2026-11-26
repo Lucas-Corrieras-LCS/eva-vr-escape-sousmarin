@@ -108,6 +108,14 @@ namespace Abysses.EditorTools
                 m.AvatarPaint[i].SetColor("_EmissionColor", QuadrantColors[i] * 0.55f);
                 EditorUtility.SetDirty(m.AvatarPaint[i]);
             }
+            // Surface : îles, rochers, phare dans le même style doux (aplats, contour lumineux chaud).
+            Stylize(sandMaterial, new Color(0.9f, 0.8f, 0.6f), 0.35f);
+            Stylize(grassMaterial, new Color(0.25f, 0.5f, 0.3f), 0.4f);
+            Stylize(rockMaterial, new Color(0.4f, 0.4f, 0.45f), 0.4f);
+            Stylize(palmLeaf, new Color(0.22f, 0.55f, 0.25f), 0.6f);
+            Stylize(palmTrunk, new Color(0.48f, 0.34f, 0.22f), 0.5f);
+            Stylize(whitePaint, new Color(0.92f, 0.92f, 0.9f), 0.5f);
+
             // Visière éclairée de l'intérieur : on devine le plongeur dans le noir.
             styleVisor = Lit("M_VisorGlow", new Color(0.02f, 0.05f, 0.07f), 0f, 0.9f, new Color(0.2f, 0.65f, 0.75f) * 0.4f);
             // Faisceau de la lampe frontale (additif, très léger), visible par les coéquipiers.
@@ -145,7 +153,8 @@ namespace Abysses.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
 
             GlowHalos(root, floorIndex);
-            WindowShafts(root, floorIndex);
+            // Les rayons intérieurs sous les hublots faisaient de grands triangles plats vus de biais : retirés.
+            // La lumière qui tombe dans l'eau est désormais dehors (voir OceanLife).
         }
 
         /// <summary>

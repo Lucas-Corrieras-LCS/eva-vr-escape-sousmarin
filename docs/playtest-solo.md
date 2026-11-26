@@ -1,6 +1,6 @@
 # Partie de test automatique — solo
 
-> 2026-11-26 11:13 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-26 14:23 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Partie solo lancée, quadrant ORANGE attribué
@@ -24,7 +24,7 @@
 - ✅ Fusible disponible pour le test d'objet perdu
 - ✅ Objet perdu (fusible passé sous le sol) revenu à sa place
 - ✅ Étage 1 : 4 tableaux de dérivation
-- ✅ Tableau : 4 fils, voyant, n° de série FF-2969
+- ✅ Tableau : 5 fils, voyant, n° de série TO-4574
 - ✅ Manuel : règles numérotées affichées
 - ✅ Tableau : un mauvais fil provoque un court-circuit
 - ✅ Tableau : nouveau tirage après le court-circuit
@@ -40,7 +40,7 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (950)
+- ✅ Balise morse : code à 3 chiffres tiré (190)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
 - ✅ Étage 2 : 4 mélangeurs d'antidote
@@ -69,7 +69,7 @@
 - ✅ Écran de surveillance : la carte de la cale est affichée
 - ✅ Cale : la dalle DÉPART arme le parcours
 - ✅ Cale : une dalle sous tension → décharge, retour au départ
-- ✅ Cale : chemin sûr suivi (8 dalles) → vanne de purge atteinte
+- ✅ Cale : chemin sûr suivi (9 dalles) → vanne de purge atteinte
 - ✅ Étage 3 : fuite et salle des pompes tirées
 - ✅ Cloisons : le plan n'est affiché que chez un plongeur (module 0)
 - ✅ Cloisons : aucune porte ne se ferme avant l'alerte
@@ -94,14 +94,14 @@
 - ✅ Léviathan : position tirée au début de l'étage
 - ✅ Sonar : la distance du module s'affiche
 - ✅ Léviathan : un tir à côté est raté
-- ✅ Léviathan : leurre tiré en E1 → touché
+- ✅ Léviathan : leurre tiré en D1 → touché
 - ✅ Étage 4 : standard des circuits en place
 - ✅ Standard : le tableau est chez l'opérateur (module 0)
 - ✅ Standard : un câblage faux est refusé, tout se débranche
 - ✅ Standard : 4 bonnes liaisons → circuits rétablis
 - ✅ Séquence du réacteur + remontée → fin de partie
 - ✅ Chrono de fin cohérent
-- ✅ Temps enregistré au classement : 1.  1:22  ·  1 plongeur
+- ✅ Temps enregistré au classement : 1.  1:23  ·  1 plongeur
 - ✅ « Nouvelle plongée » : retour surface, étages déchargés
 - ✅ Remontée : portes fermées pendant l'émersion
 - ✅ Remontée : on émerge à la surface, portes rouvertes

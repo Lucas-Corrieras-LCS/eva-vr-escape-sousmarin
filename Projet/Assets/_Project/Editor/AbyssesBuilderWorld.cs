@@ -47,22 +47,8 @@ namespace Abysses.EditorTools
                 main.startColor = snowColor;
                 Velocity(snow, new Vector2(-0.03f, 0.03f), new Vector2(-0.12f, -0.05f), new Vector2(-0.02f, 0.02f));
 
-                if (floor == 1)
-                {
-                    // Banc de poissons qui longe la station : silhouettes sombres sur le bleu.
-                    ParticleSystem fish = Particles("FishSchool_Q" + mod.Q, ocean, outside + new Vector3(0f, -0.1f, mod.Vz * -0.5f), m.Fish, 40, 1.4f, new Vector2(18f, 24f));
-                    SetBox(fish, new Vector3(PlayArea.QuadrantWidth, 1.4f, 3f));
-                    var fishMain = fish.main;
-                    fishMain.startSize = new ParticleSystem.MinMaxCurve(0.14f, 0.28f);
-                    Velocity(fish, new Vector2(0.55f, 0.85f), new Vector2(-0.03f, 0.03f), new Vector2(-0.05f, 0.05f));
-                    var noise = fish.noise;
-                    noise.enabled = true;
-                    noise.strength = 0.12f;
-                    noise.frequency = 0.4f;
-                    // Les poissons regardent vers +x : vu depuis un module sud (on regarde vers -z), +x est à gauche de l'écran.
-                    fish.GetComponent<ParticleSystemRenderer>().flip = new Vector3(mod.Vz < 0 ? 1f : 0f, 0f, 0f);
-                }
-                else
+                // Étage 1 : les bancs de poissons sont désormais en 3D et colorés (voir OceanLife).
+                if (floor != 1)
                 {
                     // Lumières vivantes : leurres de poissons-lanternes (rares, chauds) ou bioluminescence (cyan / magenta).
                     bool deep = floor == 3;
@@ -84,11 +70,12 @@ namespace Abysses.EditorTools
             }
 
             // Silhouette géante de chaque côté de la station (raie à -200 m, requin à -1 500 m, léviathan à -4 000 m).
-            Vector2 scale = floor == 1 ? new Vector2(7f, 3.5f) : floor == 2 ? new Vector2(5f, 2.5f) : new Vector2(18f, 9f);
+            // Plus grande et plus proche (5,5 m du mur au lieu de 9) : on la voit vraiment passer derrière les hublots.
+            Vector2 scale = floor == 1 ? new Vector2(10f, 5f) : floor == 2 ? new Vector2(8f, 4f) : new Vector2(22f, 11f);
             float crossing = floor == 3 ? 75f : floor == 2 ? 28f : 45f;
             foreach (float side in new[] { -1f, 1f })
             {
-                float z = side < 0 ? -9f : PlayArea.ArenaDepth + 9f;
+                float z = side < 0 ? -5.5f : PlayArea.ArenaDepth + 5.5f;
                 var go = new GameObject(side < 0 ? "Leviathan_South" : "Leviathan_North");
                 go.transform.SetParent(ocean, false);
                 go.transform.position = new Vector3(-14f, 1.6f, z);
@@ -104,6 +91,9 @@ namespace Abysses.EditorTools
                 so.FindProperty("pauseRange").vector2Value = side < 0 ? new Vector2(25f, 55f) : new Vector2(40f, 80f);
                 so.ApplyModifiedPropertiesWithoutUndo();
             }
+
+            // Vie derrière les hublots : jardins de coraux, poissons 3D, méduses, rayons, bulles, fond d'eau (AbyssesBuilderOcean).
+            OceanLife(m, ocean, modules, floor);
         }
 
         static ParticleSystem Particles(string name, Transform parent, Vector3 position, Material material, int max, float rate, Vector2 lifetime)

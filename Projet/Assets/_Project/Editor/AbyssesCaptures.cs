@@ -35,6 +35,8 @@ namespace Abysses.EditorTools
                     new View("etage1_hublot", new Vector3(6f, 1.6f, 2f), new Vector3(14.7f, 1.6f, 5.5f)),
                     new View("etage1_digicode", new Vector3(9.4f, 1.55f, 1.5f), new Vector3(10f, 1.3f, 0.34f)),
                     // Hublots sur l'océan, aux deux bouts du mur extérieur du module Q0 (x = 1,1 et 13,9).
+                    // Face au hublot sur l'océan (module ORANGE, x = 1,1) : comme le visage collé à la vitre.
+                    new View("etage1_hublot_ocean", new Vector3(1.1f, 1.55f, 0.95f), new Vector3(1.1f, 1.0f, -4f)),
                     new View("etage1_ocean_bureau", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
                     new View("etage1_disjoncteurs", new Vector3(1.7f, 1.45f, 2.4f), new Vector3(0.34f, 1.3f, 2.4f)),
                     new View("etage1_note", new Vector3(2.5f, 1.45f, 1.45f), new Vector3(2.1f, 0.79f, 0.62f)),
@@ -54,6 +56,7 @@ namespace Abysses.EditorTools
                     new View("etage2_manometre", new Vector3(5f, 1.6f, 2.3f), new Vector3(4.5f, 1.4f, 0.34f)),
                     new View("etage2_morse", new Vector3(1.75f, 1.45f, 3.7f), new Vector3(0.34f, 1.35f, 3.7f)),
                     new View("etage2_balise", new Vector3(13.9f, 1.5f, 1.5f), new Vector3(13.9f, 1.45f, -2.8f)),
+                    new View("etage2_hublot_ocean", new Vector3(1.1f, 1.55f, 0.95f), new Vector3(1.1f, 1.0f, -4f)),
                     new View("etage2_ocean", new Vector3(13.2f, 1.55f, 2.9f), new Vector3(13.9f, 1.45f, 0.3f)),
                     new View("etage2_fuite", new Vector3(4f, 1.7f, 4.2f), new Vector3(0.45f, 2.1f, 1.7f)),
                     new View("etage2_relais", new Vector3(9.05f, 1.55f, 1.75f), new Vector3(9.05f, 1.3f, 0.38f)),
@@ -67,6 +70,7 @@ namespace Abysses.EditorTools
             {
                 "Etage3_Ballasts", new[]
                 {
+                    new View("etage3b_hublot_ocean", new Vector3(1.1f, 1.55f, 0.95f), new Vector3(1.1f, 1.0f, -4f)),
                     new View("etage3b_module", new Vector3(13.5f, 2f, 1.2f), new Vector3(2f, 1.2f, 6f)),
                     // Collecteur de vannes du module ORANGE (mur du fond) et schéma du collecteur CYAN, chez ORANGE.
                     new View("etage3b_collecteur", new Vector3(1.75f, 1.4f, 4f), new Vector3(0.34f, 1.15f, 4f)),
@@ -85,6 +89,7 @@ namespace Abysses.EditorTools
                 {
                     new View("etage3_reacteur", new Vector3(9f, 1.7f, 2f), new Vector3(15.5f, 1.4f, 8.25f)),
                     new View("etage3_salle", new Vector3(1.5f, 2.2f, 1.2f), new Vector3(20f, 0.8f, 12f)),
+                    new View("etage4_hublot_ocean", new Vector3(1.1f, 1.55f, 0.95f), new Vector3(1.1f, 1.0f, -4f)),
                     new View("etage3_ocean", new Vector3(2.4f, 1.55f, 2.9f), new Vector3(1.1f, 1.45f, 0.3f)),
                     new View("etage4_sonar", new Vector3(10.76f, 1.5f, 1.5f), new Vector3(10.76f, 1.35f, 0.44f)),
                     new View("etage4_standard", new Vector3(1.6f, 1.5f, 3.0f), new Vector3(0.34f, 1.3f, 3.0f)),

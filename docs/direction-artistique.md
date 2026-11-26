@@ -21,6 +21,27 @@
   - une visière éclairée de l'intérieur ;
   - un faisceau de lampe frontale qui montre où regarde le coéquipier.
 
+## Derrière les hublots : chaque hublot est une petite illustration vivante
+
+Plus on descend, moins il y a de couleurs vives et de lumière du jour, et plus il y a de bioluminescence :
+
+| Étage | Eau | Vie |
+|-------|-----|-----|
+| Habitat (-200 m) | Bleue, rayons de soleil | Récif coloré (éponges violettes, roses, ocre), algues qui ondulent, bancs de poissons orange, jaunes et bleus |
+| Laboratoires (-1 500 m) | Sombre | Récif terne aux pointes chaudes, poissons-lanternes, méduses orangées |
+| Ballasts (-2 800 m) | Vert d'eau | Algues pâles, poissons et méduses turquoise |
+| Cœur (-4 000 m) | Noire | Seulement de la bioluminescence cyan et magenta, méduses violettes, léviathan |
+
+Sur tous les étages, on retrouve aussi :
+- un fond d'eau en dégradé, des colonnes de bulles et de la neige marine ;
+- une grande créature qui passe à 5,5 m du mur.
+
+Le générateur est `Editor/AbyssesBuilderOcean.cs`. Les animations sont légères, avec un composant par groupe : `FishSchool`, `JellyPulse` et `Sway`. Les coraux sont fusionnés par matériau, et il n'y a aucune lumière en plus.
+
+## Surface : le paysage au loin
+
+Trois chaînes de montagnes en anneau, en couches comme du papier découpé : la plus proche est verte et sombre, la plus lointaine pâle et bleutée (perspective aérienne). S'y ajoutent les îles et le phare dans le même style doux, un halo autour du soleil et plus de nuages.
+
 ## Comment c'est fait (et pourquoi ça tient sur Quest 2)
 
 | Élément | Technique | Coût |

@@ -21,6 +21,9 @@ namespace Abysses.EditorTools
         const uint SurfaceLayer = 1u << 2;
         const float ShroudRadius = 2.95f;
 
+        /// <summary>Dégradé vertical (clair en haut) : puits de descente, fonds d'eau derrière les hublots.</summary>
+        static Texture2D waterGradient;
+
         static Material seaMaterial, sandMaterial, grassMaterial, rockMaterial, cloudMaterial, sunDiscMaterial, whitePaint, shroudMaterial, palmLeaf, palmTrunk, foamMaterial;
 
         static void SurfaceMaterials()
@@ -45,7 +48,7 @@ namespace Abysses.EditorTools
             sunDiscMaterial = Unlit("M_SunDisc", new Color(1f, 0.97f, 0.85f));
             foamMaterial = Unlit("M_Foam", new Color(0.92f, 0.97f, 1f));
 
-            Texture2D gradient = AbyssesContent.Png("T_WaterGradient", WaterGradient(64), 4, 64, true, true);
+            Texture2D gradient = waterGradient = AbyssesContent.Png("T_WaterGradient", WaterGradient(64), 4, 64, true, true);
             shroudMaterial = Unlit("M_DescentWater", Color.white);
             shroudMaterial.SetTexture("_BaseMap", gradient);
             shroudMaterial.SetFloat("_Cull", (float)CullMode.Off);
@@ -184,6 +187,8 @@ namespace Abysses.EditorTools
             Lighthouse(m, scenery, new Vector3(-60f, SeaLevel, 6f));
             Boat(m, world, new Vector3(48f, SeaLevel, 5f));
             Clouds(scenery, center);
+            // Direction artistique : chaînes de montagnes en couches qui pâlissent avec la distance (perspective aérienne).
+            DistantRanges(scenery, center);
             Transform[] gulls = Gulls(m, world, center);
 
             // Un seul jeu de maillages par matériau pour tout le décor fixe.
@@ -218,6 +223,10 @@ namespace Abysses.EditorTools
             Vector3 sunDir = -sunGo.transform.forward;
             GameObject disc = Prim(PrimitiveType.Quad, "DisqueSolaire", world, center + sunDir * 480f, Quaternion.LookRotation(-sunDir), Vector3.one * 26f, sunDiscMaterial, false);
             disc.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+            // Halo doux autour du soleil (additif) : la lumière « bave » comme dans une illustration.
+            Material sunGlow = Additive("M_SunGlow", "Universal Render Pipeline/Unlit", new Color(1f, 0.92f, 0.75f, 0.45f), fx.Dot);
+            GameObject glowQuad = Prim(PrimitiveType.Quad, "HaloSolaire", world, center + sunDir * 470f, Quaternion.LookRotation(-sunDir), Vector3.one * 140f, sunGlow, false);
+            glowQuad.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
 
             // Sons : ressac et vent, mouettes au-dessus de la plateforme, treuil et éclaboussure de la plongée.
             AudioSource ambience = Sfx(surface, fx.Waves, 0.6f, 0f);
@@ -493,12 +502,62 @@ namespace Abysses.EditorTools
             root.gameObject.AddComponent<Bobbing>();
         }
 
+        /// <summary>
+        /// Trois chaînes de montagnes en anneau autour de la plateforme, comme des couches de papier découpé :
+        /// la plus proche verte et sombre, la plus lointaine pâle et bleutée (le brouillard linéaire accentue l'effet).
+        /// Des « cartes » verticales tournées vers la plateforme : quelques centaines de triangles en tout.
+        /// </summary>
+        static void DistantRanges(Transform parent, Vector3 center)
+        {
+            var layers = new (float radius, float minH, float maxH, Color color, int seed)[]
+            {
+                (260f, 18f, 55f, new Color(0.17f, 0.32f, 0.33f), 41),
+                (360f, 35f, 95f, new Color(0.3f, 0.46f, 0.56f), 42),
+                (470f, 55f, 135f, new Color(0.52f, 0.66f, 0.78f), 43),
+            };
+            for (int l = 0; l < layers.Length; l++)
+            {
+                (float radius, float minH, float maxH, Color color, int seed) = layers[l];
+                var random = new System.Random(seed);
+                const int segments = 140;
+                var vertices = new List<Vector3>();
+                var triangles = new List<int>();
+                // Hauteur : bruit lissé (plusieurs sinus) + pics aléatoires, avec des creux où la mer reste visible.
+                float p1 = (float)random.NextDouble() * 6f, p2 = (float)random.NextDouble() * 6f, p3 = (float)random.NextDouble() * 6f;
+                for (int i = 0; i <= segments; i++)
+                {
+                    float a = i / (float)segments * Mathf.PI * 2f;
+                    float n = 0.5f + 0.25f * Mathf.Sin(a * 3f + p1) + 0.15f * Mathf.Sin(a * 7f + p2) + 0.1f * Mathf.Sin(a * 17f + p3);
+                    float gap = Mathf.SmoothStep(0f, 1f, Mathf.Abs(Mathf.Sin(a * 2f + p1 * 0.5f)) * 1.6f);
+                    float h = Mathf.Lerp(minH, maxH, Mathf.Clamp01(n)) * gap + ((float)random.NextDouble() - 0.5f) * (maxH - minH) * 0.12f;
+                    var dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                    vertices.Add(center + dir * radius + Vector3.up * (SeaLevel - 2f));
+                    vertices.Add(center + dir * radius + Vector3.up * Mathf.Max(SeaLevel, h));
+                }
+                for (int i = 0; i < segments; i++)
+                {
+                    int k = i * 2;
+                    // Faces tournées vers la plateforme (le centre).
+                    triangles.AddRange(new[] { k, k + 2, k + 1, k + 1, k + 2, k + 3 });
+                }
+                var mesh = new Mesh { name = "Montagnes_" + l };
+                mesh.SetVertices(vertices);
+                mesh.SetTriangles(triangles, 0);
+                mesh.RecalculateNormals();
+                mesh.RecalculateBounds();
+                var go = new GameObject("Montagnes_" + l);
+                go.transform.SetParent(parent, false);
+                go.AddComponent<MeshFilter>().sharedMesh = SurfaceMesh("Surface_Montagnes_" + l, mesh);
+                go.AddComponent<MeshRenderer>().sharedMaterial = Unlit("M_Montagnes_" + l, color);
+            }
+        }
+
         static void Clouds(Transform parent, Vector3 center)
         {
             var random = new System.Random(5);
-            for (int i = 0; i < 12; i++)
+            for (int i = 0; i < 20; i++)
             {
-                float a = i / 12f * Mathf.PI * 2f + (float)random.NextDouble() * 0.3f;
+                float a = i / 20f * Mathf.PI * 2f + (float)random.NextDouble() * 0.3f;
                 var basePos = center + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * (360f + 80f * (float)random.NextDouble()) + Vector3.up * (60f + 60f * (float)random.NextDouble());
                 for (int k = 0; k < 4; k++)
                 {
