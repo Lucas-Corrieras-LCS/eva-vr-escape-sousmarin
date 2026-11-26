@@ -50,12 +50,12 @@ namespace Abysses.Level
         [SerializeField] AbyssPalette surfacePalette = new AbyssPalette
         {
             low = new Color(0.78f, 0.82f, 0.86f), high = new Color(1.05f, 1.05f, 1.05f), rim = new Color(1f, 0.95f, 0.85f),
-            rimStrength = 0.25f, grain = 0.3f, gradientRange = new Vector2(-0.5f, 3f), rimPower = 3f,
+            rimStrength = 0.25f, grain = 0.7f, gradientRange = new Vector2(-0.5f, 3f), rimPower = 3f,
         };
         [SerializeField] AbyssPalette underwaterPalette = new AbyssPalette
         {
             low = new Color(0.3f, 0.5f, 0.6f), high = new Color(0.9f, 1.05f, 1.15f), rim = new Color(0.4f, 0.9f, 1f),
-            rimStrength = 0.6f, grain = 0.25f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f,
+            rimStrength = 0.6f, grain = 0.7f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f,
         };
 
         [Header("Plongée")]

@@ -17,7 +17,7 @@ namespace Abysses.Core
         [Tooltip("Couleur du contour lumineux des objets et des plongeurs.")]
         public Color rim;
         [Range(0f, 2f)] public float rimStrength;
-        [Tooltip("Grain de texture conservé (0 = aplats lisses, 1 = texture complète).")]
+        [Tooltip("Grain de texture conservé (0 = aplats lisses, 1 = texture complète ; ~0,7 : style doux qui garde le détail des tôles).")]
         [Range(0f, 1f)] public float grain;
         [Tooltip("Hauteurs (m) du bas et du haut du dégradé.")]
         public Vector2 gradientRange;
@@ -26,7 +26,7 @@ namespace Abysses.Core
         public static AbyssPalette Default => new AbyssPalette
         {
             low = new Color(0.4f, 0.48f, 0.55f), high = new Color(1f, 1.05f, 1.1f),
-            rim = new Color(0.35f, 0.85f, 1f), rimStrength = 0.5f, grain = 0.25f,
+            rim = new Color(0.35f, 0.85f, 1f), rimStrength = 0.5f, grain = 0.7f,
             gradientRange = new Vector2(0f, 2.8f), rimPower = 3f,
         };
     }

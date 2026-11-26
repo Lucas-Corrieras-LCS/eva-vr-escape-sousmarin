@@ -30,16 +30,16 @@ namespace Abysses.EditorTools
         {
             // Étage 1 — Habitat : bleu-vert profond, contours cyan.
             new AbyssPalette { low = new Color(0.28f, 0.36f, 0.45f), high = new Color(0.92f, 1f, 1.08f), rim = new Color(0.3f, 0.85f, 1f),
-                rimStrength = 0.55f, grain = 0.22f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f },
+                rimStrength = 0.55f, grain = 0.7f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f },
             // Étage 2 — Laboratoires : rouge sourd, contours orangés.
             new AbyssPalette { low = new Color(0.28f, 0.18f, 0.18f), high = new Color(0.9f, 0.78f, 0.76f), rim = new Color(1f, 0.42f, 0.28f),
-                rimStrength = 0.45f, grain = 0.22f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f },
+                rimStrength = 0.45f, grain = 0.7f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f },
             // Étage 3 — Ballasts : vert d'eau, contours turquoise.
             new AbyssPalette { low = new Color(0.22f, 0.36f, 0.38f), high = new Color(0.9f, 1.02f, 1f), rim = new Color(0.3f, 1f, 0.82f),
-                rimStrength = 0.5f, grain = 0.22f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f },
+                rimStrength = 0.5f, grain = 0.7f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f },
             // Étage 4 — Cœur : presque noir, bioluminescence violette et cyan.
             new AbyssPalette { low = new Color(0.16f, 0.13f, 0.28f), high = new Color(0.7f, 0.74f, 0.95f), rim = new Color(0.75f, 0.35f, 1f),
-                rimStrength = 0.65f, grain = 0.18f, gradientRange = new Vector2(0f, 3.2f), rimPower = 2.6f },
+                rimStrength = 0.65f, grain = 0.65f, gradientRange = new Vector2(0f, 3.2f), rimPower = 2.6f },
         };
 
         static readonly Color[] ShaftColors =

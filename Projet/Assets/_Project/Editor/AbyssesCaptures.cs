@@ -121,6 +121,9 @@ namespace Abysses.EditorTools
                 foreach (ParticleSystem ps in root.GetComponentsInChildren<ParticleSystem>())
                     if (ps.main.playOnAwake) ps.Simulate(12f, true, true);
 
+                // Image « à blanc » : la première prise de vue part avant que les lightmaps de l'étage soient chargées
+                // (image noire ou incomplète). On la jette et on capture ensuite pour de bon.
+                if (floor.Value.Length > 0) Render(floor.Value[0], background, Path.Combine(Path.GetTempPath(), "abysses_warmup.png"));
                 foreach (View view in floor.Value)
                     Render(view, background, Path.Combine(dir, view.Name + ".png"));
 

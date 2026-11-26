@@ -5,7 +5,7 @@
 ## L'idée
 
 - **Des fonds presque noirs, où seul l'important brille** : énigmes, voyants, lampes, créatures, coéquipiers.
-- **Des formes lisses** : la texture n'est plus qu'un léger grain, chaque objet se lit à sa couleur.
+- **Des formes douces** : la texture est adoucie (grain conservé ≈ 0,7, on voit encore les tôles et les rivets), chaque objet se lit d'abord à sa couleur.
 - **Une palette par étage** :
 
 | Étage | Palette |
