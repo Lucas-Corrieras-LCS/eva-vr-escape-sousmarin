@@ -242,6 +242,7 @@ namespace Abysses.EditorTools
             AssetDatabase.SaveAssets();
             PuzzleMaterials();
             SurfaceMaterials();
+            StylizeMaterials(m);
             return m;
         }
 
@@ -656,6 +657,9 @@ namespace Abysses.EditorTools
         {
             EnsureFolder(SceneDir);
             string path = SceneDir + "/" + name + ".unity";
+            // Direction artistique : palette, halos et rayons de chaque étage (voir AbyssesBuilderStyle).
+            int floorIndex = System.Array.IndexOf(FloorScenes, name);
+            if (floorIndex >= 0) StyleFloor(scene, floorIndex);
             EditorSceneManager.SaveScene(scene, path);
 
             // Un objet réseau créé par script n'a pas d'identifiant (GlobalObjectIdHash = 0) tant que la scène

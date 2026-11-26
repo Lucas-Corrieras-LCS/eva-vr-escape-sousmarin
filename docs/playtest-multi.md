@@ -1,6 +1,6 @@
 # Partie de test automatique — 2 plongeurs + pupitre
 
-> 2026-11-26 08:42 · Unity 6000.3.23f1 · *Abysses → Tests*. 
+> 2026-11-26 09:17 · Unity 6000.3.23f1 · *Abysses → Tests*. 
 > Énigmes coopératives résolues par le maître du jeu ; énigmes de module (disjoncteurs, morse, sonar) résolues par de vrais appuis. On vérifie l'enchaînement et les systèmes, pas les gestes au casque.
 
 - ✅ Hôte réseau local lancé (plongeur ORANGE)
@@ -25,7 +25,7 @@
 - ✅ Étage 2 : eau qui monte dans les 4 modules
 - ✅ Étage 2 : néons défaillants
 - ✅ Étage 2 : 4 cadenas morse
-- ✅ Balise morse : code à 3 chiffres tiré (070)
+- ✅ Balise morse : code à 3 chiffres tiré (142)
 - ✅ Cadenas : un mauvais code est refusé
 - ✅ Cadenas : le code de la balise ouvre la vanne d'urgence
 - ✅ Étage 2 : 4 mélangeurs d'antidote
@@ -54,7 +54,7 @@
 - ✅ Écran de surveillance : la carte de la cale est affichée
 - ✅ Cale : la dalle DÉPART arme le parcours
 - ✅ Cale : une dalle sous tension → décharge, retour au départ
-- ✅ Cale : chemin sûr suivi (7 dalles) → vanne de purge atteinte
+- ✅ Cale : chemin sûr suivi (10 dalles) → vanne de purge atteinte
 - ✅ Étage 3 : fuite et salle des pompes tirées
 - ✅ Cloisons : le plan n'est affiché que chez un plongeur (module 1)
 - ✅ Cloisons : aucune porte ne se ferme avant l'alerte
@@ -65,9 +65,9 @@
 - ✅ Contrepoids : registre de lest affiché
 - ✅ Contrepoids : le plateau pèse les lests posés dessus (5 kg)
 - ✅ Contrepoids : charge fausse, pas d'équilibre
-- ✅ Contrepoids : combinaison de lests trouvée pour 9 kg
-- ✅ Contrepoids : combinaison de lests trouvée pour 11 kg
-- ✅ Contrepoids : chaque plateau à sa charge (dont 9 kg ici) → ballasts équilibrés
+- ✅ Contrepoids : combinaison de lests trouvée pour 13 kg
+- ✅ Contrepoids : combinaison de lests trouvée pour 7 kg
+- ✅ Contrepoids : chaque plateau à sa charge (dont 13 kg ici) → ballasts équilibrés
 - ✅ Étage 3 : verrou de la cabine en place
 - ✅ Pupitre : 2 énigme(s) des autres plongeurs résolue(s) par le maître du jeu
 - ✅ Étage 3 : tous les fragments du code révélés
@@ -81,7 +81,7 @@
 - ✅ Léviathan : position tirée au début de l'étage
 - ✅ Sonar : la distance du module s'affiche
 - ✅ Léviathan : un tir à côté est raté
-- ✅ Léviathan : leurre tiré en F3 → touché
+- ✅ Léviathan : leurre tiré en D5 → touché
 - ✅ Étage 4 : standard des circuits en place
 - ✅ Standard : le tableau est chez l'opérateur (module 1)
 - ✅ Standard : un câblage faux est refusé, tout se débranche

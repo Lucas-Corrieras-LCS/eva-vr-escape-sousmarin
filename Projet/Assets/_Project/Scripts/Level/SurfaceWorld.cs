@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using Abysses.Core;
 using Abysses.Player;
 
 namespace Abysses.Level
@@ -45,6 +46,17 @@ namespace Abysses.Level
         [SerializeField] Color surfaceAmbient = new Color(0.5f, 0.56f, 0.62f);
         [SerializeField] float surfaceFarClip = 600f;
         [SerializeField] float underwaterFarClip = 40f;
+        [Tooltip("Palette de la surface (plein jour) et sous l'eau pendant la plongée.")]
+        [SerializeField] AbyssPalette surfacePalette = new AbyssPalette
+        {
+            low = new Color(0.78f, 0.82f, 0.86f), high = new Color(1.05f, 1.05f, 1.05f), rim = new Color(1f, 0.95f, 0.85f),
+            rimStrength = 0.25f, grain = 0.3f, gradientRange = new Vector2(-0.5f, 3f), rimPower = 3f,
+        };
+        [SerializeField] AbyssPalette underwaterPalette = new AbyssPalette
+        {
+            low = new Color(0.3f, 0.5f, 0.6f), high = new Color(0.9f, 1.05f, 1.15f), rim = new Color(0.4f, 0.9f, 1f),
+            rimStrength = 0.6f, grain = 0.25f, gradientRange = new Vector2(0f, 2.8f), rimPower = 3f,
+        };
 
         [Header("Plongée")]
         [Tooltip("Niveau de la mer (y) au repos ; le haut des hublots est à 1,88 m.")]
@@ -261,6 +273,7 @@ namespace Abysses.Level
             Camera main = Camera.main;
             if (underwater <= 0f)
             {
+                AbyssStyle.Apply(surfacePalette);
                 RenderSettings.fog = true;
                 RenderSettings.fogMode = FogMode.Linear;
                 RenderSettings.fogStartDistance = 80f;
@@ -276,6 +289,7 @@ namespace Abysses.Level
                 }
                 return;
             }
+            AbyssStyle.Apply(underwaterPalette);
             Color water = DepthColor(underwater * 2.5f);
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;

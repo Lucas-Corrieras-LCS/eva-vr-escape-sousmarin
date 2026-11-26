@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Rendering;
+using Abysses.Core;
 
 namespace Abysses.Level
 {
@@ -13,6 +14,10 @@ namespace Abysses.Level
         [SerializeField] Color fogColor = new Color(0.02f, 0.08f, 0.1f);
         [SerializeField, Range(0f, 0.3f)] float fogDensity = 0.06f;
         [SerializeField] Color ambientColor = new Color(0.05f, 0.1f, 0.12f);
+        [Tooltip("Palette de la direction artistique (shader Abysses/Stylized) : dégradé, contour lumineux, grain.")]
+        [SerializeField] AbyssPalette palette = AbyssPalette.Default;
+
+        public AbyssPalette Palette => palette;
 
         // Les étages bakés apportent leurs light probes en chargement additif : Unity demande de recalculer
         // la tétraédrisation à chaque ajout/retrait, sinon les objets mobiles (avatars, objets) restent mal éclairés.
@@ -23,6 +28,7 @@ namespace Abysses.Level
             LightProbes.needsRetetrahedralization += LightProbes.TetrahedralizeAsync;
         }
 
+        AbyssPalette previousPalette;
         Color previousFog;
         float previousDensity;
         Color previousAmbient;
@@ -32,6 +38,8 @@ namespace Abysses.Level
             previousFog = RenderSettings.fogColor;
             previousDensity = RenderSettings.fogDensity;
             previousAmbient = RenderSettings.ambientLight;
+            previousPalette = AbyssStyle.Current;
+            AbyssStyle.Apply(palette);
 
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.ExponentialSquared;
@@ -49,6 +57,7 @@ namespace Abysses.Level
             RenderSettings.fogColor = previousFog;
             RenderSettings.fogDensity = previousDensity;
             RenderSettings.ambientLight = previousAmbient;
+            AbyssStyle.Apply(previousPalette);
             Camera main = Camera.main;
             if (main != null) main.backgroundColor = previousFog;
         }

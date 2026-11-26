@@ -194,6 +194,9 @@ namespace Abysses.EditorTools
             RenderSettings.fogColor = so.FindProperty("horizon").colorValue;
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = so.FindProperty("surfaceAmbient").colorValue;
+            var surfacePalette = (Abysses.Core.AbyssPalette)typeof(SurfaceWorld).GetField("surfacePalette",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(surface);
+            Abysses.Core.AbyssStyle.Apply(surfacePalette);
             Render(new View("surface_plateforme", new Vector3(3.2f, 1.7f, 1.2f), new Vector3(9f, 2.2f, 4.5f)), sky, Path.Combine(dir, "surface_plateforme.png"), 600f);
             Render(new View("surface_large", new Vector3(14f, 1.7f, 8f), new Vector3(-60f, 6f, 20f)), sky, Path.Combine(dir, "surface_large.png"), 600f);
             Render(new View("surface_hublot", new Vector3(7.5f, 1.55f, 4f), new Vector3(5f, 1.4f, 4f)), sky, Path.Combine(dir, "surface_hublot.png"), 600f);
@@ -236,6 +239,8 @@ namespace Abysses.EditorTools
                 RenderSettings.fogDensity = so.FindProperty("fogDensity").floatValue;
                 RenderSettings.ambientMode = AmbientMode.Flat;
                 RenderSettings.ambientLight = so.FindProperty("ambientColor").colorValue;
+                // Palette de la direction artistique (posée en jeu par FloorAmbience).
+                Abysses.Core.AbyssStyle.Apply(ambience.Palette);
                 return RenderSettings.fogColor;
             }
             return Color.black;
@@ -262,6 +267,13 @@ namespace Abysses.EditorTools
 
         static void Render(View view, Color background, string path, float farClip = 40f)
         {
+            // Halos lumineux tournés vers la caméra (en jeu, c'est HaloBillboards qui s'en charge à chaque image).
+            foreach (HaloBillboards billboards in Object.FindObjectsByType<HaloBillboards>(FindObjectsSortMode.None))
+            {
+                var halos = (Transform[])typeof(HaloBillboards).GetField("halos", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(billboards);
+                foreach (Transform halo in halos)
+                    if (halo != null && (halo.position - view.Eye).sqrMagnitude > 0.0001f) halo.rotation = Quaternion.LookRotation(halo.position - view.Eye);
+            }
             var go = new GameObject("CaptureCamera");
             var camera = go.AddComponent<Camera>();
             camera.transform.SetPositionAndRotation(view.Eye, Quaternion.LookRotation(view.Target - view.Eye));

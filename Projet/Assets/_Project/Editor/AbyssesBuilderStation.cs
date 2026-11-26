@@ -67,24 +67,21 @@ namespace Abysses.EditorTools
             hidden.Add(helmet.gameObject);
             GameObject dome = Prim(PrimitiveType.Sphere, "Dome", helmet, new Vector3(0f, 0.01f, -0.01f), Quaternion.identity, new Vector3(0.3f, 0.31f, 0.3f), m.AvatarPaint[0], false);
             tinted.Add(dome.GetComponent<Renderer>());
-            Prim(PrimitiveType.Sphere, "Hublot", helmet, new Vector3(0f, -0.005f, 0.122f), Quaternion.identity, new Vector3(0.19f, 0.16f, 0.07f), m.Visor, false);
+            // Visière éclairée de l'intérieur (direction artistique) : on devine le plongeur dans le noir.
+            Prim(PrimitiveType.Sphere, "Hublot", helmet, new Vector3(0f, -0.005f, 0.122f), Quaternion.identity, new Vector3(0.19f, 0.16f, 0.07f), styleVisor != null ? styleVisor : m.Visor, false);
             AbyssesArt.MeshObject("Cerclage", helmet, art.Ring, new Vector3(0f, -0.005f, 0.14f), Quaternion.identity, new Vector3(0.21f, 0.18f, 0.025f), m.Brass);
-            foreach (float x in new[] { -0.045f, 0f, 0.045f })
-                Prim(PrimitiveType.Cube, "Grille", helmet, new Vector3(x, -0.005f, 0.152f), Quaternion.identity, new Vector3(0.008f, 0.16f, 0.008f), m.Brass, false);
             foreach (float side in new[] { -1f, 1f })
             {
                 Prim(PrimitiveType.Sphere, "HublotLateral", helmet, new Vector3(side * 0.135f, 0f, 0.02f), Quaternion.identity, new Vector3(0.03f, 0.08f, 0.08f), m.Visor, false);
                 AbyssesArt.MeshObject("CerclageLateral", helmet, art.Ring, new Vector3(side * 0.145f, 0f, 0.02f), Quaternion.Euler(0f, 90f, 0f), new Vector3(0.095f, 0.095f, 0.02f), m.Brass);
             }
             AbyssesArt.MeshObject("Collerette", helmet, art.Ring, new Vector3(0f, -0.14f, -0.01f), Quaternion.Euler(90f, 0f, 0f), new Vector3(0.31f, 0.31f, 0.05f), m.Brass);
-            for (int i = 0; i < 8; i++)
-            {
-                float a = i * Mathf.PI / 4f;
-                Prim(PrimitiveType.Sphere, "Boulon", helmet, new Vector3(Mathf.Sin(a) * 0.15f, -0.135f, Mathf.Cos(a) * 0.15f - 0.01f), Quaternion.identity, Vector3.one * 0.016f, m.Frame, false);
-            }
             // Lampe frontale : boîtier sombre et verre lumineux, inclinée vers l'avant.
             Prim(PrimitiveType.Cylinder, "Lampe", helmet, new Vector3(0f, 0.145f, 0.06f), Quaternion.Euler(65f, 0f, 0f), new Vector3(0.06f, 0.04f, 0.06f), m.Frame, false);
             Prim(PrimitiveType.Cylinder, "Verre", helmet, new Vector3(0f, 0.163f, 0.097f), Quaternion.Euler(65f, 0f, 0f), new Vector3(0.05f, 0.004f, 0.05f), m.EmitWarm, false);
+            // Faisceau de la lampe frontale, vers l'avant et un peu vers le bas : on voit où regarde le coéquipier.
+            if (styleBeam != null)
+                AbyssesArt.MeshObject("Faisceau", helmet, fx.ShaftCone, new Vector3(0f, 0.165f, 0.1f), Quaternion.Euler(-75f, 0f, 0f), new Vector3(0.32f, 1.3f, 0.32f), styleBeam);
             CombineAvatarPart(helmet, tinted, "Casque");
         }
 
@@ -116,22 +113,23 @@ namespace Abysses.EditorTools
             {
                 GameObject pad = Prim(PrimitiveType.Sphere, "Epaulette", torso, new Vector3(side * 0.19f, 0.19f, 0f), Quaternion.identity, new Vector3(0.14f, 0.1f, 0.14f), m.AvatarPaint[0], false);
                 tinted.Add(pad.GetComponent<Renderer>());
-                Prim(PrimitiveType.Cube, "Harnais", torso, new Vector3(side * 0.08f, -0.02f, 0.127f), Quaternion.Euler(0f, 0f, side * 16f), new Vector3(0.045f, 0.4f, 0.018f), m.Rubber, false);
             }
             Prim(PrimitiveType.Cube, "Plastron", torso, new Vector3(0f, 0.06f, 0.122f), Quaternion.identity, new Vector3(0.22f, 0.15f, 0.035f), m.Panel, false);
-            GameObject stripe = Prim(PrimitiveType.Cube, "Bande", torso, new Vector3(0f, 0.07f, 0.142f), Quaternion.identity, new Vector3(0.18f, 0.04f, 0.01f), m.AvatarPaint[0], false);
+            GameObject stripe = Prim(PrimitiveType.Cube, "Bande", torso, new Vector3(0f, 0.07f, 0.142f), Quaternion.identity, new Vector3(0.2f, 0.07f, 0.01f), m.AvatarPaint[0], false);
             tinted.Add(stripe.GetComponent<Renderer>());
-            Prim(PrimitiveType.Cylinder, "Ceinture", torso, new Vector3(0f, -0.25f, 0f), Quaternion.identity, new Vector3(0.39f, 0.03f, 0.28f), m.Rubber, false);
-            for (int i = 0; i < 4; i++)
-            {
-                float a = (i - 1.5f) * 0.55f;
-                Prim(PrimitiveType.Cube, "Plomb", torso, new Vector3(Mathf.Sin(a) * 0.19f, -0.25f, Mathf.Cos(a) * 0.13f), Quaternion.Euler(0f, a * Mathf.Rad2Deg, 0f), new Vector3(0.07f, 0.055f, 0.035f), m.Frame, false);
-            }
+            // Ceinture lumineuse à la couleur du joueur : silhouette lisible de face comme de dos.
+            GameObject belt = Prim(PrimitiveType.Cylinder, "Ceinture", torso, new Vector3(0f, -0.25f, 0f), Quaternion.identity, new Vector3(0.39f, 0.035f, 0.28f), m.AvatarPaint[0], false);
+            tinted.Add(belt.GetComponent<Renderer>());
             foreach (float side in new[] { -1f, 1f })
             {
-                Prim(PrimitiveType.Cylinder, "Bouteille", torso, new Vector3(side * 0.07f, 0f, -0.18f), Quaternion.identity, new Vector3(0.12f, 0.19f, 0.12f), m.PipeYellow, false);
-                Prim(PrimitiveType.Sphere, "Ogive", torso, new Vector3(side * 0.07f, 0.19f, -0.18f), Quaternion.identity, new Vector3(0.12f, 0.07f, 0.12f), m.PipeYellow, false);
-                Prim(PrimitiveType.Sphere, "Fond", torso, new Vector3(side * 0.07f, -0.19f, -0.18f), Quaternion.identity, new Vector3(0.12f, 0.06f, 0.12f), m.PipeYellow, false);
+                // Bouteilles à la couleur du joueur : on reconnaît son coéquipier de dos, de loin, dans le noir.
+                foreach (GameObject tank in new[]
+                {
+                    Prim(PrimitiveType.Cylinder, "Bouteille", torso, new Vector3(side * 0.07f, 0f, -0.18f), Quaternion.identity, new Vector3(0.12f, 0.19f, 0.12f), m.AvatarPaint[0], false),
+                    Prim(PrimitiveType.Sphere, "Ogive", torso, new Vector3(side * 0.07f, 0.19f, -0.18f), Quaternion.identity, new Vector3(0.12f, 0.07f, 0.12f), m.AvatarPaint[0], false),
+                    Prim(PrimitiveType.Sphere, "Fond", torso, new Vector3(side * 0.07f, -0.19f, -0.18f), Quaternion.identity, new Vector3(0.12f, 0.06f, 0.12f), m.AvatarPaint[0], false),
+                })
+                    tinted.Add(tank.GetComponent<Renderer>());
                 Prim(PrimitiveType.Cylinder, "Robinet", torso, new Vector3(side * 0.07f, 0.24f, -0.18f), Quaternion.identity, new Vector3(0.035f, 0.025f, 0.035f), m.Brass, false);
             }
             // Tuyau d'air : du robinet vers l'arrière du casque.
@@ -145,6 +143,12 @@ namespace Abysses.EditorTools
             {
                 GameObject limb = Prim(PrimitiveType.Capsule, name, root.transform, Vector3.zero, Quaternion.identity, Vector3.one * 0.08f, material, false);
                 hidden.Add(limb);
+                // Bande lumineuse à la couleur du joueur sur l'avant-bras et le bas de la jambe (lisible en mouvement).
+                if (name.StartsWith("AvantBras") || name.StartsWith("Jambe"))
+                {
+                    GameObject band = Prim(PrimitiveType.Cylinder, "Bande", limb.transform, new Vector3(0f, -0.35f, 0f), Quaternion.identity, new Vector3(1.1f, 0.12f, 1.1f), m.AvatarPaint[0], false);
+                    tinted.Add(band.GetComponent<Renderer>());
+                }
                 return limb.transform;
             }
             Transform Boot(string name)
