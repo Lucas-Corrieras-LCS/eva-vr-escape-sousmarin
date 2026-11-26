@@ -42,6 +42,7 @@ namespace Abysses.Interaction
             Loads.OnValueChanged += OnIntChanged;
             objective.StateChanged += OnSolved;
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += OnModulesChanged;
             Loc.Changed += Refresh;
             Refresh();
         }
@@ -52,6 +53,7 @@ namespace Abysses.Interaction
             Loads.OnValueChanged -= OnIntChanged;
             objective.StateChanged -= OnSolved;
             GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= OnModulesChanged;
             Loc.Changed -= Refresh;
         }
 
@@ -67,6 +69,27 @@ namespace Abysses.Interaction
         {
             // Les cibles dépendent des plongeurs présents : tirées au début de l'étage.
             if (IsServer && phase == GamePhase.Playing && Targets.Value < 0) DrawTargets();
+            Refresh();
+        }
+
+        /// <summary>
+        /// Un plongeur est parti (après le délai de grâce) : son partenaire ne peut plus recevoir ni envoyer de lests.
+        /// Sa paire revient à 10 kg chacun, atteignable seul ; sinon l'étage serait impossible à finir.
+        /// </summary>
+        void OnModulesChanged()
+        {
+            if (IsServer && Targets.Value >= 0 && !objective.Solved.Value)
+            {
+                int active = Active, packed = Targets.Value;
+                for (int pair = 0; pair < 4; pair += 2)
+                {
+                    bool both = (active & (1 << pair)) != 0 && (active & (1 << (pair + 1))) != 0;
+                    if (both) continue;
+                    packed &= ~(31 << (pair * 5) | 31 << ((pair + 1) * 5));
+                    packed |= 10 << (pair * 5) | 10 << ((pair + 1) * 5);
+                }
+                if (packed != Targets.Value) Targets.Value = packed;
+            }
             Refresh();
         }
 

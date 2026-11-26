@@ -54,6 +54,7 @@ namespace Abysses.Interaction
             Misses.OnValueChanged += OnMiss;
             objective.StateChanged += OnSolved;
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += Refresh;
             Loc.Changed += Refresh;
             Refresh();
         }
@@ -64,6 +65,7 @@ namespace Abysses.Interaction
             Misses.OnValueChanged -= OnMiss;
             objective.StateChanged -= OnSolved;
             GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= Refresh;
             Loc.Changed -= Refresh;
         }
 

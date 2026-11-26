@@ -25,10 +25,15 @@ namespace Abysses.Level
         void OnEnable()
         {
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += Refresh;
             Refresh();
         }
 
-        void OnDisable() => GameStateManager.PhaseChanged -= OnPhaseChanged;
+        void OnDisable()
+        {
+            GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= Refresh;
+        }
 
         void OnPhaseChanged(GamePhase phase) => Refresh();
 

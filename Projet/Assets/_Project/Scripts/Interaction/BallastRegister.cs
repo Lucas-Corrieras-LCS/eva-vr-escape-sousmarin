@@ -23,6 +23,7 @@ namespace Abysses.Interaction
         {
             scale.Changed += Refresh;
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += Refresh;
             Loc.Changed += Refresh;
             Refresh();
         }
@@ -31,6 +32,7 @@ namespace Abysses.Interaction
         {
             scale.Changed -= Refresh;
             GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= Refresh;
             Loc.Changed -= Refresh;
         }
 

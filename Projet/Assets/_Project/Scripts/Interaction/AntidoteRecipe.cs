@@ -24,6 +24,7 @@ namespace Abysses.Interaction
             foreach (AntidoteMixer mixer in mixers)
                 if (mixer != null) mixer.Changed += Refresh;
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += Refresh;
             Loc.Changed += Refresh;
             Refresh();
         }
@@ -33,6 +34,7 @@ namespace Abysses.Interaction
             foreach (AntidoteMixer mixer in mixers)
                 if (mixer != null) mixer.Changed -= Refresh;
             GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= Refresh;
             Loc.Changed -= Refresh;
         }
 

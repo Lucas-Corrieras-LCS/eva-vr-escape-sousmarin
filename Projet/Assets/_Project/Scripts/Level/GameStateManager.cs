@@ -50,13 +50,18 @@ namespace Abysses.Level
 
         /// <summary>Changement des joueurs présents dans leur cabine, sur tous les clients.</summary>
         public static event Action<int> ReadyChanged;
+        /// <summary>
+        /// Les modules actifs ont changé en cours d'étage (joueur parti, après le délai de grâce) : les affichages croisés
+        /// recalculent chez qui montrer chaque info.
+        /// </summary>
+        public static event Action ModulesChanged;
 
-        // ⚠️ Netcode applique les variables chez les clients dans leur ordre de déclaration :
-        // les horaires sont déclarés AVANT la phase, pour être déjà à jour quand l'événement de phase arrive.
+        // ⚠️ Netcode applique les variables chez les clients dans leur ordre de déclaration, et déclenche l'événement de
+        // chacune au passage. Tout ce que lisent les abonnés de PhaseChanged (horaires, étage, modules actifs, cabines,
+        // mode facile) est donc déclaré AVANT la phase : à l'arrivée sur un étage, un casque client voit déjà le bon étage
+        // et les bons modules (sinon les affichages croisés et les fragments du verrou partaient d'un masque vide).
         public readonly NetworkVariable<double> StartTime = new NetworkVariable<double>(0);
         public readonly NetworkVariable<double> EndTime = new NetworkVariable<double>(0);
-
-        public readonly NetworkVariable<GamePhase> Phase = new NetworkVariable<GamePhase>(GamePhase.Lobby);
         /// <summary>0 = surface, puis 1..N.</summary>
         public readonly NetworkVariable<int> Floor = new NetworkVariable<int>(0);
         /// <summary>Quadrants occupés au début de l'étage (bit n = Qn).</summary>
@@ -65,6 +70,8 @@ namespace Abysses.Level
         public readonly NetworkVariable<int> ReadyMask = new NetworkVariable<int>(0);
         /// <summary>Mode facile (enfants, débutants) : indices plus fréquents, leviers plus tolérants. Choisi à la surface.</summary>
         public readonly NetworkVariable<bool> EasyMode = new NetworkVariable<bool>(false);
+
+        public readonly NetworkVariable<GamePhase> Phase = new NetworkVariable<GamePhase>(GamePhase.Lobby);
         /// <summary>Meilleurs temps de l'hôte, format brut <see cref="Leaderboard"/> (affiché dans la langue de chacun).</summary>
         public readonly NetworkVariable<FixedString512Bytes> Leaderboard = new NetworkVariable<FixedString512Bytes>();
 
@@ -108,6 +115,7 @@ namespace Abysses.Level
         {
             Instance = this;
             Phase.OnValueChanged += OnPhaseChanged;
+            ActiveMask.OnValueChanged += OnActiveChanged;
             ReadyMask.OnValueChanged += OnReadyChanged;
             EasyMode.OnValueChanged += OnEasyChanged;
             Leaderboard.OnValueChanged += OnLeaderboardChanged;
@@ -128,6 +136,7 @@ namespace Abysses.Level
         public override void OnNetworkDespawn()
         {
             Phase.OnValueChanged -= OnPhaseChanged;
+            ActiveMask.OnValueChanged -= OnActiveChanged;
             ReadyMask.OnValueChanged -= OnReadyChanged;
             EasyMode.OnValueChanged -= OnEasyChanged;
             Leaderboard.OnValueChanged -= OnLeaderboardChanged;
@@ -145,6 +154,7 @@ namespace Abysses.Level
         }
 
         void OnPhaseChanged(GamePhase previous, GamePhase current) => PhaseChanged?.Invoke(current);
+        void OnActiveChanged(int previous, int current) => ModulesChanged?.Invoke();
         void OnReadyChanged(int previous, int current) => ReadyChanged?.Invoke(current);
         void OnEasyChanged(bool previous, bool current) => SettingsChanged?.Invoke();
         void OnLeaderboardChanged(FixedString512Bytes previous, FixedString512Bytes current) => SettingsChanged?.Invoke();

@@ -53,6 +53,7 @@ namespace Abysses.Interaction
             ReceivedB.OnValueChanged += OnIntChanged;
             foreach (PuzzleObjective objective in objectives) objective.StateChanged += OnSolved;
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += Refresh;
             Loc.Changed += Refresh;
             Refresh();
         }
@@ -66,6 +67,7 @@ namespace Abysses.Interaction
             ReceivedB.OnValueChanged -= OnIntChanged;
             foreach (PuzzleObjective objective in objectives) objective.StateChanged -= OnSolved;
             GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= Refresh;
             Loc.Changed -= Refresh;
         }
 
@@ -78,10 +80,17 @@ namespace Abysses.Interaction
 
         void OnIntChanged(int previous, int current) => Refresh();
 
+        readonly bool[] played = new bool[2];
+
         void OnSolved(bool solved)
         {
+            // Un seul son par côté, au moment où CE côté est résolu (avant : résoudre B rejouait aussi le son de A).
             for (int side = 0; side < 2; side++)
-                if (objectives[side].Solved.Value && side < successSounds.Length && successSounds[side] != null && solved) successSounds[side].Play();
+            {
+                bool now = objectives[side].Solved.Value;
+                if (now && !played[side] && side < successSounds.Length && successSounds[side] != null) successSounds[side].Play();
+                played[side] = now;
+            }
             Refresh();
         }
 

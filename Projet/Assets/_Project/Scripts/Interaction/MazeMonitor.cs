@@ -40,6 +40,7 @@ namespace Abysses.Interaction
             foreach (ShockMaze maze in mazes)
                 if (maze != null) maze.Changed += Refresh;
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += Refresh;
             Loc.Changed += Refresh;
             Refresh();
         }
@@ -49,6 +50,7 @@ namespace Abysses.Interaction
             foreach (ShockMaze maze in mazes)
                 if (maze != null) maze.Changed -= Refresh;
             GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= Refresh;
             Loc.Changed -= Refresh;
         }
 

@@ -270,6 +270,20 @@ namespace Abysses.EditorTools
         static T Field<T>(object target, string name) =>
             (T)target.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).GetValue(target);
 
+        /// <summary>
+        /// Netcode applique les variables chez les clients dans l'ordre de leur liste : tout ce que lisent les abonnés de
+        /// PhaseChanged doit la précéder (sinon, à l'arrivée sur un étage, un client voit encore l'ancien étage / masque).
+        /// </summary>
+        static bool PhaseSyncedLast()
+        {
+            var fields = typeof(Unity.Netcode.NetworkBehaviour).GetField("NetworkVariableFields", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+                ?.GetValue(State) as System.Collections.IList;
+            if (fields == null) return false;
+            int phase = fields.IndexOf(State.Phase);
+            return phase > fields.IndexOf(State.Floor) && phase > fields.IndexOf(State.ActiveMask)
+                && phase > fields.IndexOf(State.ReadyMask) && phase > fields.IndexOf(State.EasyMode) && phase > fields.IndexOf(State.StartTime);
+        }
+
         static string WatchText()
         {
             // Sans casque, les manettes ne sont pas suivies et XRI désactive leurs objets : on rafraîchit la montre à la main.
@@ -809,6 +823,7 @@ namespace Abysses.EditorTools
             ConnectionManager connection = ConnectionManager.Instance;
             connection.PlaySolo();
             yield return Until(() => connection.State == ConnectionState.Online && LocalRig.Instance.Quadrant == 0, 15f, "Partie solo lancée, quadrant ORANGE attribué");
+            Check(PhaseSyncedLast(), "Réseau : la phase est reçue après l'étage, les modules actifs et les cabines (affichages croisés à jour chez les clients)");
             yield return Until(() => (State.ReadyMask.Value & 1) != 0, 10f, "Joueur détecté dans sa cabine (calibration)");
 
             Loc.Toggle();

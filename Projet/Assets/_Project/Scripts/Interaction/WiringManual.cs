@@ -25,6 +25,7 @@ namespace Abysses.Interaction
             foreach (WiringPanel panel in panels)
                 if (panel != null) panel.Changed += Refresh;
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += Refresh;
             Loc.Changed += Refresh;
             Refresh();
         }
@@ -34,6 +35,7 @@ namespace Abysses.Interaction
             foreach (WiringPanel panel in panels)
                 if (panel != null) panel.Changed -= Refresh;
             GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= Refresh;
             Loc.Changed -= Refresh;
         }
 

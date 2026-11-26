@@ -38,6 +38,7 @@ namespace Abysses.Interaction
             floorLock.Changed += Refresh;
             Loc.Changed += Refresh;
             GameStateManager.PhaseChanged += OnPhaseChanged;
+            GameStateManager.ModulesChanged += Refresh;
             seenWrong = floorLock.Wrong.Value;
             Refresh();
         }
@@ -47,6 +48,7 @@ namespace Abysses.Interaction
             floorLock.Changed -= Refresh;
             Loc.Changed -= Refresh;
             GameStateManager.PhaseChanged -= OnPhaseChanged;
+            GameStateManager.ModulesChanged -= Refresh;
         }
 
         void OnPhaseChanged(GamePhase phase) => Refresh();
